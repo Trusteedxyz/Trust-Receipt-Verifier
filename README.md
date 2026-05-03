@@ -63,15 +63,15 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 **Transaction Evidence**
 
-| Field                | Type              | Description                                                                         |
-| -------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| Field                | Type               | Description                                                                           |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------------- |
 | `user_intent_hash`   | string (non-empty) | Hash of the user's original intent text — must be non-empty (SHA-256 hex recommended) |
-| `cart_hash`          | SHA-256 hex       | Hash of cart contents at decision time (optional)                                   |
-| `order_hash`         | SHA-256 hex       | Hash of settled order object (optional)                                             |
-| `transaction_id`     | string            | Platform transaction reference (optional)                                           |
-| `protocol`           | enum              | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`                                          |
-| `protocol_artifacts` | array             | Hashes of protocol-specific evidence objects                                        |
-| `payment_reference`  | object            | PSP name + reference, no raw payment data (optional)                                |
+| `cart_hash`          | SHA-256 hex        | Hash of cart contents at decision time (optional)                                     |
+| `order_hash`         | SHA-256 hex        | Hash of settled order object (optional)                                               |
+| `transaction_id`     | string             | Platform transaction reference (optional)                                             |
+| `protocol`           | enum               | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`                                            |
+| `protocol_artifacts` | array              | Hashes of protocol-specific evidence objects                                          |
+| `payment_reference`  | object             | PSP name + reference, no raw payment data (optional)                                  |
 
 **Trust Assertions**
 
@@ -83,28 +83,28 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 **Compliance**
 
-| Field                    | Type        | Description                                                              |
-| ------------------------ | ----------- | ------------------------------------------------------------------------ |
-| `liability_context`      | object      | Assertor and scope (optional)                                            |
-| `consent_context`        | object      | Consent hash, scope, timestamp (optional)                                |
-| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional)                        |
-| `verification_methods`   | array       | JWKS URL or DID for key resolution — at least one entry required         |
-| `kid`                    | string      | Key ID used to sign this receipt                                         |
-| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                               |
-| `attachments`            | array       | Named, hashed file references (optional)                                 |
+| Field                    | Type        | Description                                                      |
+| ------------------------ | ----------- | ---------------------------------------------------------------- |
+| `liability_context`      | object      | Assertor and scope (optional)                                    |
+| `consent_context`        | object      | Consent hash, scope, timestamp (optional)                        |
+| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional)                |
+| `verification_methods`   | array       | JWKS URL or DID for key resolution — at least one entry required |
+| `kid`                    | string      | Key ID used to sign this receipt                                 |
+| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                       |
+| `attachments`            | array       | Named, hashed file references (optional)                         |
 
 ---
 
 ## Protocol support
 
-| Protocol | Artifact mapping | Primary artifact types                                  |
-| -------- | ---------------- | ------------------------------------------------------- |
-| MCAP     | Defined          | `mcap_consent_hash`, `mcap_nonce`                       |
-| x402     | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
-| AP2      | Defined          | `mandate_hash`, `ap2_consent_hash`                      |
-| MCP      | Defined          | `mcp_call_hash`, `tool_call_hash`                       |
-| ACP      | Defined          | `acp_session_hash`, `acp_policy_hash`                   |
-| UCP      | Defined          | `ucp_token_hash`                                        |
+| Protocol                                                                                                  | Artifact mapping | Primary artifact types                                  |
+| --------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------- |
+| [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Defined          | `mcap_consent_hash`, `mcap_nonce`                       |
+| [x402](https://github.com/coinbase/x402)                                                                  | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
+| [AP2](https://github.com/google-agentic-commerce/AP2)                                                     | Defined          | `mandate_hash`, `ap2_consent_hash`                      |
+| [MCP](https://modelcontextprotocol.io)                                                                    | Defined          | `mcp_call_hash`, `tool_call_hash`                       |
+| [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                             | Defined          | `acp_session_hash`, `acp_policy_hash`                   |
+| [UCP](https://github.com/Universal-Commerce-Protocol/ucp)                                                 | Defined          | `ucp_token_hash`                                        |
 
 ---
 
