@@ -1,0 +1,100 @@
+{
+  "_demo_note": "Fictional example data only. Provider names are illustrative and do not represent real integrations or endorsements.",
+  "receipt_id": "c3d4e5f6-a7b8-9012-cdef-012345678902",
+  "schema_version": "1.0",
+  "issued_at": 1745891200,
+  "expires_at": 1777427200,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-shop-demo-03",
+  "agent_id": "agent-claude-sonnet-4-6-session-def456",
+  "agent_provider": "anthropic",
+  "user_intent_hash": "e8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9",
+  "cart_hash": "5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a",
+  "order_hash": "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+  "transaction_id": "txn-ap2-2026-0429-003",
+  "protocol": "AP2",
+  "protocol_artifacts": [
+    {
+      "type": "ap2_authorization_hash",
+      "hash": "9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d"
+    },
+    {
+      "type": "ap2_consent_token_hash",
+      "hash": "d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1"
+    }
+  ],
+  "payment_reference": {
+    "psp": "example_psp",
+    "ref": "DEMO-2026-0429-003"
+  },
+  "risk_signals": [
+    {
+      "signal_type": "velocity_check",
+      "value": "normal",
+      "source": "example_fraud_provider"
+    },
+    {
+      "signal_type": "kyc_status",
+      "value": "verified",
+      "source": "example_identity_provider"
+    },
+    {
+      "signal_type": "behavioural_biometrics",
+      "value": "match",
+      "source": "example_biometrics_provider"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "example_fraud_provider",
+      "assertion_type": "fraud_score",
+      "score": 0.91,
+      "score_range": "0-1",
+      "ts": 1745891199,
+      "confidence": "high",
+      "evidence_hash": "3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e"
+    },
+    {
+      "provider": "example_identity_provider",
+      "assertion_type": "identity_verified",
+      "score": null,
+      "score_range": null,
+      "ts": 1745891150,
+      "confidence": "high",
+      "evidence_hash": "4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f"
+    },
+    {
+      "provider": "example_biometrics_provider",
+      "assertion_type": "behavioural_trust",
+      "score": 0.87,
+      "score_range": "0-1",
+      "ts": 1745891180,
+      "confidence": "medium",
+      "evidence_hash": "5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a"
+    }
+  ],
+  "policy_decision": "allow",
+  "liability_context": {
+    "assertor": "trusteed.xyz",
+    "scope": "commerce_transaction"
+  },
+  "consent_context": {
+    "consent_hash": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "scope": "purchase_and_data_processing_consent",
+    "ts": 1745891000
+  },
+  "privacy_classification": {
+    "contains_pii": false,
+    "retention_days": 365,
+    "jurisdiction": "US"
+  },
+  "verification_methods": [
+    {
+      "type": "jwks",
+      "value": "https://trusteed.xyz/.well-known/jwks.json"
+    }
+  ],
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": "f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+  "attachments": []
+}

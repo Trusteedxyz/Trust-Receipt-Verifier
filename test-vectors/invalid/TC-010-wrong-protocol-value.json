@@ -1,0 +1,57 @@
+{
+  "_test_hint": "TC-010: Two enum violations. (1) 'protocol' is set to 'INVALID_PROTOCOL', which is not in the allowed enum: x402 | AP2 | ACP | MCP | UCP | MCAP. (2) 'policy_decision' is set to 'maybe', which is not in the allowed enum: allow | deny | review | challenge. Sign this payload and expect the verifier to return failure code: schema_invalid.",
+  "receipt_id": "d0e1f2a3-b4c5-6789-defa-789000000009",
+  "schema_version": "1.0",
+  "issued_at": 1745910600,
+  "expires_at": 1777446600,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-shop-demo-10",
+  "agent_id": "agent-gpt-4o-session-yza567",
+  "agent_provider": "openai",
+  "user_intent_hash": "5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e",
+  "cart_hash": null,
+  "order_hash": null,
+  "transaction_id": "txn-wrongenum-2026-0429-010",
+  "protocol": "INVALID_PROTOCOL",
+  "protocol_artifacts": [
+    {
+      "type": "unknown_artifact",
+      "hash": "6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f"
+    }
+  ],
+  "payment_reference": null,
+  "risk_signals": [
+    {
+      "signal_type": "velocity_check",
+      "value": "normal",
+      "source": "unknown"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "unknown_provider",
+      "assertion_type": "fraud_score",
+      "score": 0.75,
+      "score_range": "0-1",
+      "ts": 1745910599,
+      "confidence": "low"
+    }
+  ],
+  "policy_decision": "maybe",
+  "liability_context": null,
+  "consent_context": null,
+  "privacy_classification": {
+    "contains_pii": false,
+    "retention_days": 90,
+    "jurisdiction": "US"
+  },
+  "verification_methods": [
+    {
+      "type": "jwks",
+      "value": "https://trusteed.xyz/.well-known/jwks.json"
+    }
+  ],
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": null,
+  "attachments": []
+}

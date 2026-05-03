@@ -1,0 +1,382 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://trusteed.xyz/schemas/trust-receipt/v1.0",
+  "title": "TrustReceipt",
+  "description": "Cross-protocol evidence receipt for agentic commerce transactions",
+  "version": "1.0",
+  "type": "object",
+  "required": [
+    "receipt_id",
+    "schema_version",
+    "issued_at",
+    "expires_at",
+    "issuer",
+    "merchant_id",
+    "agent_id",
+    "agent_provider",
+    "user_intent_hash",
+    "protocol",
+    "protocol_artifacts",
+    "risk_signals",
+    "trust_provider_assertions",
+    "policy_decision",
+    "verification_methods",
+    "kid",
+    "attachments"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this receipt (UUID v4)"
+    },
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "TrustReceipt schema version"
+    },
+    "issued_at": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix timestamp (seconds) when the receipt was issued"
+    },
+    "expires_at": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix timestamp (seconds) when the receipt expires"
+    },
+    "issuer": {
+      "type": "string",
+      "description": "Issuer domain, e.g. trusteed.xyz or merchant domain"
+    },
+    "merchant_id": {
+      "type": "string",
+      "description": "Merchant identifier"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Agent session or instance identifier"
+    },
+    "agent_provider": {
+      "type": "string",
+      "description": "Agent provider, e.g. anthropic, openai, google"
+    },
+    "user_intent_hash": {
+      "type": "string",
+      "description": "SHA-256 hex digest of the user intent text"
+    },
+    "cart_hash": {
+      "oneOf": [{ "type": "string" }, { "type": "null" }],
+      "description": "SHA-256 hex digest of the cart contents (optional)"
+    },
+    "order_hash": {
+      "oneOf": [{ "type": "string" }, { "type": "null" }],
+      "description": "SHA-256 hex digest of the order (optional)"
+    },
+    "transaction_id": {
+      "oneOf": [{ "type": "string" }, { "type": "null" }],
+      "description": "Platform transaction ID (optional)"
+    },
+    "protocol": {
+      "type": "string",
+      "enum": ["x402", "AP2", "ACP", "MCP", "UCP", "MCAP"],
+      "description": "Agentic commerce protocol used for this transaction"
+    },
+    "protocol_artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ProtocolArtifact" },
+      "description": "Protocol-specific cryptographic artifacts"
+    },
+    "payment_reference": {
+      "oneOf": [
+        { "$ref": "#/definitions/PaymentReference" },
+        { "type": "null" }
+      ],
+      "description": "Payment processor reference (no raw payment data)"
+    },
+    "risk_signals": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/RiskSignal" },
+      "description": "Normalized risk signals from fraud/trust providers"
+    },
+    "trust_provider_assertions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/TrustProviderAssertion" },
+      "description": "Assertions from trust and fraud score providers"
+    },
+    "policy_decision": {
+      "type": "string",
+      "enum": ["allow", "deny", "review", "challenge"],
+      "description": "Outcome of the policy evaluation for this transaction"
+    },
+    "liability_context": {
+      "oneOf": [
+        { "$ref": "#/definitions/LiabilityContext" },
+        { "type": "null" }
+      ],
+      "description": "Liability assertor and scope (optional)"
+    },
+    "consent_context": {
+      "oneOf": [{ "$ref": "#/definitions/ConsentContext" }, { "type": "null" }],
+      "description": "User consent record (optional)"
+    },
+    "privacy_classification": {
+      "oneOf": [
+        { "$ref": "#/definitions/PrivacyClassification" },
+        { "type": "null" }
+      ],
+      "description": "Privacy and data classification (optional)"
+    },
+    "verification_methods": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/VerificationMethod" },
+      "description": "Methods to verify the receipt signature"
+    },
+    "kid": {
+      "type": "string",
+      "description": "Key ID used to sign this receipt (must match a JWKS entry)"
+    },
+    "hash_chain_prev": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        { "type": "null" }
+      ],
+      "description": "SHA-256 hex digest of the previous receipt in the audit chain (optional)"
+    },
+    "attachments": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Attachment" },
+      "description": "Supporting evidence attachments"
+    },
+    "signature": {
+      "type": "string",
+      "description": "JWS compact signature (populated when issued as JWS)"
+    }
+  },
+  "definitions": {
+    "ProtocolArtifact": {
+      "type": "object",
+      "title": "ProtocolArtifact",
+      "description": "A protocol-specific cryptographic artifact associated with this transaction",
+      "required": ["type", "hash"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Artifact type identifier, e.g. mcap_consent_hash, permit2_hash"
+        },
+        "hash": {
+          "type": "string",
+          "description": "SHA-256 hex digest of the artifact"
+        },
+        "ref": {
+          "type": "string",
+          "description": "Optional external reference for the artifact (e.g. on-chain tx hash)"
+        }
+      }
+    },
+    "PaymentReference": {
+      "type": "object",
+      "title": "PaymentReference",
+      "description": "Payment processor reference — no raw card or account data",
+      "required": ["psp", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "psp": {
+          "type": "string",
+          "description": "Payment service provider name, e.g. stripe, mastercard, paypal"
+        },
+        "ref": {
+          "type": "string",
+          "description": "PSP-assigned payment reference or transaction ID"
+        }
+      }
+    },
+    "RiskSignal": {
+      "type": "object",
+      "title": "RiskSignal",
+      "description": "A normalized risk signal from a fraud or trust provider",
+      "required": ["signal_type", "value", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "signal_type": {
+          "type": "string",
+          "description": "Signal category, e.g. velocity_check, device_fingerprint"
+        },
+        "value": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" }
+          ],
+          "description": "Signal value (string, number, or boolean)"
+        },
+        "source": {
+          "type": "string",
+          "description": "Provider that produced this signal, e.g. clearsale, stripe"
+        }
+      }
+    },
+    "TrustProviderAssertion": {
+      "type": "object",
+      "title": "TrustProviderAssertion",
+      "description": "An assertion from a trust, KYC, or fraud score provider",
+      "required": ["provider", "assertion_type", "ts", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Provider name, e.g. clearsale, trulioo, stripe_radar"
+        },
+        "assertion_type": {
+          "type": "string",
+          "description": "Assertion category. Well-known values: kyc, fraud_score, agent_trust, payment_trust, identity. Provider-specific extensions allowed.",
+          "examples": [
+            "kyc",
+            "fraud_score",
+            "agent_trust",
+            "payment_trust",
+            "identity",
+            "identity_verified",
+            "behavioural_trust",
+            "kyapay_agent_identity"
+          ]
+        },
+        "score": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            { "type": "null" }
+          ],
+          "description": "Normalized score in [0, 1] range (null if not applicable)"
+        },
+        "score_range": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }],
+          "description": "Human-readable score range, e.g. 0-1, 0-1000 (null if not applicable)"
+        },
+        "ts": {
+          "type": "integer",
+          "description": "Unix timestamp (seconds) when this assertion was produced"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Provider confidence in this assertion"
+        },
+        "evidence_hash": {
+          "type": "string",
+          "description": "SHA-256 hex digest of supporting evidence (optional)"
+        }
+      }
+    },
+    "VerificationMethod": {
+      "type": "object",
+      "title": "VerificationMethod",
+      "description": "A method by which the receipt signature can be verified",
+      "required": ["type", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["jwks", "did", "key_id"],
+          "description": "Verification method type"
+        },
+        "value": {
+          "type": "string",
+          "description": "Method-specific value: JWKS URL, DID, or key ID string"
+        }
+      }
+    },
+    "LiabilityContext": {
+      "type": "object",
+      "title": "LiabilityContext",
+      "description": "Liability assertion scope for this transaction",
+      "required": ["assertor", "scope"],
+      "additionalProperties": false,
+      "properties": {
+        "assertor": {
+          "type": "string",
+          "description": "Entity making the liability assertion, e.g. trusteed.xyz"
+        },
+        "scope": {
+          "type": "string",
+          "description": "Scope of the liability assertion, e.g. commerce_transaction"
+        }
+      }
+    },
+    "ConsentContext": {
+      "type": "object",
+      "title": "ConsentContext",
+      "description": "User consent record bound to this transaction",
+      "required": ["consent_hash", "scope", "ts"],
+      "additionalProperties": false,
+      "properties": {
+        "consent_hash": {
+          "type": "string",
+          "description": "SHA-256 hex digest of the consent record"
+        },
+        "scope": {
+          "type": "string",
+          "description": "Consent scope, e.g. purchase_consent, gdpr_article6_1b_contract_necessity"
+        },
+        "ts": {
+          "type": "integer",
+          "description": "Unix timestamp (seconds) when consent was recorded"
+        }
+      }
+    },
+    "PrivacyClassification": {
+      "type": "object",
+      "title": "PrivacyClassification",
+      "description": "Data privacy classification for this receipt",
+      "required": ["contains_pii"],
+      "additionalProperties": false,
+      "properties": {
+        "contains_pii": {
+          "type": "boolean",
+          "description": "Whether this receipt payload contains personally identifiable information"
+        },
+        "retention_days": {
+          "type": "integer",
+          "description": "Required data retention period in days (optional)"
+        },
+        "jurisdiction": {
+          "type": "string",
+          "description": "Applicable legal jurisdiction, e.g. EU, US (optional)"
+        }
+      }
+    },
+    "Attachment": {
+      "type": "object",
+      "title": "Attachment",
+      "description": "A supporting evidence file attached to this receipt",
+      "required": ["name", "content_type", "hash"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "File name of the attachment"
+        },
+        "content_type": {
+          "type": "string",
+          "description": "MIME type of the attachment, e.g. application/pdf"
+        },
+        "hash": {
+          "type": "string",
+          "description": "SHA-256 hex digest of the attachment content"
+        },
+        "uri": {
+          "type": "string",
+          "description": "Optional URI where the attachment can be retrieved"
+        }
+      }
+    }
+  }
+}

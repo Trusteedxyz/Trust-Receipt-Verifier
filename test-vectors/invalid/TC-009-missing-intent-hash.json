@@ -1,0 +1,56 @@
+{
+  "_test_hint": "TC-009: Two required fields are missing entirely. (1) 'user_intent_hash' is absent from the JSON object (not null, not empty — the key does not exist). (2) 'verification_methods' is absent. Both are required by the schema. Sign this malformed payload and expect the verifier to return failure code: schema_invalid before any signature or expiry check.",
+  "receipt_id": "c9d0e1f2-a3b4-5678-cdef-678900000008",
+  "schema_version": "1.0",
+  "issued_at": 1745907400,
+  "expires_at": 1777443400,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-shop-demo-09",
+  "agent_id": "agent-claude-opus-4-7-session-vwx234",
+  "agent_provider": "anthropic",
+  "cart_hash": null,
+  "order_hash": null,
+  "transaction_id": "txn-missingfields-2026-0429-009",
+  "protocol": "UCP",
+  "protocol_artifacts": [
+    {
+      "type": "ucp_authorization_hash",
+      "hash": "4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d"
+    }
+  ],
+  "payment_reference": {
+    "psp": "paypal",
+    "ref": "PAY-2026-0429-DEMO009-001"
+  },
+  "risk_signals": [
+    {
+      "signal_type": "velocity_check",
+      "value": "normal",
+      "source": "paypal"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "paypal",
+      "assertion_type": "fraud_score",
+      "score": 0.88,
+      "score_range": "0-1",
+      "ts": 1745907399,
+      "confidence": "high"
+    }
+  ],
+  "policy_decision": "allow",
+  "liability_context": {
+    "assertor": "trusteed.xyz",
+    "scope": "commerce_transaction"
+  },
+  "consent_context": null,
+  "privacy_classification": {
+    "contains_pii": false,
+    "retention_days": 180,
+    "jurisdiction": "US"
+  },
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": null,
+  "attachments": []
+}

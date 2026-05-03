@@ -1,0 +1,86 @@
+{
+  "_demo_note": "Fictional example data only. Provider names are illustrative and do not represent real integrations or endorsements.",
+  "receipt_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "1.0",
+  "issued_at": 1745884800,
+  "expires_at": 1777420800,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-shop-demo-01",
+  "agent_id": "agent-claude-opus-4-7-session-xyz",
+  "agent_provider": "anthropic",
+  "user_intent_hash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+  "cart_hash": "b94f6f125c79e3a5ffaa826f584c10d52ada669e6762051b826b55776d05a15c",
+  "order_hash": "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9068",
+  "transaction_id": "txn-mcap-2026-0429-001",
+  "protocol": "MCAP",
+  "protocol_artifacts": [
+    {
+      "type": "mcap_consent_hash",
+      "hash": "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b"
+    },
+    {
+      "type": "mcap_nonce",
+      "hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a8d"
+    }
+  ],
+  "payment_reference": {
+    "psp": "example_payment_network",
+    "ref": "DEMO-2026-0429-001"
+  },
+  "risk_signals": [
+    {
+      "signal_type": "velocity_check",
+      "value": "normal",
+      "source": "example_fraud_provider"
+    },
+    {
+      "signal_type": "device_fingerprint",
+      "value": "verified",
+      "source": "example_payment_network"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "example_fraud_provider",
+      "assertion_type": "fraud_score",
+      "score": 0.94,
+      "score_range": "0-1",
+      "ts": 1745884799,
+      "confidence": "high",
+      "evidence_hash": "abc123def456abc123def456abc123def456abc123def456abc123def456abcd12"
+    },
+    {
+      "provider": "example_payment_network",
+      "assertion_type": "agent_trust",
+      "score": 0.88,
+      "score_range": "0-1",
+      "ts": 1745884797,
+      "confidence": "high",
+      "evidence_hash": "fe9a23bc11d047e2fe9a23bc11d047e2fe9a23bc11d047e2fe9a23bc11d047e2"
+    }
+  ],
+  "policy_decision": "allow",
+  "liability_context": {
+    "assertor": "trusteed.xyz",
+    "scope": "commerce_transaction"
+  },
+  "consent_context": {
+    "consent_hash": "c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00",
+    "scope": "purchase_consent",
+    "ts": 1745884700
+  },
+  "privacy_classification": {
+    "contains_pii": false,
+    "retention_days": 365,
+    "jurisdiction": "EU"
+  },
+  "verification_methods": [
+    {
+      "type": "jwks",
+      "value": "https://trusteed.xyz/.well-known/jwks.json"
+    }
+  ],
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": null,
+  "attachments": []
+}

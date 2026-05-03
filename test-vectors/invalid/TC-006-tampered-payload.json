@@ -1,0 +1,63 @@
+{
+  "_test_hint": "TC-006: Two schema violations. (1) user_intent_hash is an empty string, which fails the non-empty SHA-256 hex constraint. (2) schema_version is '2.0', which is not a recognised version. Expected failure code: schema_invalid. The verifier must reject this payload before any signature check.",
+  "receipt_id": "f6a7b8c9-d0e1-2345-fabc-345678900005",
+  "schema_version": "2.0",
+  "issued_at": 1745901000,
+  "expires_at": 1777437000,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-shop-demo-06",
+  "agent_id": "agent-claude-opus-4-7-session-mno345",
+  "agent_provider": "anthropic",
+  "user_intent_hash": "",
+  "cart_hash": "8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d",
+  "order_hash": null,
+  "transaction_id": "txn-tampered-2026-0429-006",
+  "protocol": "MCAP",
+  "protocol_artifacts": [
+    {
+      "type": "mcap_consent_hash",
+      "hash": "9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e"
+    }
+  ],
+  "payment_reference": {
+    "psp": "mastercard",
+    "ref": "MC-2026-0429-DEMO006"
+  },
+  "risk_signals": [
+    {
+      "signal_type": "velocity_check",
+      "value": "normal",
+      "source": "clearsale"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "clearsale",
+      "assertion_type": "fraud_score",
+      "score": 0.9,
+      "score_range": "0-1",
+      "ts": 1745900999,
+      "confidence": "high"
+    }
+  ],
+  "policy_decision": "allow",
+  "liability_context": {
+    "assertor": "trusteed.xyz",
+    "scope": "commerce_transaction"
+  },
+  "consent_context": null,
+  "privacy_classification": {
+    "contains_pii": false,
+    "retention_days": 365,
+    "jurisdiction": "US"
+  },
+  "verification_methods": [
+    {
+      "type": "jwks",
+      "value": "https://trusteed.xyz/.well-known/jwks.json"
+    }
+  ],
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": null,
+  "attachments": []
+}

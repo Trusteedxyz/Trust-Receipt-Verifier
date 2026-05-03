@@ -1,0 +1,84 @@
+{
+  "_demo_note": "Fictional example data only. Provider names are illustrative and do not represent real integrations or endorsements.",
+  "receipt_id": "e5f6a7b8-c9d0-1234-efab-234567890004",
+  "schema_version": "1.0",
+  "issued_at": 1745897600,
+  "expires_at": 1777433600,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-shop-demo-05",
+  "agent_id": "agent-claude-sonnet-4-6-session-jkl012",
+  "agent_provider": "anthropic",
+  "user_intent_hash": "0ad1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1",
+  "cart_hash": "7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c",
+  "order_hash": "1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f",
+  "transaction_id": "txn-acp-2026-0429-005",
+  "protocol": "ACP",
+  "protocol_artifacts": [
+    {
+      "type": "acp_credential_hash",
+      "hash": "2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a"
+    },
+    {
+      "type": "acp_nonce",
+      "hash": "3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b"
+    }
+  ],
+  "payment_reference": {
+    "psp": "example_agent_trust_provider",
+    "ref": "DEMO-2026-0429-005"
+  },
+  "risk_signals": [
+    {
+      "signal_type": "agent_identity_verified",
+      "value": "true",
+      "source": "example_agent_trust_provider"
+    },
+    {
+      "signal_type": "spending_limit_check",
+      "value": "within_limit",
+      "source": "example_agent_trust_provider"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "example_agent_trust_provider",
+      "assertion_type": "agent_trust",
+      "score": 0.97,
+      "score_range": "0-1",
+      "ts": 1745897599,
+      "confidence": "high",
+      "evidence_hash": "4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c"
+    }
+  ],
+  "policy_decision": "allow",
+  "liability_context": {
+    "assertor": "trusteed.xyz",
+    "scope": "commerce_transaction"
+  },
+  "consent_context": {
+    "consent_hash": "beefdead00beefdead00beefdead00beefdead00beefdead00beefdead00beef",
+    "scope": "acp_agent_spending_consent",
+    "ts": 1745897500
+  },
+  "privacy_classification": {
+    "contains_pii": false,
+    "retention_days": 365,
+    "jurisdiction": "US"
+  },
+  "verification_methods": [
+    {
+      "type": "jwks",
+      "value": "https://trusteed.xyz/.well-known/jwks.json"
+    }
+  ],
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": "5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+  "attachments": [
+    {
+      "name": "acp-transaction-evidence.pdf",
+      "content_type": "application/pdf",
+      "hash": "6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+      "uri": "https://evidence.trusteed.xyz/receipts/e5f6a7b8-c9d0-1234-efab-234567890004/acp-evidence.pdf"
+    }
+  ]
+}

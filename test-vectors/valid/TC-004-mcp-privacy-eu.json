@@ -1,0 +1,74 @@
+{
+  "_demo_note": "Fictional example data only. Provider names are illustrative and do not represent real integrations or endorsements.",
+  "receipt_id": "d4e5f6a7-b8c9-0123-defa-123456789003",
+  "schema_version": "1.0",
+  "issued_at": 1745894400,
+  "expires_at": 1777430400,
+  "issuer": "trusteed.xyz",
+  "merchant_id": "merchant-eu-shop-demo-04",
+  "agent_id": "agent-claude-opus-4-7-session-ghi789",
+  "agent_provider": "anthropic",
+  "user_intent_hash": "f9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0",
+  "cart_hash": "6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b",
+  "order_hash": null,
+  "transaction_id": null,
+  "protocol": "MCP",
+  "protocol_artifacts": [
+    {
+      "type": "mcp_tool_call_hash",
+      "hash": "b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9"
+    },
+    {
+      "type": "mcp_session_id_hash",
+      "hash": "c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0"
+    }
+  ],
+  "payment_reference": null,
+  "risk_signals": [
+    {
+      "signal_type": "gdpr_consent_verified",
+      "value": "true",
+      "source": "trusteed"
+    },
+    {
+      "signal_type": "age_verification",
+      "value": "18+",
+      "source": "example_identity_provider"
+    }
+  ],
+  "trust_provider_assertions": [
+    {
+      "provider": "example_identity_provider",
+      "assertion_type": "identity_verified",
+      "score": null,
+      "score_range": null,
+      "ts": 1745894399,
+      "confidence": "high",
+      "evidence_hash": "e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1"
+    }
+  ],
+  "policy_decision": "review",
+  "liability_context": {
+    "assertor": "trusteed.xyz",
+    "scope": "identity_verification_pending"
+  },
+  "consent_context": {
+    "consent_hash": "cafebabe00cafebabe00cafebabe00cafebabe00cafebabe00cafebabe00cafe",
+    "scope": "gdpr_article6_1b_contract_necessity",
+    "ts": 1745894300
+  },
+  "privacy_classification": {
+    "contains_pii": true,
+    "retention_days": 90,
+    "jurisdiction": "EU"
+  },
+  "verification_methods": [
+    {
+      "type": "jwks",
+      "value": "https://trusteed.xyz/.well-known/jwks.json"
+    }
+  ],
+  "kid": "tr-ed25519-2026-04-29-demo",
+  "hash_chain_prev": null,
+  "attachments": []
+}

@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "created": "2026-04-29",
+  "description": "TrustReceipt conformance test vectors. A verifier claiming TrustReceipt conformance must produce the exact expected outcome for all 10 vectors.",
+  "test_jwks": {
+    "description": "Use any Ed25519 key pair when running these vectors. The kid in each valid vector and in TC-007 must match the kid in your test JWK. TC-008 deliberately uses a mismatched kid.",
+    "recommended_kid": "tr-ed25519-2026-04-29-demo"
+  },
+  "failure_codes": {
+    "schema_invalid": "The payload does not conform to the TrustReceipt 1.0 schema (missing required field, bad enum, bad type, or unknown schema_version).",
+    "expired": "The current time is after expires_at.",
+    "unknown_kid": "The kid in the JWS header is not present in the verifier's JWKS.",
+    "signature_invalid": "The JWS signature does not verify against the public key for the given kid."
+  },
+  "vectors": [
+    {
+      "id": "TC-001",
+      "file": "valid/TC-001-mcap-allow.json",
+      "expected": "valid",
+      "protocol": "MCAP",
+      "policy_decision": "allow",
+      "description": "Valid MCAP receipt with policy_decision=allow, two trust provider assertions (ClearSale fraud score + Mastercard AP agent trust), EU GDPR privacy classification, cart_hash and order_hash present, empty hash_chain_prev."
+    },
+    {
+      "id": "TC-002",
+      "file": "valid/TC-002-x402-allow.json",
+      "expected": "valid",
+      "protocol": "x402",
+      "policy_decision": "allow",
+      "description": "Valid x402 receipt with policy_decision=allow, payment_reference present (Stripe), single Stripe Radar trust assertion (score 0.92), no PII, OpenAI agent provider, permit2 and ERC-20 transfer artifacts."
+    },
+    {
+      "id": "TC-003",
+      "file": "valid/TC-003-ap2-multi-provider.json",
+      "expected": "valid",
+      "protocol": "AP2",
+      "policy_decision": "allow",
+      "description": "Valid AP2 receipt with policy_decision=allow, three trust providers (ClearSale + Trulioo identity + NeuroID behavioural), consent_context present, hash_chain_prev linking to a prior receipt, Anthropic agent."
+    },
+    {
+      "id": "TC-004",
+      "file": "valid/TC-004-mcp-privacy-eu.json",
+      "expected": "valid",
+      "protocol": "MCP",
+      "policy_decision": "review",
+      "description": "Valid MCP receipt with policy_decision=review (transaction under manual review, no payment_reference yet), contains_pii=true, EU jurisdiction, 90-day retention, GDPR consent scope, Trulioo identity assertion."
+    },
+    {
+      "id": "TC-005",
+      "file": "valid/TC-005-acp-hash-chain.json",
+      "expected": "valid",
+      "protocol": "ACP",
+      "policy_decision": "allow",
+      "description": "Valid ACP receipt with policy_decision=allow, Skyfire KYAPay assertion, hash_chain_prev present (audit continuity), one attachment (PDF evidence file), consent_context present."
+    },
+    {
+      "id": "TC-006",
+      "file": "invalid/TC-006-tampered-payload.json",
+      "expected": "invalid",
+      "failure_code": "schema_invalid",
+      "protocol": "MCAP",
+      "description": "Tampered payload: user_intent_hash is empty string (violates non-empty constraint) AND schema_version is '2.0' (unknown version). Verifier must reject at schema validation before signature check."
+    },
+    {
+      "id": "TC-007",
+      "file": "invalid/TC-007-expired-receipt.json",
+      "expected": "invalid",
+      "failure_code": "expired",
+      "protocol": "MCP",
+      "description": "Expired receipt: issued_at=1700000000 (Nov 2023), expires_at=1700003600 (one hour later). Sign with a valid test key. Verifier must pass signature check and then reject on expiry."
+    },
+    {
+      "id": "TC-008",
+      "file": "invalid/TC-008-wrong-kid.json",
+      "expected": "invalid",
+      "failure_code": "unknown_kid",
+      "protocol": "x402",
+      "description": "kid='nonexistent-key-id-abc123' which does not exist in the test JWKS. Set the same kid in both the JWS header and payload field when building the test token. Verifier must fail key lookup."
+    },
+    {
+      "id": "TC-009",
+      "file": "invalid/TC-009-missing-intent-hash.json",
+      "expected": "invalid",
+      "failure_code": "schema_invalid",
+      "protocol": "UCP",
+      "description": "Two required fields are absent: user_intent_hash (key does not exist, not null) and verification_methods (key does not exist). Verifier must reject at schema validation."
+    },
+    {
+      "id": "TC-010",
+      "file": "invalid/TC-010-wrong-protocol-value.json",
+      "expected": "invalid",
+      "failure_code": "schema_invalid",
+      "protocol": "INVALID_PROTOCOL",
+      "description": "Two enum violations: protocol='INVALID_PROTOCOL' and policy_decision='maybe'. Neither value is in the allowed enum. Verifier must reject at schema validation."
+    }
+  ]
+}
