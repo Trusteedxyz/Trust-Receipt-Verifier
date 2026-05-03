@@ -71,16 +71,29 @@ const testJwks = { keys: [publicJwk] };
 
 ```typescript
 import { readFileSync } from "fs";
-import { SignJWT } from "jose";
+import { CompactSign, importJWK } from "jose";
 
 const payload = JSON.parse(
   readFileSync("valid/TC-001-mcap-allow.json", "utf8")
-);
+) as Record<string, unknown>;
 
-const jws = await new SignJWT(payload)
-  .setProtectedHeader({ alg: "EdDSA", kid: payload.kid })
-  .sign(privateKey);
+// For valid vectors, refresh timestamps so they don't expire between test runs
+const now = Math.floor(Date.now() / 1000);
+const payloadToSign = {
+  ...payload,
+  issued_at: now,
+  expires_at: now + 3600,
+};
+
+const privKey = await importJWK(privateJwk, "EdDSA");
+const jws = await new CompactSign(
+  new TextEncoder().encode(JSON.stringify(payloadToSign))
+)
+  .setProtectedHeader({ alg: "EdDSA", kid: KID })
+  .sign(privKey);
 ```
+
+> **Nota sobre timestamps**: los archivos vectoriales contienen `issued_at` y `expires_at` estáticos (fecha de creación del vector). Para vectores válidos (TC-001 a TC-005), refresca los timestamps a la hora actual antes de firmar, o el verifier devolverá `expired`. Los vectores inválidos (TC-006 a TC-010) deben usarse con sus timestamps originales — TC-007 en particular requiere `expires_at` en el pasado para ejercitar el camino `expired`.
 
 ### Step 4 — Call the verifier
 
@@ -113,7 +126,7 @@ Sign the payload with the normal test key (kid matches). The verifier must first
 
 ### TC-008 — unknown_kid
 
-Sign the payload with any real test private key, but set `kid: 'nonexistent-key-id-abc123'` in both the JWS protected header and leave the `kid` field in the payload as-is. Do not add the signing key's real kid to the test JWKS. The verifier must fail key lookup. Expected result: `{ valid: false, error: 'unknown_kid' }`.
+Sign the payload with any real test private key whose `kid` is not present in the test JWKS (i.e., do not add the signing key's public key to `testJwks`). Set `kid: 'nonexistent-key-id-abc123'` in the JWS protected header. The verifier fails at step 2 (key lookup), before signature verification is attempted. Expected result: `{ valid: false, error: 'unknown_kid' }`.
 
 ---
 
@@ -129,9 +142,10 @@ A verifier earns the **TrustReceipt Conformant** badge when it passes all 10 vec
 | TC-008 rejected as `unknown_kid`           | Key lookup failure on JWKS                            |
 | TC-009 rejected as `schema_invalid`        | Missing required fields detected                      |
 | TC-010 rejected as `schema_invalid`        | Bad enum values rejected                              |
-| Schema validation precedes signature check | For TC-006, TC-009, TC-010                            |
+| Schema validation after signature check    | Step 4 after Step 3 for TC-006, TC-009, TC-010        |
 | Expiry check follows signature check       | For TC-007                                            |
 | No partial acceptance                      | A receipt is either fully valid or fully rejected     |
+| alg header must be "EdDSA"                 | Non-EdDSA alg in header rejected as invalid_jws       |
 
 ---
 
@@ -164,3 +178,7 @@ To propose additional vectors:
 2. Add the payload JSON in the correct subdirectory (`valid/` or `invalid/`).
 3. Add an entry to `vectors.json` with a new sequential TC-0xx id, expected outcome, and failure code if invalid.
 4. At least 3 maintainers must approve before a vector is merged — merged vectors become part of the normative conformance suite.
+
+---
+
+> **Script integrado**: en lugar de implementar los pasos anteriores manualmente, ejecuta `npx tsx scripts/validate-vectors.ts` desde la raíz del paquete. El script genera un keypair fresco, refresca los timestamps de vectores válidos, firma todos los vectores, llama `verifyTrustReceipt` y reporta pass/fail por vector.

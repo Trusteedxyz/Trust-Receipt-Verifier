@@ -63,15 +63,15 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 **Transaction Evidence**
 
-| Field                | Type        | Description                                          |
-| -------------------- | ----------- | ---------------------------------------------------- |
-| `user_intent_hash`   | SHA-256 hex | Hash of the user's original intent text              |
-| `cart_hash`          | SHA-256 hex | Hash of cart contents at decision time (optional)    |
-| `order_hash`         | SHA-256 hex | Hash of settled order object (optional)              |
-| `transaction_id`     | string      | Platform transaction reference (optional)            |
-| `protocol`           | enum        | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`           |
-| `protocol_artifacts` | array       | Hashes of protocol-specific evidence objects         |
-| `payment_reference`  | object      | PSP name + reference, no raw payment data (optional) |
+| Field                | Type              | Description                                                                         |
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| `user_intent_hash`   | string (non-empty) | Hash of the user's original intent text — must be non-empty (SHA-256 hex recommended) |
+| `cart_hash`          | SHA-256 hex       | Hash of cart contents at decision time (optional)                                   |
+| `order_hash`         | SHA-256 hex       | Hash of settled order object (optional)                                             |
+| `transaction_id`     | string            | Platform transaction reference (optional)                                           |
+| `protocol`           | enum              | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`                                          |
+| `protocol_artifacts` | array             | Hashes of protocol-specific evidence objects                                        |
+| `payment_reference`  | object            | PSP name + reference, no raw payment data (optional)                                |
 
 **Trust Assertions**
 
@@ -83,15 +83,15 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 **Compliance**
 
-| Field                    | Type        | Description                                       |
-| ------------------------ | ----------- | ------------------------------------------------- |
-| `liability_context`      | object      | Assertor and scope (optional)                     |
-| `consent_context`        | object      | Consent hash, scope, timestamp (optional)         |
-| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional) |
-| `verification_methods`   | array       | JWKS URL or DID for key resolution                |
-| `kid`                    | string      | Key ID used to sign this receipt                  |
-| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)        |
-| `attachments`            | array       | Named, hashed file references (optional)          |
+| Field                    | Type        | Description                                                              |
+| ------------------------ | ----------- | ------------------------------------------------------------------------ |
+| `liability_context`      | object      | Assertor and scope (optional)                                            |
+| `consent_context`        | object      | Consent hash, scope, timestamp (optional)                                |
+| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional)                        |
+| `verification_methods`   | array       | JWKS URL or DID for key resolution — at least one entry required         |
+| `kid`                    | string      | Key ID used to sign this receipt                                         |
+| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                               |
+| `attachments`            | array       | Named, hashed file references (optional)                                 |
 
 ---
 
@@ -118,10 +118,22 @@ A verifier implementation must pass all 10 test vectors to claim TrustReceipt co
 | 2     | Issuer   | Level 1 + correctly issues valid receipts                               |
 | 3     | Provider | Level 2 + co-authors ≥1 `trust_provider_assertions` type with real data |
 
-This reference implementation is Level 2 conformant. Run the suite:
+This reference implementation is Level 2 conformant. There are two ways to run the conformance suite:
+
+**(a) Unit tests** — verifies all 10 vectors using pre-built test infrastructure (10 tests):
 
 ```bash
 pnpm test
+```
+
+**(b) End-to-end JWS conformance** — generates a fresh keypair, signs all 10 vectors, calls `verifyTrustReceipt`, and reports pass/fail per vector:
+
+```bash
+# Via CLI (requires the package to be built first)
+trust-receipt conformance
+
+# Or directly with tsx (no build required)
+npx tsx scripts/validate-vectors.ts
 ```
 
 Add the badge to your project once all 10 pass:
@@ -151,7 +163,7 @@ packages/trust-receipt-verifier/
 │   ├── valid/                       — TC-001 through TC-005
 │   └── invalid/                     — TC-006 through TC-010
 ├── bin/
-│   └── trust-receipt.js             — CLI: verify, inspect, generate-key, conformance
+│   └── trust-receipt.ts (source) → dist/bin/trust-receipt.js (compiled) — CLI: verify, inspect, generate-key, conformance
 └── demo/                            — runnable demo scripts
 ```
 
@@ -182,6 +194,8 @@ const jws = await issueTrustReceipt({
 });
 ```
 
+> **Canonicalización**: el payload se serializa con RFC 8785 (claves ordenadas, sin whitespace) antes de firmar, garantizando que `SHA-256(payload)` sea idéntico en cualquier implementación conforme.
+
 ## CLI
 
 ```bash
@@ -194,7 +208,7 @@ trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwk
 # Inspect a receipt without verifying the signature
 trust-receipt inspect receipt.jws
 
-# Run the full conformance suite
+# Run full end-to-end conformance suite (signs + verifies all 10 vectors)
 trust-receipt conformance
 ```
 

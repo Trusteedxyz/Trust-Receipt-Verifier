@@ -28,6 +28,9 @@ if (result.valid) {
 npx trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwks.json
 npx trust-receipt inspect receipt.jws
 npx trust-receipt generate-key
+
+# Run full end-to-end conformance suite (signs + verifies all 10 vectors)
+npx trust-receipt conformance
 ```
 
 ## Conformance test
