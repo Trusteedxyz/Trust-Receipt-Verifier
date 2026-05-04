@@ -100,7 +100,7 @@ A TrustReceipt payload contains 24 fields across five groups:
 | Protocol                                                                                                  | Artifact mapping | Primary artifact types                                  |
 | --------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------- |
 | [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Defined          | `mcap_consent_hash`, `mcap_nonce`                       |
-| [x402](https://github.com/coinbase/x402)                                                                  | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
+| [x402](https://github.com/x402-foundation/x402)                                                           | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
 | [AP2](https://github.com/google-agentic-commerce/AP2)                                                     | Defined          | `mandate_hash`, `ap2_consent_hash`                      |
 | [MCP](https://modelcontextprotocol.io)                                                                    | Defined          | `mcp_call_hash`, `tool_call_hash`                       |
 | [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                             | Defined          | `acp_session_hash`, `acp_policy_hash`                   |
