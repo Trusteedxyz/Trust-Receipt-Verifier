@@ -1,0 +1,50 @@
+{
+  "envelope": {
+    "envelope_metadata": {
+      "created_at": 1777593601,
+      "legal_posture": "ades_candidate_no_tsa",
+      "legal_posture_warnings": [
+        {
+          "evidence_ref": "vault://incident/tsa-down-2026-05-01",
+          "reason": "tsa_unavailable",
+          "since": 1777593600
+        }
+      ],
+      "receipt_id": "55d1f8a9-aea6-4ffc-9f41-0701d49d1ea0"
+    },
+    "receipt": "eyJhbGciOiJFZERTQSIsImtpZCI6InRyLWVkMjU1MTktdjExLXRlc3QtMjAyNiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6ImFnZW50LWJ1eWVyLXRlc3QtMDE1IiwiYWdlbnRfcHJvdmlkZXIiOiJBbnRocm9waWMiLCJhdXRob3JpemF0aW9uX2V2aWRlbmNlIjp7ImV4ZWN1dGlvbl9oYXNoIjoic2hhMjU2OjY2ODg4ZmVjZWMwNzAyODYwZGMwNTY5OGI4NmRhZWQ1YzYyYjBiOTZjMjg1MDIyNGRmOTBjZDAyMTg0NGZjMjkiLCJpbnRlbnRfaG1hY19rZXlfdmVyc2lvbiI6MSwicHJvdG9jb2xfYXV0aG9yaXphdGlvbl9yZWYiOiJhcDItbWFuZGF0ZS10ZXN0LTAwMSIsInVzZXJfaW50ZW50X2hhc2giOiJobWFjLXNoYTI1Njo1NDE4MmQ2Zjc1MGU2MDVmYzk3NDFjYzYzN2ExYmEzNmJkZTE3M2E3OGU0MTQ1MjY4YTAzNGJiYTY4NjcwZWZkIn0sImF1dGhvcml6YXRpb25fc2NoZW1lIjoiYXAyX21hbmRhdGVfandzIiwiYnV5ZXJfYWdlbnRfY29uc2VudF9jb250ZXh0Ijp7ImFnZW50X2F1dGhvcml6YXRpb25fY2hhaW4iOlt7ImFjdG9yIjoidXNlciIsImhhc2giOiJobWFjLXNoYTI1NjplNWUzN2ZhMWEzMjNjYjI3ZDg0YzJkZDBhYTNkNzVlMjM1ODU5MGRmMjZhMzRmYTQ3MzlhYTZhNjE2MDE0ZGZjIiwibWV0aG9kIjoiT0F1dGgrTUZBIiwidGltZXN0YW1wIjoxNzc3NTkzNTQwfSx7ImFjdG9yIjoiYWdlbnQiLCJoYXNoIjoiaG1hYy1zaGEyNTY6MDVjZDk3ZjJhMWJjNzYyZmJhZWVlMTk4ZGZkZDNlMDc5MzEwM2Y3YjQ0MTY5OTNjNWJlOGYyNDNjYjM1YmE0ZiIsIm1ldGhvZCI6InJmYzk0MjFfc2lnbmF0dXJlIiwicmVmIjoiYWdlbnQtYnV5ZXItdGVzdC0wMTUiLCJ0aW1lc3RhbXAiOjE3Nzc1OTM1NDF9XSwiY29uc2VudF9kaXNjbG9zdXJlX3ZlcnNpb24iOiIxLjAuMCIsImNvbnNlbnRfZXZpZGVuY2VfcmVmIjoidmF1bHQ6Ly9jb25zZW50LzAxNSIsImNvbnNlbnRfaGFzaCI6ImhtYWMtc2hhMjU2OjQ2NWZmOTcxYzllMGMwOWZjZTFkNjQ3YmFlZWE5ZjkzODk5MDU0ZWY2NDk5ODRmNzNiOGE1YjUzN2M2OWEzZTgiLCJjb25zZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImNvbnNlbnRfdGltZXN0YW1wIjoxNzc3NTkzNTQwLCJjb25zZW50X3R5cGUiOiJleHBsaWNpdF9hY3Rpb24iLCJjb25zZW50X3dpdGhkcmF3YWxfdXJpX2hhc2giOiJzaGEyNTY6ZTNjMjEzNjgyMWRhNWJjNWNhY2ZiOWJlZWRmYjYzM2M0N2I1OTY1NjBhM2NhMzk4NDE1NjY1YzMwMTFiZWMxOCJ9LCJjb25zZW50X2V2aWRlbmNlX3JlZiI6InZhdWx0Oi8vY29uc2VudC8wMTUiLCJlc2lnbl9kaXNjbG9zdXJlX2hhc2giOiJzaGEyNTY6ZDU2YTdlMGQ1N2ZlMmVjNGFjNWIzZWFiMGVmOGJkNjZlOTM1NmYxZGVmZjlhMzA0OTYyNjdhMTBhYjNhNzA3ZSIsImVzaWduX2Rpc2Nsb3N1cmVfdmVyc2lvbiI6IjEuMC4wIiwiZXhwaXJlc19hdCI6MTc3NzY4MDAwMCwiaW50ZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImlzc3VlZF9hdCI6MTc3NzU5MzYwMCwiaXNzdWVyIjoiaHR0cHM6Ly90ZXN0LnRydXN0ZWVkLnh5eiIsImxlZ2FsX3Bvc3R1cmUiOiJhZGVzX2NhbmRpZGF0ZV9ub190c2EiLCJsZWdhbF9wb3N0dXJlX3dhcm5pbmdzIjpbeyJldmlkZW5jZV9yZWYiOiJ2YXVsdDovL2luY2lkZW50L3RzYS1kb3duLTIwMjYtMDUtMDEiLCJyZWFzb24iOiJ0c2FfdW5hdmFpbGFibGUiLCJzaW5jZSI6MTc3NzU5MzYwMH1dLCJtZXJjaGFudF9pZCI6Im1lcmNoYW50X1QwNjVfdGVzdCIsInBheW1lbnRfYXV0aG9yaXphdGlvbl9oYXNoIjoic2hhMjU2OjY2ODg4ZmVjZWMwNzAyODYwZGMwNTY5OGI4NmRhZWQ1YzYyYjBiOTZjMjg1MDIyNGRmOTBjZDAyMTg0NGZjMjkiLCJwb2xpY3lfZGVjaXNpb24iOiJhbGxvdyIsInByaXZhY3lfY2xhc3NpZmljYXRpb24iOiJwaWlfaGFzaGVkX3NhbHRlZCIsInByb3RvY29sIjoiQVAyIiwicHJvdG9jb2xfYXJ0aWZhY3RzIjpbXSwicmVjZWlwdF9pZCI6IjU1ZDFmOGE5LWFlYTYtNGZmYy05ZjQxLTA3MDFkNDlkMWVhMCIsInJlY2VpcHRfc3ViamVjdCI6ImJ1eWVyX2FnZW50Iiwic2NoZW1hX3ZlcnNpb24iOiIxLjEiLCJ1c2VyX2ludGVudF9oYXNoIjoiaG1hYy1zaGEyNTY6NTQxODJkNmY3NTBlNjA1ZmM5NzQxY2M2MzdhMWJhMzZiZGUxNzNhNzhlNDE0NTI2OGEwMzRiYmE2ODY3MGVmZCIsInZlcmlmaWNhdGlvbl9tZXRob2RzIjp7Imp3a3MiOnsia2lkIjoidHItZWQyNTUxOS12MTEtdGVzdC0yMDI2IiwidXJpIjoiaHR0cHM6Ly90ZXN0LnRydXN0ZWVkLnh5ei8ud2VsbC1rbm93bi9qd2tzLmpzb24ifSwiandrc19zaGEyNTYiOiI0MWI1MmM4OTY2NTg3YTFjOWY2YTljYTFiYWZiZWU0Y2FhNmE5MzQ1OTgxMWUwMjJiZjRhZGVkZWI5MTRiMjhmIiwidHJ1c3RfYW5jaG9yX3NoYTI1NiI6ImRkNDNiZjJjZDY1MDIzZDc5ZTQxMzU4MjI2ZWQxMTk3ZmNlYTM2YmM2OTNmMWMwZmFkZGUwZTMxOGJmZDc2YTEifX0.34XgEKzn2iXAUHZ-B-YSezZKRPtqvZuIEqGf-PyxUO_CR7jByyWSs_8s-dmNtfEGVrwf209GbrydTxI8tUAmAg",
+    "timestamp_evidence": {
+      "attempted_at": 1777593600,
+      "attempted_tsa": [
+        "https://test-tsa.trusteed.xyz/tsa",
+        "https://test-tsa-2.trusteed.xyz/tsa"
+      ],
+      "reason": "tsa_unavailable",
+      "type": "unavailable"
+    }
+  },
+  "expected": {
+    "errorCode": null,
+    "outcome": "accepted",
+    "recomputed_legal_posture": "ades_candidate_no_tsa",
+    "warnings": ["tsa_unavailable"]
+  },
+  "title": "v1.1 buyer_agent with timestamp_evidence.unavailable (fail_open path)",
+  "vector_id": "015",
+  "verify_options": {
+    "currentTime": 1777593660,
+    "expectedSubject": "buyer_agent",
+    "jwks": {
+      "keys": [
+        {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-v11-test-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "pjg4qAbmm8pTMI6d3w2PyCAj-b1tSwf23Ugzygaau2I"
+        }
+      ]
+    }
+  }
+}

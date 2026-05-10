@@ -1,0 +1,91 @@
+{
+  "envelope": {
+    "envelope_metadata": {
+      "created_at": 1778284801,
+      "legal_posture": "ades_candidate_timestamped",
+      "legal_posture_warnings": [],
+      "receipt_id": "e2a2da0f-6755-4b8a-8531-05e076c3979c"
+    },
+    "receipt": "eyJhbGciOiJFZERTQSIsImtpZCI6InRyLWVkMjU1MTktdjExLXRlc3QtMjAyNiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6ImFnZW50LWJ1eWVyLXRlc3QtMDE2IiwiYWdlbnRfcHJvdmlkZXIiOiJBbnRocm9waWMiLCJhdXRob3JpemF0aW9uX2V2aWRlbmNlIjp7ImV4ZWN1dGlvbl9oYXNoIjoic2hhMjU2OjZhNWUyNDIxYjc2MjY2OGRkMDQ2MjhjZjZlMGZhZTNmNjBmNjc3YzYxY2UyNGQ3YjM4ZWVkMDE0M2Q5YjE2N2YiLCJpbnRlbnRfaG1hY19rZXlfdmVyc2lvbiI6MSwicHJvdG9jb2xfYXV0aG9yaXphdGlvbl9yZWYiOiJhcDItbWFuZGF0ZS10ZXN0LTAwMSIsInVzZXJfaW50ZW50X2hhc2giOiJobWFjLXNoYTI1NjpmMjUxODlkMzM5M2M1YjM0MWMxMTc4MDgyMzQ4ZmQ2Zjk1YjJmN2NhN2NmYmFkMjRiNTlkZTFiZTYxNWI4ZTc4In0sImF1dGhvcml6YXRpb25fc2NoZW1lIjoiYXAyX21hbmRhdGVfandzIiwiYnV5ZXJfYWdlbnRfY29uc2VudF9jb250ZXh0Ijp7ImFnZW50X2F1dGhvcml6YXRpb25fY2hhaW4iOlt7ImFjdG9yIjoidXNlciIsImhhc2giOiJobWFjLXNoYTI1NjphZDVlMzZjODYxMjYxYTJjMWRlN2JiOTZiZWNiNzZkYzViMTgyODU2YWU1Y2NiNWE5NDZjMzViOTE0YmFhYjIyIiwibWV0aG9kIjoiT0F1dGgrTUZBIiwidGltZXN0YW1wIjoxNzc3NTkzNTcwfSx7ImFjdG9yIjoiYWdlbnQiLCJoYXNoIjoiaG1hYy1zaGEyNTY6ZTcyZmYxMGQzNzNkZjY4ZjhlNDU2OTIzZjU2NjkxMGIyZGNmODU5YzVkZWI1OTE5ZThjZjNmODc2NDU5ZTg3OCIsIm1ldGhvZCI6InJmYzk0MjFfc2lnbmF0dXJlIiwicmVmIjoiYWdlbnQtYnV5ZXItdGVzdC0wMTYiLCJ0aW1lc3RhbXAiOjE3Nzc1OTM1NzF9XSwiY29uc2VudF9kaXNjbG9zdXJlX3ZlcnNpb24iOiIxLjAuMCIsImNvbnNlbnRfZXZpZGVuY2VfcmVmIjoidmF1bHQ6Ly9jb25zZW50LzAxNiIsImNvbnNlbnRfaGFzaCI6ImhtYWMtc2hhMjU2OjZmNDBiZWVjYWNlYWViYzNhZGI4NDFjODVjODYxNGI0NzE3ZjI2ZWI2YzZjNWM5YjEzZjgzNDc4Y2ViZDM0ZjAiLCJjb25zZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImNvbnNlbnRfdGltZXN0YW1wIjoxNzc3NTkzNTcwLCJjb25zZW50X3R5cGUiOiJleHBsaWNpdF9hY3Rpb24iLCJjb25zZW50X3dpdGhkcmF3YWxfdXJpX2hhc2giOiJzaGEyNTY6ZTNjMjEzNjgyMWRhNWJjNWNhY2ZiOWJlZWRmYjYzM2M0N2I1OTY1NjBhM2NhMzk4NDE1NjY1YzMwMTFiZWMxOCJ9LCJjb25zZW50X2V2aWRlbmNlX3JlZiI6InZhdWx0Oi8vY29uc2VudC8wMTYiLCJlc2lnbl9kaXNjbG9zdXJlX2hhc2giOiJzaGEyNTY6OGE0YmFhOWVmYTI0ZjJkMzBjMDUzYjhjODE4NmVmZGNlOTgwODhlZTBjNTg3OGM4MGZmYTJkYjQ4YjgzZTIxNSIsImVzaWduX2Rpc2Nsb3N1cmVfdmVyc2lvbiI6IjEuMC4wIiwiZXhwaXJlc19hdCI6MTc3NzY4MDAwMCwiaW50ZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImlzc3VlZF9hdCI6MTc3NzU5MzYwMCwiaXNzdWVyIjoiaHR0cHM6Ly90ZXN0LnRydXN0ZWVkLnh5eiIsImxlZ2FsX3Bvc3R1cmUiOiJhZGVzX2NhbmRpZGF0ZV90aW1lc3RhbXBlZCIsImxlZ2FsX3Bvc3R1cmVfd2FybmluZ3MiOltdLCJtZXJjaGFudF9pZCI6Im1lcmNoYW50X1QwNjVfdGVzdCIsInBheW1lbnRfYXV0aG9yaXphdGlvbl9oYXNoIjoic2hhMjU2OjZhNWUyNDIxYjc2MjY2OGRkMDQ2MjhjZjZlMGZhZTNmNjBmNjc3YzYxY2UyNGQ3YjM4ZWVkMDE0M2Q5YjE2N2YiLCJwb2xpY3lfZGVjaXNpb24iOiJhbGxvdyIsInByaXZhY3lfY2xhc3NpZmljYXRpb24iOiJwaWlfaGFzaGVkX3NhbHRlZCIsInByb3RvY29sIjoiQVAyIiwicHJvdG9jb2xfYXJ0aWZhY3RzIjpbXSwicmVjZWlwdF9pZCI6ImUyYTJkYTBmLTY3NTUtNGI4YS04NTMxLTA1ZTA3NmMzOTc5YyIsInJlY2VpcHRfc3ViamVjdCI6ImJ1eWVyX2FnZW50Iiwic2NoZW1hX3ZlcnNpb24iOiIxLjEiLCJ0cnVzdF9wcm92aWRlcl9hc3NlcnRpb25zIjpbeyJhc3N1cmFuY2VfbGV2ZWwiOiJNZWRpdW0iLCJjbGFpbXMiOnsiZ3BnNDVfcGFyYW0iOiJTUEMwMDM4In0sInByb3ZpZGVyIjoidWstZGlhdGYiLCJ0aW1lc3RhbXAiOjE3Nzc1OTM1NzJ9XSwidXNlcl9pbnRlbnRfaGFzaCI6ImhtYWMtc2hhMjU2OmYyNTE4OWQzMzkzYzViMzQxYzExNzgwODIzNDhmZDZmOTViMmY3Y2E3Y2ZiYWQyNGI1OWRlMWJlNjE1YjhlNzgiLCJ2ZXJpZmljYXRpb25fbWV0aG9kcyI6eyJqd2tzIjp7ImtpZCI6InRyLWVkMjU1MTktdjExLXRlc3QtMjAyNiIsInVyaSI6Imh0dHBzOi8vdGVzdC50cnVzdGVlZC54eXovLndlbGwta25vd24vandra3MuanNvbiJ9LCJqd2tzX3NoYTI1NiI6IjQxYjUyYzg5NjY1ODdhMWM5ZjZhOWNhMWJhZmJlZTRjYWE2YTkzNDU5ODExZTAyMmJmNGFkZWRlYjkxNGIyOGYiLCJ0cnVzdF9hbmNob3Jfc2hhMjU2IjoiZGQ0M2JmMmNkNjUwMjNkNzllNDEzNTgyMjZlZDExOTdmY2VhMzZiYzY5M2YxYzBmYWRkZTBlMzE4YmZkNzZhMSJ9fQ.x7WK4YXP8YlA4fWC4dKhrnb7WMLFGt9k9xRXhSJIfTtyCm6_W_h1cgElRoTWOQDK0604h-R9EOu6ORD4EpEyDg",
+    "timestamp_evidence": {
+      "imprint_algo": "sha-256",
+      "imprint_target": "jws_compact_bytes",
+      "issued_at_attested": 1778284805,
+      "nonce": "b12fe5c2dd2549e8a477fcea510d7971",
+      "policy_oid": "1.2.3.4.5.6.7.8.9",
+      "revocation_evidence": {
+        "data_b64": "AHX1jjb31UhzWluvba8ikcyJUMXCx4dFSjHUQZ3dkME=",
+        "kind": "ocsp"
+      },
+      "tolerance_seconds": 60,
+      "tsa_cert_chain": [
+        "-----BEGIN CERTIFICATE-----\nMIHgMIGToAMCAQICAQEwBQYDK2VwMBgxFjAUBgNVBAMMDVQwNjUgVGVzdCBUU0Ew\nIhgPMTk3MDAxMDEwMDAwMDBaGA8yMTAwMDEwMTAwMDAwMFowGDEWMBQGA1UEAwwN\nVDA2NSBUZXN0IFRTQTAqMAUGAytlcAMhANAe8N4JJQFSEdnUPXm1EmrIyKwx76u5\nBXivBooBHaYpMAUGAytlcANBABMvoqHpe3tLnOC4YhcaxcP08J3GcFLaQ6a6HfnW\nopN1Ey+ioel7e0uc4LhiFxrFw/TwncZwUtpDprod+daik3U=\n-----END CERTIFICATE-----\n"
+      ],
+      "tsa_endpoint": "https://test-tsa.trusteed.xyz/tsa",
+      "tsa_root_cert_sha256": "c89c29193975eccc4f57d6e2ae716825fcd0934c41c675e6ab9c1791e356c358",
+      "tsr": "MHwwAwIBADB1BgkqhkiG9w0BBwKgaARmMGQCAQEGCCoDBAUGBwgJMC8wCwYJYIZIAWUDBAIBBCACL9U7FcvMWAW3yt0XU69UI6P9VK9uGx5biWXT33HxPgIBEBgPMjAyNjA1MDEwMDAwMDVaAhADd7maxHv1eWW3Mm4S+bpo",
+      "tst": "MHUGCSqGSIb3DQEHAqBoBGYwZAIBAQYIKgMEBQYHCAkwLzALBglghkgBZQMEAgEEIAIv1TsVy8xYBbfK3RdTr1Qjo/1Ur24bHluJZdPfcfE+AgEQGA8yMDI2MDUwMTAwMDAwNVoCEAN3uZrEe/V5ZbcybhL5umg=",
+      "type": "RFC3161"
+    }
+  },
+  "export_bundle": {
+    "bundle_id": "bundle-uk-021-test",
+    "created_at": 1778284810,
+    "merchant_jurisdiction": "UK",
+    "receipt_ids": ["e2a2da0f-6755-4b8a-8531-05e076c3979c"],
+    "retention": {
+      "jurisdiction": "UK",
+      "min_retention_years": 6,
+      "statute_ref": "ECA 2000 §7 + SI 2002/318 + Limitation Act 1980 §5"
+    }
+  },
+  "expected": {
+    "errorCode": null,
+    "outcome": "accepted",
+    "recomputed_legal_posture": "ades_candidate_timestamped",
+    "uk_assertions": {
+      "diatf_provider_present": true,
+      "diatf_assurance_level": "Medium",
+      "retention_years_met": true,
+      "statute_ref_valid": true
+    },
+    "warnings": []
+  },
+  "notes": "UK merchant export bundle. Receipt carries trust_provider_assertions with provider='uk-diatf', assurance_level='Medium' (GPG 45 SPC0038). Export bundle retention.jurisdiction='UK', min_retention_years=6, statute_ref='ECA 2000 §7 + SI 2002/318 + Limitation Act 1980 §5'. Verifier must: (1) accept legal_posture 'ades_candidate_timestamped' for UK jurisdiction; (2) confirm min_retention_years >= 6 for UK; (3) accept 'uk-diatf' provider in trust_provider_assertions without mapping to eIDAS LoA. See docs/legal/trust-receipt-claims-policy.md §5a and spec-049 research.md R20.",
+  "title": "v1.1 UK jurisdiction export bundle: ECA 2000 + SI 2002/318 retention, uk-diatf Medium assurance",
+  "vector_id": "021",
+  "verify_options": {
+    "currentTime": 1778371200,
+    "expectedSubject": "buyer_agent",
+    "jwks": {
+      "keys": [
+        {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-v11-test-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "pjg4qAbmm8pTMI6d3w2PyCAj-b1tSwf23Ugzygaau2I"
+        }
+      ]
+    },
+    "jwks_history": [
+      {
+        "jwk_pub": {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-v11-test-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "pjg4qAbmm8pTMI6d3w2PyCAj-b1tSwf23Ugzygaau2I"
+        },
+        "kid": "tr-ed25519-v11-test-2026",
+        "valid_from": 1775001600,
+        "valid_to": null
+      }
+    ],
+    "tsa_root_pins": [
+      "c89c29193975eccc4f57d6e2ae716825fcd0934c41c675e6ab9c1791e356c358"
+    ]
+  }
+}

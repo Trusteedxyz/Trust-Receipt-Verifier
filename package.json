@@ -1,0 +1,40 @@
+{
+  "name": "trust-receipt-verifier",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "TrustReceipt open standard — cross-protocol agentic commerce evidence receipt verifier",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "trust-receipt": "./dist/bin/trust-receipt.js"
+  },
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.cli.json",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "vectors:generate": "tsx scripts/generate-test-vectors-v11.ts",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
+  },
+  "dependencies": {
+    "@agenticmcpstores/trust-receipt-tsa-client": "workspace:*",
+    "jose": "^6",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "tsx": "^4.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "adm-zip": "^0.5.12",
+    "@types/adm-zip": "^0.5.7"
+  }
+}

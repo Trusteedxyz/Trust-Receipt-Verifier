@@ -1,0 +1,29 @@
+{
+  "envelope": {
+    "legacy_v1_0": true,
+    "receipt": "eyJhbGciOiJFZERTQSIsImtpZCI6InRyLWVkMjU1MTktdjExLXRlc3QtMjAyNiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6ImFnZW50LWxlZ2FjeS0wMTciLCJhZ2VudF9wcm92aWRlciI6IkFudGhyb3BpYyIsImF0dGFjaG1lbnRzIjpbXSwiY2FydF9oYXNoIjoic2hhMjU2OjExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJleHBpcmVzX2F0Ijo0ODg5Mjg5NjAwLCJpc3N1ZWRfYXQiOjE3MzU2ODk2MDAsImlzc3VlciI6Imh0dHBzOi8vdGVzdC50cnVzdGVlZC54eXoiLCJraWQiOiJ0ci1lZDI1NTE5LXYxMS10ZXN0LTIwMjYiLCJtYW5kYXRlX2hhc2giOiJzaGEyNTY6MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMiIsIm1lcmNoYW50X2lkIjoibWVyY2hhbnRfVDA2NV90ZXN0IiwicG9saWN5X2RlY2lzaW9uIjoiYWxsb3ciLCJwcm90b2NvbCI6IkFQMiIsInByb3RvY29sX2FydGlmYWN0cyI6W10sInJlY2VpcHRfaWQiOiJmNzI5YTQxOS02ZWEyLTQ5ZGQtODRjMi00ODZlYzFiZmM4YTIiLCJyaXNrX3NpZ25hbHMiOltdLCJzY2hlbWFfdmVyc2lvbiI6IjEuMCIsInRydXN0X3Byb3ZpZGVyX2Fzc2VydGlvbnMiOltdLCJ1c2VyX2ludGVudF9oYXNoIjoic2hhMjU2OjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMTciLCJ2ZXJpZmljYXRpb25fbWV0aG9kcyI6W3sidHlwZSI6Imp3a3MiLCJ2YWx1ZSI6Imh0dHBzOi8vdGVzdC50cnVzdGVlZC54eXovLndlbGwta25vd24vandrcy5qc29uIn1dfQ.sHuab5I1JryjlkUnFcB1yr9t1VFfe4d0NGN2VccsJtQvST5GNYv8VCr7-IGhBxD_sK8pRnhJCO3XyyNqIJwNCg"
+  },
+  "expected": {
+    "errorCode": null,
+    "outcome": "accepted",
+    "recomputed_legal_posture": null,
+    "warnings": ["legacy_pre_eidas_hardening"]
+  },
+  "title": "v1.0 legacy receipt — dispatcher routes to v1.0 verifier",
+  "vector_id": "017",
+  "verify_options": {
+    "currentTime": 1735776000,
+    "jwks": {
+      "keys": [
+        {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-v11-test-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "pjg4qAbmm8pTMI6d3w2PyCAj-b1tSwf23Ugzygaau2I"
+        }
+      ]
+    }
+  }
+}

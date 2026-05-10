@@ -134,18 +134,18 @@ Sign the payload with any real test private key whose `kid` is not present in th
 
 A verifier earns the **TrustReceipt Conformant** badge when it passes all 10 vectors with the following guarantees:
 
-| Requirement                                | Detail                                                |
-| ------------------------------------------ | ----------------------------------------------------- |
-| All 5 valid vectors accepted               | `result.valid === true` for TC-001 through TC-005     |
-| TC-006 rejected as `schema_invalid`        | Empty intent hash and unknown schema_version detected |
-| TC-007 rejected as `expired`               | Signature valid but timestamp check fails             |
-| TC-008 rejected as `unknown_kid`           | Key lookup failure on JWKS                            |
-| TC-009 rejected as `schema_invalid`        | Missing required fields detected                      |
-| TC-010 rejected as `schema_invalid`        | Bad enum values rejected                              |
-| Schema validation after signature check    | Step 4 after Step 3 for TC-006, TC-009, TC-010        |
-| Expiry check follows signature check       | For TC-007                                            |
-| No partial acceptance                      | A receipt is either fully valid or fully rejected     |
-| alg header must be "EdDSA"                 | Non-EdDSA alg in header rejected as invalid_jws       |
+| Requirement                             | Detail                                                |
+| --------------------------------------- | ----------------------------------------------------- |
+| All 5 valid vectors accepted            | `result.valid === true` for TC-001 through TC-005     |
+| TC-006 rejected as `schema_invalid`     | Empty intent hash and unknown schema_version detected |
+| TC-007 rejected as `expired`            | Signature valid but timestamp check fails             |
+| TC-008 rejected as `unknown_kid`        | Key lookup failure on JWKS                            |
+| TC-009 rejected as `schema_invalid`     | Missing required fields detected                      |
+| TC-010 rejected as `schema_invalid`     | Bad enum values rejected                              |
+| Schema validation after signature check | Step 4 after Step 3 for TC-006, TC-009, TC-010        |
+| Expiry check follows signature check    | For TC-007                                            |
+| No partial acceptance                   | A receipt is either fully valid or fully rejected     |
+| alg header must be "EdDSA"              | Non-EdDSA alg in header rejected as invalid_jws       |
 
 ---
 

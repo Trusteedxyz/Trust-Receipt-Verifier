@@ -18,6 +18,12 @@ TrustReceipt is an open standard for cryptographically signed evidence receipts 
 
 ## 1. Introduction
 
+### Legal Disclaimer
+
+> **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
+
+_See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) for the full claims policy._
+
 ### 1.1 Motivation
 
 Agentic commerce — where AI agents autonomously execute purchases on behalf of users — is growing faster than the trust infrastructure that should accompany it. Several forces create the gap:

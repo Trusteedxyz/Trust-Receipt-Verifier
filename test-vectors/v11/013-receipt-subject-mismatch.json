@@ -1,0 +1,55 @@
+{
+  "envelope": {
+    "envelope_metadata": {
+      "created_at": 1777593601,
+      "legal_posture": "merchant_admin_action",
+      "legal_posture_warnings": [],
+      "receipt_id": "fd55482c-a21c-49bc-bd1a-694070f87822"
+    },
+    "receipt": "eyJhbGciOiJFZERTQSIsImtpZCI6InRyLWVkMjU1MTktdjExLXRlc3QtMjAyNiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6bnVsbCwiYWdlbnRfcHJvdmlkZXIiOiJuL2EiLCJhdXRob3JpemF0aW9uX2V2aWRlbmNlIjp7ImV4ZWN1dGlvbl9oYXNoIjoic2hhMjU2OjZiNWFiNTg2YjM4ODFiZWFiNDk2ODU0NDBkOWU1YzdiMGMwNzYxYzZlMzk3OWVjZGI0Y2MyMDZmMTc5ODY0YTEiLCJpbnRlbnRfaG1hY19rZXlfdmVyc2lvbiI6MSwidXNlcl9pbnRlbnRfaGFzaCI6ImhtYWMtc2hhMjU2OjdiYjk0N2U4OTAyYTE3YzFhMGE4NjZiZjNiMzM4NzA4OGI4ZTUxZTViZGUxMTUyZWQ1NGY3OTY4ZGFhYTJlYjgifSwiZXhwaXJlc19hdCI6MTc3NzY4MDAwMCwiaW50ZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImlzc3VlZF9hdCI6MTc3NzU5MzYwMCwiaXNzdWVyIjoiaHR0cHM6Ly90ZXN0LnRydXN0ZWVkLnh5eiIsImxlZ2FsX3Bvc3R1cmUiOiJtZXJjaGFudF9hZG1pbl9hY3Rpb24iLCJsZWdhbF9wb3N0dXJlX3dhcm5pbmdzIjpbXSwibWVyY2hhbnRfYWRtaW5fYXV0aG9yaXphdGlvbl9jb250ZXh0Ijp7ImFjdGVkX2F0IjoxNzc3NTkzNjAwLCJhZG1pbl9hY3Rpb25fdHlwZSI6InJlZnVuZCIsImFkbWluX2F1dGhlbnRpY2F0aW9uX21ldGhvZCI6InNob3BpZnlfYXBwX2JyaWRnZV9qd3QiLCJhZG1pbl91c2VyX2lkX2hhc2giOiJobWFjLXNoYTI1Njo2NzRkMTIxMGE4M2FkOTI2MTA3MWM4M2QwYTY1NTVkZWFkMzM0NGRiZmRkNzFkOTIwYTgwNDZmOTVmODY1NjYxIiwibWZhX2V2aWRlbmNlX2hhc2giOiJobWFjLXNoYTI1NjplNDc3ZWFmMzg3ZTZiN2QyOGFkNjE1MmI4YTg4Mjk2ZDcwMzc4YTNjZjg2YzBhNWQwZGFjM2VlYmRlMDk2Zjg0IiwicmJhY19yb2xlX2F0X2FjdGlvbl90aW1lIjoibWVyY2hhbnRfYWRtaW4ifSwibWVyY2hhbnRfaWQiOiJtZXJjaGFudF9UMDY1X3Rlc3QiLCJwb2xpY3lfZGVjaXNpb24iOiJhbGxvdyIsInByaXZhY3lfY2xhc3NpZmljYXRpb24iOiJwaWlfaGFzaGVkX3NhbHRlZCIsInByb3RvY29sIjoiTUNQIiwicHJvdG9jb2xfYXJ0aWZhY3RzIjpbXSwicmVjZWlwdF9pZCI6ImZkNTU0ODJjLWEyMWMtNDliYy1iZDFhLTY5NDA3MGY4NzgyMiIsInJlY2VpcHRfc3ViamVjdCI6Im1lcmNoYW50X2FkbWluIiwic2NoZW1hX3ZlcnNpb24iOiIxLjEiLCJ0cmFuc2FjdGlvbl9pZCI6InR4LTAxMyIsInVzZXJfaW50ZW50X2hhc2giOiJobWFjLXNoYTI1Njo3YmI5NDdlODkwMmExN2MxYTBhODY2YmYzYjMzODcwODhiOGU1MWU1YmRlMTE1MmVkNTRmNzk2OGRhYWEyZWI4IiwidmVyaWZpY2F0aW9uX21ldGhvZHMiOnsiandrcyI6eyJraWQiOiJ0ci1lZDI1NTE5LXYxMS10ZXN0LTIwMjYiLCJ1cmkiOiJodHRwczovL3Rlc3QudHJ1c3RlZWQueHl6Ly53ZWxsLWtub3duL2p3a3MuanNvbiJ9LCJqd2tzX3NoYTI1NiI6IjQxYjUyYzg5NjY1ODdhMWM5ZjZhOWNhMWJhZmJlZTRjYWE2YTkzNDU5ODExZTAyMmJmNGFkZWRlYjkxNGIyOGYiLCJ0cnVzdF9hbmNob3Jfc2hhMjU2IjoiZGQ0M2JmMmNkNjUwMjNkNzllNDEzNTgyMjZlZDExOTdmY2VhMzZiYzY5M2YxYzBmYWRkZTBlMzE4YmZkNzZhMSJ9fQ.nimAY7yEKTxPuJIzkh7Hoxm65AxkNuH4NnNuizYXfNjM4_Qq0SZ2KR7nrz0xByVrNu1IN9D9YelpaBuNyrkWAA",
+    "timestamp_evidence": {
+      "imprint_algo": "sha-256",
+      "imprint_target": "jws_compact_bytes",
+      "issued_at_attested": 1777593605,
+      "nonce": "924bd4b1be1439d7f366efeaf40d6860",
+      "policy_oid": "1.2.3.4.5.6.7.8.9",
+      "revocation_evidence": {
+        "data_b64": "AHX1jjb31UhzWluvba8ikcyJUMXCx4dFSjHUQZ3dkME=",
+        "kind": "ocsp"
+      },
+      "tolerance_seconds": 60,
+      "tsa_cert_chain": [
+        "-----BEGIN CERTIFICATE-----\nMIHgMIGToAMCAQICAQEwBQYDK2VwMBgxFjAUBgNVBAMMDVQwNjUgVGVzdCBUU0Ew\nIhgPMTk3MDAxMDEwMDAwMDBaGA8yMTAwMDEwMTAwMDAwMFowGDEWMBQGA1UEAwwN\nVDA2NSBUZXN0IFRTQTAqMAUGAytlcAMhANAe8N4JJQFSEdnUPXm1EmrIyKwx76u5\nBXivBooBHaYpMAUGAytlcANBABMvoqHpe3tLnOC4YhcaxcP08J3GcFLaQ6a6HfnW\nopN1Ey+ioel7e0uc4LhiFxrFw/TwncZwUtpDprod+daik3U=\n-----END CERTIFICATE-----\n"
+      ],
+      "tsa_endpoint": "https://test-tsa.trusteed.xyz/tsa",
+      "tsa_root_cert_sha256": "c89c29193975eccc4f57d6e2ae716825fcd0934c41c675e6ab9c1791e356c358",
+      "tsr": "MHwwAwIBADB1BgkqhkiG9w0BBwKgaARmMGQCAQEGCCoDBAUGBwgJMC8wCwYJYIZIAWUDBAIBBCBOC8HGKEzDI9h9X3mO9gpWCy1Lo8Qut6s5am/UIapuCAIBDRgPMjAyNjA1MDEwMDAwMDVaAhAcVpM+j29G1tjjdfqjy+wO",
+      "tst": "MHUGCSqGSIb3DQEHAqBoBGYwZAIBAQYIKgMEBQYHCAkwLzALBglghkgBZQMEAgEEIE4LwcYoTMMj2H1feY72ClYLLUujxC63qzlqb9Qhqm4IAgENGA8yMDI2MDUwMTAwMDAwNVoCEBxWkz6Pb0bW2ON1+qPL7A4=",
+      "type": "RFC3161"
+    }
+  },
+  "expected": {
+    "errorCode": "receipt_subject_mismatch",
+    "outcome": "rejected",
+    "recomputed_legal_posture": null,
+    "warnings": []
+  },
+  "title": "v1.1 merchant_admin receipt verified with expectedSubject=buyer_agent (mismatch)",
+  "vector_id": "013",
+  "verify_options": {
+    "currentTime": 1777593660,
+    "expectedSubject": "buyer_agent",
+    "jwks": {
+      "keys": [
+        {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-v11-test-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "pjg4qAbmm8pTMI6d3w2PyCAj-b1tSwf23Ugzygaau2I"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "envelope": {
+    "envelope_metadata": {
+      "created_at": 1777593601,
+      "legal_posture": "ades_candidate_timestamped",
+      "legal_posture_warnings": [],
+      "receipt_id": "68845dfd-d684-4111-aaef-2c983f7a015b"
+    },
+    "receipt": "eyJhbGciOiJFZERTQSIsImtpZCI6InRyLWVkMjU1MTktdjExLXRlc3QtMjAyNiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6ImFnZW50LWJ1eWVyLXRlc3QtMDEyIiwiYWdlbnRfcHJvdmlkZXIiOiJBbnRocm9waWMiLCJhdXRob3JpemF0aW9uX2V2aWRlbmNlIjp7ImV4ZWN1dGlvbl9oYXNoIjoic2hhMjU2Ojk3M2ZjOTI4MWQyM2M5MTRiZTkxM2Y2YjIyMmM5OWRjY2VmZmJkMThlOWZmZTRiYzZjMTk4YWU4NGRlOTM0NTUiLCJpbnRlbnRfaG1hY19rZXlfdmVyc2lvbiI6MSwicHJvdG9jb2xfYXV0aG9yaXphdGlvbl9yZWYiOiJhcDItbWFuZGF0ZS10ZXN0LTAwMSIsInVzZXJfaW50ZW50X2hhc2giOiJobWFjLXNoYTI1Njo3MWE0NjViODYxY2U2ZjIxYzQwYzAxZmNlMjc4MDc4MWY5NWMwMmRjZGMyZDZmNjljYzVlMmNlNGQ4OTU2MGQ3In0sImF1dGhvcml6YXRpb25fc2NoZW1lIjoiYXAyX21hbmRhdGVfandzIiwiY2FydF9oYXNoIjoic2hhMjU2OmM2M2QzMzQ5ZTI0N2NiN2Q2YzhmODE2NGUzZDA2YWFkZWUzZmIzYjhkODdjMDJjOWYxODk1YjFkNWIzYTZmZjgiLCJjb25zZW50X2V2aWRlbmNlX3JlZiI6InZhdWx0Oi8vY29uc2VudC8wMTIiLCJlc2lnbl9kaXNjbG9zdXJlX2hhc2giOiJzaGEyNTY6ODE4NzEzNWZhZWFkMzE4ODkyNTUzYjZkN2VlNDgzMjFjNGQwMGFjMDI4ZTg4ZDE3YTAyZjA1ZGU5MTYyODYzZiIsImVzaWduX2Rpc2Nsb3N1cmVfdmVyc2lvbiI6IjEuMC4wIiwiZXhwaXJlc19hdCI6MTc3NzY4MDAwMCwiaW50ZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImlzc3VlZF9hdCI6MTc3NzU5MzYwMCwiaXNzdWVyIjoiaHR0cHM6Ly90ZXN0LnRydXN0ZWVkLnh5eiIsImxlZ2FsX3Bvc3R1cmUiOiJhZGVzX2NhbmRpZGF0ZV90aW1lc3RhbXBlZCIsImxlZ2FsX3Bvc3R1cmVfd2FybmluZ3MiOltdLCJtZXJjaGFudF9pZCI6Im1lcmNoYW50X1QwNjVfdGVzdCIsInBheW1lbnRfYXV0aG9yaXphdGlvbl9oYXNoIjoic2hhMjU2Ojk3M2ZjOTI4MWQyM2M5MTRiZTkxM2Y2YjIyMmM5OWRjY2VmZmJkMThlOWZmZTRiYzZjMTk4YWU4NGRlOTM0NTUiLCJwb2xpY3lfZGVjaXNpb24iOiJhbGxvdyIsInByaXZhY3lfY2xhc3NpZmljYXRpb24iOiJwaWlfaGFzaGVkX3NhbHRlZCIsInByb3RvY29sIjoiQVAyIiwicHJvdG9jb2xfYXJ0aWZhY3RzIjpbXSwicmVjZWlwdF9pZCI6IjY4ODQ1ZGZkLWQ2ODQtNDExMS1hYWVmLTJjOTgzZjdhMDE1YiIsInJlY2VpcHRfc3ViamVjdCI6ImJ1eWVyX2FnZW50Iiwic2NoZW1hX3ZlcnNpb24iOiIxLjEiLCJ1c2VyX2ludGVudF9oYXNoIjoiaG1hYy1zaGEyNTY6NzFhNDY1Yjg2MWNlNmYyMWM0MGMwMWZjZTI3ODA3ODFmOTVjMDJkY2RjMmQ2ZjY5Y2M1ZTJjZTRkODk1NjBkNyIsInZlcmlmaWNhdGlvbl9tZXRob2RzIjp7Imp3a3MiOnsia2lkIjoidHItZWQyNTUxOS12MTEtdGVzdC0yMDI2IiwidXJpIjoiaHR0cHM6Ly90ZXN0LnRydXN0ZWVkLnh5ei8ud2VsbC1rbm93bi9qd2tzLmpzb24ifSwiandrc19zaGEyNTYiOiI0MWI1MmM4OTY2NTg3YTFjOWY2YTljYTFiYWZiZWU0Y2FhNmE5MzQ1OTgxMWUwMjJiZjRhZGVkZWI5MTRiMjhmIiwidHJ1c3RfYW5jaG9yX3NoYTI1NiI6ImRkNDNiZjJjZDY1MDIzZDc5ZTQxMzU4MjI2ZWQxMTk3ZmNlYTM2YmM2OTNmMWMwZmFkZGUwZTMxOGJmZDc2YTEifX0.SXypQIodXhER-rlS_VvL2sbnrR3Mk2Z827PfaRLXlIOt4mnXauEvrYtaFKR3tzF-p2CxwvmxdWRHtQUciRH_Dw",
+    "timestamp_evidence": {
+      "imprint_algo": "sha-256",
+      "imprint_target": "jws_compact_bytes",
+      "issued_at_attested": 1777593605,
+      "nonce": "924bd4b1be1439d7f366efeaf40d6860",
+      "policy_oid": "1.2.3.4.5.6.7.8.9",
+      "revocation_evidence": {
+        "data_b64": "AHX1jjb31UhzWluvba8ikcyJUMXCx4dFSjHUQZ3dkME=",
+        "kind": "ocsp"
+      },
+      "tolerance_seconds": 60,
+      "tsa_cert_chain": [
+        "-----BEGIN CERTIFICATE-----\nMIHgMIGToAMCAQICAQEwBQYDK2VwMBgxFjAUBgNVBAMMDVQwNjUgVGVzdCBUU0Ew\nIhgPMTk3MDAxMDEwMDAwMDBaGA8yMTAwMDEwMTAwMDAwMFowGDEWMBQGA1UEAwwN\nVDA2NSBUZXN0IFRTQTAqMAUGAytlcAMhANAe8N4JJQFSEdnUPXm1EmrIyKwx76u5\nBXivBooBHaYpMAUGAytlcANBABMvoqHpe3tLnOC4YhcaxcP08J3GcFLaQ6a6HfnW\nopN1Ey+ioel7e0uc4LhiFxrFw/TwncZwUtpDprod+daik3U=\n-----END CERTIFICATE-----\n"
+      ],
+      "tsa_endpoint": "https://test-tsa.trusteed.xyz/tsa",
+      "tsa_root_cert_sha256": "c89c29193975eccc4f57d6e2ae716825fcd0934c41c675e6ab9c1791e356c358",
+      "tsr": "MHwwAwIBADB1BgkqhkiG9w0BBwKgaARmMGQCAQEGCCoDBAUGBwgJMC8wCwYJYIZIAWUDBAIBBCB/AZkrhR5K0cJZZWrqt1pofUtMX/8KkZb0BfNEt18okwIBDBgPMjAyNjA1MDEwMDAwMDVaAhAnG2MdPq9S81oz5cNkXNOk",
+      "tst": "MHUGCSqGSIb3DQEHAqBoBGYwZAIBAQYIKgMEBQYHCAkwLzALBglghkgBZQMEAgEEIH8BmSuFHkrRwlllauq3Wmh9S0xf/wqRlvQF80S3XyiTAgEMGA8yMDI2MDUwMTAwMDAwNVoCECcbYx0+r1LzWjPlw2Rc06Q=",
+      "type": "RFC3161"
+    }
+  },
+  "expected": {
+    "errorCode": "missing_required_consent_context",
+    "outcome": "rejected",
+    "recomputed_legal_posture": null,
+    "warnings": []
+  },
+  "title": "v1.1 buyer_agent receipt missing buyer_agent_consent_context",
+  "vector_id": "012",
+  "verify_options": {
+    "currentTime": 1777593660,
+    "expectedSubject": "buyer_agent",
+    "jwks": {
+      "keys": [
+        {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-v11-test-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "pjg4qAbmm8pTMI6d3w2PyCAj-b1tSwf23Ugzygaau2I"
+        }
+      ]
+    }
+  }
+}
