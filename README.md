@@ -32,10 +32,10 @@ _See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-
 | Framework | Jurisdiction | Status | v1.1 Fields |
 | --------- | ------------ | ------ | ----------- |
 | **eIDAS** (Regulation 910/2014) | EU | 🟡 Candidate — `legal_posture` progresses `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Qualified seal (QeSeal) requires a QTSP. | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash` |
-| **ESIGN / UETA** | US | 🟡 Partial — consumer consent disclosure tracking implemented via `esign_disclosure_hash` + `consent_context`. Full ESIGN disclosure workflow (withdrawal URI, version pinning) in progress. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
+| **ESIGN / UETA** | US | 🟡 Partial — Verifiable seal with consent evidence, agent attribution, versioned disclosure, and auditable retention, designed to support ESIGN/UETA. Full disclosure workflow (withdrawal URI, version pinning) in progress. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
 | **Electronic Communications Act 2000 / DIATF** | UK | 🟡 Schema-compatible — jurisdiction-aware retention (UK: 7 y default) and `legal_posture` field carry UK trust-service evidence. DIATF alignment verified at schema level; operational certification pending. | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy` |
 
-> ⚠️ None of the above constitutes legal advice. Regulatory qualification status may change as spec-049 ships. Consult qualified legal counsel for jurisdiction-specific requirements.
+> ⚠️ None of the above constitutes legal advice. Regulatory qualification status may change as the implementation evolves. Consult qualified legal counsel for jurisdiction-specific requirements.
 
 ---
 
