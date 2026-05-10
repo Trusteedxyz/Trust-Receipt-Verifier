@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-spec/
+.turbo/
+*.tsbuildinfo
+.env
+.env.local
+coverage/
