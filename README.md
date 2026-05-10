@@ -19,9 +19,23 @@ TrustReceipt is an open standard for JWS-signed JSON receipts that are verifiabl
 
 ## Legal Disclaimer
 
+> Verifiable seal for agentic commerce. Each TrustReceipt generates portable cryptographic evidence of origin, integrity, consent, agent authorization, and auditable retention.
+> Designed to be compatible with ESIGN/UETA in the US, with eIDAS in the EU as candidate advanced electronic seal evidence, and with the UK Electronic Signatures and Trust Services framework.
+> Qualified seals/signatures require issuance or validation by an applicable QTSP.
+
 > **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
 _See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) for the full claims policy._
+
+### Regulatory Compatibility Status
+
+| Framework | Jurisdiction | Status | v1.1 Fields |
+| --------- | ------------ | ------ | ----------- |
+| **eIDAS** (Regulation 910/2014) | EU | 🟡 Candidate — `legal_posture` progresses `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Qualified seal (QeSeal) requires a QTSP. | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash` |
+| **ESIGN / UETA** | US | 🟡 Partial — consumer consent disclosure tracking implemented via `esign_disclosure_hash` + `consent_context`. Full ESIGN disclosure workflow (withdrawal URI, version pinning) in progress. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
+| **Electronic Communications Act 2000 / DIATF** | UK | 🟡 Schema-compatible — jurisdiction-aware retention (UK: 7 y default) and `legal_posture` field carry UK trust-service evidence. DIATF alignment verified at schema level; operational certification pending. | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy` |
+
+> ⚠️ None of the above constitutes legal advice. Regulatory qualification status may change as spec-049 ships. Consult qualified legal counsel for jurisdiction-specific requirements.
 
 ---
 
@@ -108,7 +122,7 @@ A TrustReceipt payload contains 24 fields across five groups:
 | Protocol                                                                                                  | Artifact mapping | Primary artifact types                                  |
 | --------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------- |
 | [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Defined          | `mcap_consent_hash`, `mcap_nonce`                       |
-| [x402](https://github.com/coinbase/x402)                                                                  | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
+| [x402](https://github.com/x402-foundation/x402)                                                           | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
 | [AP2](https://github.com/google-agentic-commerce/AP2)                                                     | Defined          | `mandate_hash`, `ap2_consent_hash`                      |
 | [MCP](https://modelcontextprotocol.io)                                                                    | Defined          | `mcp_call_hash`, `tool_call_hash`                       |
 | [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                             | Defined          | `acp_session_hash`, `acp_policy_hash`                   |
@@ -120,9 +134,7 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 A verifier implementation must pass all 10 test vectors (v1.0) to claim TrustReceipt conformance. Three levels are defined:
 
-> **v1.1 status (2026-05-06)** — Spec-049 eIDAS hardening adds 11 v1.1 vectors under `test-vectors/v11/` (011, 012, 013, 014, 015, 016, 017, 018, 019, 019b, 020). v1.1 schema body drops legacy `mandate_hash` / `permit2` / `mcp` rail fields and introduces `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, and `esign_disclosure_hash`. Combined suite 58/58 verde. Coverage pending fixture generator: `mcap_cart_binding`, `ucp_rule_set_plus_agent_token`, `acp_session_token`, `svm_token_authorization`. See `specs/049-trust-receipt-eidas-hardening/`.
-
-> ⚠️ **Gotcha — `pnpm vectors:generate` tras cambios de schema**: el generator puede dejar el campo `nonce` del JSON desincronizado respecto al blob DER del TST, causando `tsa_nonce_mismatch` en tests que antes pasaban. Después de cada regeneración, ejecutar el script de detección y corrección documentado en `wiki/gotchas/development-environment.md` §Gotcha 7 antes de hacer commit.
+> **v1.1 status (2026-05-06)** — eIDAS hardening adds 11 v1.1 vectors under `test-vectors/v11/`. v1.1 schema drops legacy `mandate_hash` / `permit2` / `mcp` rail fields and introduces `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, and `esign_disclosure_hash`. Combined suite 58/58 passing.
 
 | Level | Name     | Requirement                                                             |
 | ----- | -------- | ----------------------------------------------------------------------- |
