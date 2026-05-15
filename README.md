@@ -19,6 +19,94 @@ TrustReceipt is an open standard for JWS-signed JSON receipts that are verifiabl
 
 ---
 
+## How it works
+
+A TrustReceipt flows through two independent operations — **issuing** and **verifying** — that can run in different systems at different times, with no shared secret required.
+
+### Issuing a receipt
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as 🤖 Agent / Platform
+    participant Issuer as 🏭 Issuer (trusteed.xyz)
+    participant KMS as 🔑 KMS / Ed25519 Key
+
+    Agent->>Issuer: Transaction event<br/>(protocol, merchant_id, agent_id,<br/>cart_hash, user_intent_hash, …)
+    Issuer->>Issuer: Build 24-field payload<br/>(5 groups: core, participants,<br/>evidence, trust assertions, compliance)
+    Issuer->>Issuer: RFC 8785 canonical serialization<br/>(sorted keys, no whitespace)
+    Issuer->>KMS: Sign canonical bytes
+    KMS-->>Issuer: Ed25519 signature
+    Issuer->>Issuer: Encode as compact JWS<br/>header.payload.signature (base64url)
+    Issuer-->>Agent: 📄 Compact JWS token
+```
+
+### Verifying a receipt
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Verifier as 🔍 Verifier (any party)
+    participant JWKS as 🌐 JWKS Endpoint<br/>/.well-known/jwks.json
+    participant Schema as 📐 Zod Schema
+
+    Verifier->>Verifier: Parse JWS header<br/>extract kid + alg
+    Verifier->>JWKS: GET public keys<br/>(cached, TTL 1h)
+    JWKS-->>Verifier: Public JWK set
+    Verifier->>Verifier: Match kid → public key
+    Verifier->>Verifier: Verify Ed25519 signature<br/>(jose — no custom crypto)
+    Verifier->>Schema: Validate decoded payload
+    Schema-->>Verifier: Zod parse result
+    Verifier->>Verifier: Check issued_at / expires_at<br/>(± clock tolerance)
+    Verifier-->>Verifier: ✅ VerifyResult { valid, receipt }<br/>or ❌ { valid: false, reason, errors }
+```
+
+### Full picture
+
+```mermaid
+flowchart LR
+    subgraph Protocols
+        P1[x402]
+        P2[AP2]
+        P3[ACP]
+        P4[MCP]
+        P5[UCP]
+        P6[MCAP]
+    end
+
+    subgraph Issuer ["Issuer (trusteed.xyz)"]
+        direction TB
+        B1["Build payload\n24 fields · 5 groups"]
+        B2["RFC 8785 canonicalize"]
+        B3["Ed25519 sign\n(kid pinned)"]
+        B4["Compact JWS"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    subgraph Verifier ["Verifier (any party, offline-capable)"]
+        direction TB
+        V1["Parse header\nextract kid"]
+        V2["Fetch JWKS\n(or inline JWK set)"]
+        V3["Match kid → key\nverify signature"]
+        V4["Zod schema check\nexpiry check"]
+        V5{Result}
+        V1 --> V2 --> V3 --> V4 --> V5
+    end
+
+    Protocols --> Issuer
+    Issuer -->|"📄 JWS token"| Verifier
+    V5 -->|valid| R1["✅ receipt object\n(policy_decision, agent_id, …)"]
+    V5 -->|invalid| R2["❌ reason + errors\n(tampered / expired / schema_invalid / …)"]
+```
+
+**Key properties:**
+- **Offline-capable** — verification only needs the JWKS URL (publicly cached); no call back to the issuer
+- **Protocol-agnostic** — one receipt format covers x402, AP2, ACP, MCP, UCP, and MCAP via `protocol_artifacts`
+- **Audit-chainable** — `hash_chain_prev` links receipts in a tamper-evident per-merchant chain (RFC 8785)
+- **Jurisdiction-aware** — `legal_posture` tracks eIDAS / ESIGN / UK-DIATF compliance posture per receipt
+
+---
+
 ## Legal Disclaimer
 
 > TrustReceipt generates portable cryptographic evidence of origin, integrity, consent, agent authorization, and auditable retention.
@@ -356,6 +444,19 @@ trust-receipt inspect receipt.jws
 # Run full end-to-end conformance suite
 trust-receipt conformance
 ```
+
+---
+
+## Documentation
+
+| Document | Description |
+| --- | --- |
+| [SPEC.md](SPEC.md) | Formal specification — wire format, field reference, conformance rules |
+| [docs/architecture.md](docs/architecture.md) | Architecture — signing envelope, key resolution, verification algorithm, security properties |
+| [schema/trust-receipt-v1.schema.json](schema/trust-receipt-v1.schema.json) | JSON Schema for machine validation |
+| [test-vectors/README.md](test-vectors/README.md) | How to run the 10 conformance vectors |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to add vectors, language ports, or trust provider schemas |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
 
