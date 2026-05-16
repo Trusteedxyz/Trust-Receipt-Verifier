@@ -1,5 +1,5 @@
 /**
- * @agenticmcpstores/trust-receipt-verifier
+ * trust-receipt-verifier
  *
  * TrustReceipt open standard — cross-protocol agentic commerce evidence receipts.
  * Standalone package: no Prisma/DB dependency.
@@ -45,7 +45,6 @@ export {
 // with the v1.0 `VerifyOptions` already exported above from `./verifier.js`.
 export {
   verifyReceiptEnvelope,
-  verifyTimestampEvidenceStub,
   type V11VerifyResult,
   type V11VerifyErrorCode,
   type VerifyOptions as VerifyV11Options,
@@ -53,9 +52,24 @@ export {
 
 export {
   verifyTimestampEvidence,
+  TSA_ROOT_NOT_TRUSTED_ERROR_CODE,
   type VerifyTimestampEvidenceOptions,
   type VerifyTimestampEvidenceResult,
 } from "./verify-timestamp-evidence.js";
+
+// Spec-052 extension artifacts (erasure receipts + signed manifests).
+export {
+  verifyExtensionArtifact,
+  type ExtensionArtifactKind,
+  type VerifyExtensionArtifactOptions,
+  type VerifyExtensionArtifactResult,
+  type ExtensionArtifactFailureReason,
+} from "./verify-extension-artifact.js";
+
+// T-CR-007: re-export so downstream consumers (api, dashboard) can plumb
+// per-merchant TSA policy through `verifyTimestampEvidence` /
+// `verifyReceiptEnvelope` without taking a direct dep on the TSA client.
+export type { MerchantTsaPolicy } from "@trusteed/trust-receipt-tsa-client";
 
 // v1.1 types (envelope, body, posture, history) for downstream consumers.
 export type {
@@ -72,7 +86,10 @@ export {
   EMBEDDED_ISSUER_ROOTS,
   findIssuerRootBySha256,
   getActiveIssuerRoot,
+  validateChain,
   type IssuerRootEntry,
+  type ValidateChainError,
+  type ValidateChainResult,
 } from "./embedded-issuer-root.js";
 
 // ─── T052 dispatcher ──────────────────────────────────────────────────────────

@@ -24,6 +24,13 @@ import {
   parseTrustReceiptUnsafe,
 } from "../src/verifier.js";
 import type { PublicJwk, VerifyFailureReason } from "../src/verifier.js";
+import {
+  verifyExtensionArtifact,
+  type ExtensionArtifactKind,
+} from "../src/verify-extension-artifact.js";
+import { verifyJwksHistorySignature } from "../src/verify-jwks-history.js";
+import { getActiveIssuerRoot } from "../src/embedded-issuer-root.js";
+import type { SignedJwksHistory } from "../src/types-1.1.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -47,7 +54,7 @@ function help(): void {
       `trust-receipt v${VERSION}`,
       "",
       "Usage:",
-      "  trust-receipt verify <file> [--jwks-url <url>] [--jwks-file <path>]",
+      "  trust-receipt verify <file> [--type <kind>] [--jwks-url <url>] [--jwks-file <path>]",
       "  trust-receipt inspect <file>",
       "  trust-receipt generate-key",
       "  trust-receipt conformance",
@@ -55,14 +62,22 @@ function help(): void {
       "  trust-receipt --version",
       "",
       "Commands:",
-      "  verify       Verify a .jws file. Exit 0 = valid, 1 = invalid.",
+      "  verify       Verify a signed artifact. Exit 0 = valid, 1 = invalid.",
       "  inspect      Decode JWS without verifying (inspection only).",
       "  generate-key Generate Ed25519 keypair in JWK format.",
       "  conformance  Run all 10 conformance test vectors end-to-end.",
       "",
       "Options for verify:",
-      "  --jwks-url <url>    Remote JWKS URL",
+      "  --type <kind>       auto (default) | receipt | erasure | manifest | jwks-history",
+      "                      Bundle (.zip) verification is deferred to v1.2.",
+      "  --jwks-url <url>    Remote JWKS URL (used by receipt | erasure | manifest)",
       "  --jwks-file <path>  Path to local JWKS JSON file",
+      "",
+      "Notes:",
+      "  - `receipt` validates Trusteed trust receipts (v1.0 JWS or v1.1 envelope).",
+      "  - `erasure` validates Trusteed extension erasure receipts (Ed25519 JWS, developer-signed).",
+      "  - `manifest` validates Trusteed extension manifests (Ed25519 JWS, shape gate only).",
+      "  - `jwks-history` validates Trusteed jwks-history.jws against the embedded issuer root.",
       "",
     ].join("\n")
   );
@@ -70,11 +85,14 @@ function help(): void {
 
 // ─── Arg parser ───────────────────────────────────────────────────────────────
 
+type VerifyType = "auto" | "receipt" | "erasure" | "manifest" | "jwks-history";
+
 interface ParsedArgs {
   command: string | null;
   file: string | null;
   jwksUrl: string | null;
   jwksFile: string | null;
+  verifyType: VerifyType;
   showHelp: boolean;
   showVersion: boolean;
 }
@@ -86,6 +104,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     file: null,
     jwksUrl: null,
     jwksFile: null,
+    verifyType: "auto",
     showHelp: false,
     showVersion: false,
   };
@@ -103,6 +122,18 @@ function parseArgs(argv: string[]): ParsedArgs {
     } else if (arg === "--jwks-file" && args[i + 1]) {
       result.jwksFile = args[i + 1] ?? null;
       i++;
+    } else if (arg === "--type" && args[i + 1]) {
+      const next = args[i + 1];
+      if (
+        next === "auto" ||
+        next === "receipt" ||
+        next === "erasure" ||
+        next === "manifest" ||
+        next === "jwks-history"
+      ) {
+        result.verifyType = next;
+      }
+      i++;
     } else if (!result.command) {
       result.command = arg ?? null;
     } else if (!result.file) {
@@ -114,38 +145,80 @@ function parseArgs(argv: string[]): ParsedArgs {
   return result;
 }
 
+// ─── Autodetect ───────────────────────────────────────────────────────────────
+
+function detectArtifactKind(blob: string): VerifyType {
+  const trimmed = blob.trim();
+  // JWKS history is a JSON object containing `jws_compact`.
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      if (typeof parsed.jws_compact === "string") return "jwks-history";
+      if (
+        typeof parsed.receipt === "string" &&
+        typeof parsed.envelope_metadata === "object"
+      ) {
+        return "receipt"; // v1.1 envelope
+      }
+    } catch {
+      /* fall through */
+    }
+    return "auto";
+  }
+  // Compact JWS — try to peek at the payload's `schema_version` / fields.
+  const segments = trimmed.split(".");
+  if (segments.length !== 3) return "auto";
+  try {
+    const payloadSeg = segments[1] ?? "";
+    const padded = payloadSeg + "=".repeat((4 - (payloadSeg.length % 4)) % 4);
+    const decoded = Buffer.from(
+      padded.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64"
+    ).toString("utf8");
+    const obj = JSON.parse(decoded) as Record<string, unknown>;
+    if (typeof obj.schema_version === "string") {
+      // Manifests carry `scopes_requested` + `vendor`; receipts carry `protocol`.
+      if ("scopes_requested" in obj && "vendor" in obj) return "manifest";
+      if ("protocol" in obj && "issuer" in obj) return "receipt";
+    }
+    if ("install_id" in obj && "deleted_at" in obj) return "erasure";
+    if ("protocol" in obj && "issuer" in obj) return "receipt";
+  } catch {
+    /* fall through */
+  }
+  return "auto";
+}
+
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
-async function cmdVerify(
-  file: string,
+function loadJwksFile(jwksFile: string): PublicJwk[] | null {
+  try {
+    const raw = readFileSync(jwksFile, "utf8");
+    const parsed = JSON.parse(raw) as { keys?: PublicJwk[] };
+    return parsed.keys ?? [];
+  } catch {
+    return null;
+  }
+}
+
+async function cmdVerifyReceipt(
+  jws: string,
   jwksUrl: string | null,
   jwksFile: string | null
 ): Promise<number> {
-  let jws: string;
-  try {
-    jws = readFileSync(file, "utf8").trim();
-  } catch {
-    printError(`Cannot read file: ${file}`);
-    return 2;
-  }
-
-  // Determine JWKS source
   let resolvedJwksUrl: string | undefined;
   let inlineJwks: PublicJwk[] | undefined;
 
   if (jwksFile) {
-    try {
-      const raw = readFileSync(jwksFile, "utf8");
-      const parsed = JSON.parse(raw) as { keys?: PublicJwk[] };
-      inlineJwks = parsed.keys ?? [];
-    } catch {
+    const keys = loadJwksFile(jwksFile);
+    if (!keys) {
       printError(`Cannot read JWKS file: ${jwksFile}`);
       return 2;
     }
+    inlineJwks = keys;
   } else if (jwksUrl) {
     resolvedJwksUrl = jwksUrl;
   } else {
-    // Try to extract from receipt's verification_methods
     const unsafe = await parseTrustReceiptUnsafe(jws);
     if (unsafe) {
       const jwksMethod = unsafe.verification_methods.find(
@@ -167,9 +240,114 @@ async function cmdVerify(
     jwksUrl: resolvedJwksUrl,
     jwks: inlineJwks,
   });
+  print({ kind: "receipt", ...result });
+  return result.valid ? 0 : 1;
+}
 
+async function cmdVerifyExtensionArtifact(
+  jws: string,
+  kind: ExtensionArtifactKind,
+  jwksUrl: string | null,
+  jwksFile: string | null
+): Promise<number> {
+  let inlineJwks: PublicJwk[] | undefined;
+  let resolvedJwksUrl: string | undefined;
+
+  if (jwksFile) {
+    const keys = loadJwksFile(jwksFile);
+    if (!keys) {
+      printError(`Cannot read JWKS file: ${jwksFile}`);
+      return 2;
+    }
+    inlineJwks = keys;
+  } else if (jwksUrl) {
+    resolvedJwksUrl = jwksUrl;
+  } else {
+    printError(
+      `No JWKS source. Provide --jwks-url or --jwks-file for --type ${kind}.`
+    );
+    return 2;
+  }
+
+  const result = await verifyExtensionArtifact(jws, {
+    kind,
+    ...(inlineJwks ? { jwks: inlineJwks } : {}),
+    ...(resolvedJwksUrl ? { jwksUrl: resolvedJwksUrl } : {}),
+  });
   print(result);
   return result.valid ? 0 : 1;
+}
+
+async function cmdVerifyJwksHistory(blob: string): Promise<number> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(blob);
+  } catch {
+    print({
+      valid: false,
+      kind: "jwks-history",
+      reason: "malformed_input",
+      detail: "input is not valid JSON",
+    });
+    return 1;
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    typeof (parsed as Record<string, unknown>).jws_compact !== "string"
+  ) {
+    print({
+      valid: false,
+      kind: "jwks-history",
+      reason: "malformed_input",
+      detail: "missing jws_compact field",
+    });
+    return 1;
+  }
+
+  const root = getActiveIssuerRoot();
+  const result = await verifyJwksHistorySignature(
+    parsed as SignedJwksHistory,
+    root
+  );
+  print({ kind: "jwks-history", ...result });
+  return result.valid ? 0 : 1;
+}
+
+async function cmdVerify(
+  file: string,
+  verifyType: VerifyType,
+  jwksUrl: string | null,
+  jwksFile: string | null
+): Promise<number> {
+  let blob: string;
+  try {
+    blob = readFileSync(file, "utf8").trim();
+  } catch {
+    printError(`Cannot read file: ${file}`);
+    return 2;
+  }
+
+  const effective: VerifyType =
+    verifyType === "auto" ? detectArtifactKind(blob) : verifyType;
+
+  if (effective === "auto") {
+    printError(
+      "Unable to autodetect artifact type. Pass --type receipt|erasure|manifest|jwks-history explicitly."
+    );
+    return 2;
+  }
+
+  switch (effective) {
+    case "receipt":
+      return cmdVerifyReceipt(blob, jwksUrl, jwksFile);
+    case "erasure":
+      return cmdVerifyExtensionArtifact(blob, "erasure", jwksUrl, jwksFile);
+    case "manifest":
+      return cmdVerifyExtensionArtifact(blob, "manifest", jwksUrl, jwksFile);
+    case "jwks-history":
+      return cmdVerifyJwksHistory(blob);
+  }
 }
 
 async function cmdInspect(file: string): Promise<number> {
@@ -336,7 +514,12 @@ async function main(): Promise<void> {
         printError("Missing file argument. Usage: trust-receipt verify <file>");
         process.exit(2);
       }
-      exitCode = await cmdVerify(args.file, args.jwksUrl, args.jwksFile);
+      exitCode = await cmdVerify(
+        args.file,
+        args.verifyType,
+        args.jwksUrl,
+        args.jwksFile
+      );
       break;
     }
     case "inspect": {

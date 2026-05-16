@@ -1,21 +1,43 @@
+<!-- generated-by: gsd-doc-writer -->
+
 # TrustReceipt
 
-**Cross-protocol evidence receipts for agentic commerce**
+**Merchant-side evidence layer for agentic commerce — signed, portable, offline-verifiable**
 
-[![Spec v1.0](https://img.shields.io/badge/spec-v1.0-blue)](SPEC.md)
-[![Spec v1.1](https://img.shields.io/badge/spec-v1.1--eIDAS-orange)](SPEC.md)
+[![Version](https://img.shields.io/badge/spec-v1.1-blue)](SPEC.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![npm](https://img.shields.io/npm/v/@agenticmcpstores/trust-receipt-verifier)](https://www.npmjs.com/package/@agenticmcpstores/trust-receipt-verifier)
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
-[![Conformance](https://img.shields.io/badge/conformance-58%2F58%20vectors-brightgreen)](test-vectors/)
+[![npm](https://img.shields.io/npm/v/trust-receipt-verifier)](https://www.npmjs.com/package/trust-receipt-verifier)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
 
 ---
 
 ## What it is
 
-TrustReceipt is an open standard for JWS-signed JSON receipts that are verifiable offline against a public JWKS endpoint. A receipt can represent evidence hashes from protocols such as x402, AP2, ACP, MCP, UCP, and MCAP without modification to the receipt format itself. Each receipt proves who the agent was, which protocol ran, what trust providers vouched for the transaction, and what policy decision was reached — all in a single self-contained token that any party can verify without calling back to the issuer.
+TrustReceipt is an open, merchant-oriented receipt format for offline-verifiable agentic commerce evidence across protocols such as ACP, AP2, x402, MCP, UCP, and MCAP. It is **protocol-compatible, not protocol-competing**: rather than replacing AP2 mandates, ACP checkout sessions, Visa TAP signatures, or x402 settlements, it produces a portable cryptographic record of the policy decision applied to them.
 
-**v1.1** (May 2026) adds eIDAS-aligned fields: `legal_posture`, RFC 3161 timestamp evidence, AWS KMS-backed signing, consent context with ESIGN/UETA fields, and jurisdiction-aware retention. The v1.0 format remains stable and production-active.
+A TrustReceipt is a JWS-signed JSON payload verifiable offline against a public JWKS endpoint. Each receipt records who the agent was, which protocol ran, what trust providers vouched for the transaction, what policy was applied, and what decision was reached — in a single self-contained token any party can verify without calling the issuer.
+
+This package is the **reference verifier and issuer** implementation. It is part of Trusteed's merchant-control stack (policy snapshots + agent control points + receipts), but the receipt format itself is open and portable across issuers.
+
+---
+
+## Capability status
+
+| Capability                                               | Status                              | Notes                                                                                 |
+| -------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
+| JWS verification (Ed25519)                               | ✅ Implemented                      | CLI + library, no custom crypto (uses `jose` v6)                                      |
+| JWKS-based public key resolution                         | ✅ Implemented                      | Cached fetch with TTL; inline JWK set also supported                                  |
+| Schema v1.0                                              | ✅ Stable                           | 10 conformance vectors passing                                                        |
+| Schema v1.1 (eIDAS-aligned fields)                       | 🟡 Code-complete / experimental     | 11 additional vectors passing; field set may evolve before v1.2                       |
+| RFC 8785 canonical JSON                                  | ✅ Implemented                      | Used for signing + audit chain hashes                                                 |
+| Audit chain (`hash_chain_prev`)                          | ✅ Implemented                      | Per-merchant tamper-evident linkage                                                   |
+| eIDAS Advanced Electronic Seal posture                   | 🟡 Candidate                        | Field-level support; **not** a Qualified Electronic Seal (no QTSP)                    |
+| ESIGN / UETA evidence shape                              | 🟡 Partial                          | `esign_disclosure_hash` + consent context; full disclosure workflow in progress       |
+| RFC 3161 trusted timestamp evidence                      | 🟡 Optional / integration-dependent | Hook present via `trust-receipt-tsa-client`; depends on TSA provider                  |
+| AWS KMS issuer-side signing                              | 🟡 Optional / issuer-side           | Provided by sibling package `trust-receipt-kms-signer`; not required for verification |
+| Reference ports (TS) / language ports (Python, Go, Java) | 🟡 TS only today                    | Ports welcome — see `CONTRIBUTING.md`                                                 |
+
+> ✅ = production-grade implementation. 🟡 = present and tested but subject to change before v1.2 GA, or dependent on operator-side integration.
 
 ---
 
@@ -100,6 +122,7 @@ flowchart LR
 ```
 
 **Key properties:**
+
 - **Offline-capable** — verification only needs the JWKS URL (publicly cached); no call back to the issuer
 - **Protocol-agnostic** — one receipt format covers x402, AP2, ACP, MCP, UCP, and MCAP via `protocol_artifacts`
 - **Audit-chainable** — `hash_chain_prev` links receipts in a tamper-evident per-merchant chain (RFC 8785)
@@ -109,128 +132,34 @@ flowchart LR
 
 ## Legal Disclaimer
 
-> TrustReceipt generates portable cryptographic evidence of origin, integrity, consent, agent authorization, and auditable retention.
-> Designed to be compatible with ESIGN/UETA in the US, with EU eIDAS Regulation 910/2014 as a candidate advanced electronic seal, and with the UK Electronic Communications Act 2000 and Digital Identity and Attributes Trust Framework (DIATF).
-> Qualified Electronic Seals (QeSeal) require issuance or co-sealing by an accredited QTSP.
+> Verifiable seal for agentic commerce. Each TrustReceipt generates portable cryptographic evidence of origin, integrity, consent, agent authorization, and auditable retention.
+> Designed to be compatible with ESIGN/UETA in the US, with eIDAS in the EU as candidate advanced electronic seal evidence, and with the UK Electronic Signatures and Trust Services framework.
+> Qualified seals/signatures require issuance or validation by an applicable QTSP.
 
-> **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
+> **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-> **Claims policy**: Do not describe TrustReceipt as "eIDAS certified", "qualified electronic seal", or "legal equivalent to a handwritten signature" in marketing materials. Correct terminology: "cryptographically verifiable evidence", "tamper-evident receipt", "advanced electronic seal candidate".
+_See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) for the full claims policy._
 
----
+### Regulatory Compatibility Status
 
-## Regulatory Compatibility Status
-
-> Last updated: 2026-05-13 · Post spec-049 Phase 13 (134/134 tests passing)
-
-| Framework | Jurisdiction | v1.0 (production) | v1.1 (code-complete) | Key v1.1 fields |
-|---|---|---|---|---|
-| **eIDAS** Art. 35 — Simple Seal | EU | ✅ Active | — | `kid`, `verification_methods` |
-| **eIDAS** Art. 36 — Advanced Seal (AdES) | EU | ⚠️ Candidate (no KMS ARN yet) | ✅ Code-complete, not wired to hot path | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence` |
-| **eIDAS** Art. 40 — Qualified Seal (QES) | EU | ❌ Requires QTSP | ❌ Deferred (spec-050) | — |
-| **EUDI Wallet** (EU 2024/1183) | EU | ❌ Blocked by legal | ❌ Analysis done, blockers unresolved | — |
-| **ESIGN Act** (15 U.S.C. §§7001-7006) | US | ⚠️ ~70% — core seal present | ✅ ~85% — consent+disclosure fields | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
-| **UETA** (47 states + DC) | US | ⚠️ Same as ESIGN | ✅ ~85% — same fields | Same as ESIGN |
-| **ECA 2000 + SI 2002/318** | UK | ✅ Ed25519 seal admissible | ✅ Statute ref updated | `legal_posture`, `privacy_classification.jurisdiction` |
-| **UK DIATF** v0.4/1.0 (OfDIA) | UK | ⚠️ Schema pass-through only | ⚠️ No GPG45/44 binding | `trust_provider_assertions[].provider="uk-diatf"`, `assurance_level` |
+| Framework                                      | Jurisdiction | Status                                                                                                                                                                                                                        | v1.1 Fields                                                                                                  |
+| ---------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **eIDAS** (Regulation 910/2014)                | EU           | 🟡 Candidate — `legal_posture` progresses `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Qualified seal (QeSeal) requires a QTSP.                                                             | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
+| **ESIGN / UETA**                               | US           | 🟡 Partial — Verifiable seal with consent evidence, agent attribution, versioned disclosure, and auditable retention, designed to support ESIGN/UETA. Full disclosure workflow (withdrawal URI, version pinning) in progress. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
+| **Electronic Communications Act 2000 / DIATF** | UK           | 🟡 Schema-compatible — jurisdiction-aware retention (UK: 7 y default) and `legal_posture` field carry UK trust-service evidence. DIATF alignment verified at schema level; operational certification pending.                 | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy`                     |
 
 > ⚠️ None of the above constitutes legal advice. Regulatory qualification status may change as the implementation evolves. Consult qualified legal counsel for jurisdiction-specific requirements.
-
----
-
-## Regulatory Detail
-
-### EU eIDAS (Regulation 910/2014)
-
-Three tiers of electronic seal, in ascending assurance:
-
-| Tier | Legal basis | Production status | Code status |
-|------|-------------|-------------------|-------------|
-| Simple (Art. 35) | Data linked to creator, integrity verifiable | ✅ **Active** — JWS compact Ed25519, `outputHash`, 5-state grace FSM | — |
-| Advanced / AdES (Art. 36) | Uniquely linked, sole control, detectable change + timestamp | ⚠️ **Candidate** — `issueReceipt()` code-complete; not wired to production worker yet | ✅ v1.1 complete |
-| Qualified / QES (Art. 40 + Annex II) | AdES + QTSP co-seal on QSCD | ❌ Deferred — requires InfoCert/Namirial (est. €0.10–0.50/seal) | ❌ |
-
-The `legal_posture` field is computed deterministically by the issuer:
-
-| KMS key configured | TSA active | Agent identity | `legal_posture` value |
-|---|---|---|---|
-| ✅ | ✅ | Present (`buyer_agent`) | `ades_candidate_timestamped` |
-| ✅ | ❌ | Present | `ades_candidate_no_tsa` |
-| ❌ | any | Present | `ades_candidate_no_tsa` |
-| any | any | Absent | `degraded_no_agent_identity` |
-| — | — | — (`merchant_admin`) | `merchant_admin_action` |
-
-AdES production requires: (1) AWS KMS Ed25519 ARN configured, (2) v1.1 caller wiring (`trust-receipt.worker.ts` → `issueReceipt()`), (3) `TRUST_RECEIPT_EIDAS_HARDENING_ENABLED=true`.
-
-### EU EUDI Wallet (Regulation 2024/1183)
-
-Analysis completed. **Blockers before any implementation:**
-
-- Legal opinion needed on "deemed Relying Party" status under Regulation 2024/1183 Art. 3(52) — unresolved.
-- Cross-border WPRC/RPRC auto-registration not empirically verified.
-- Age verification SMB exemption scope unclear.
-- QTSP abstraction (Procivis/Paradym) requires POC before spec.
-
-Timeline estimate if blockers resolved: 28–36 weeks. No implementation currently planned.
-
-### US ESIGN Act / UETA
-
-Coverage at v1.1 schema level (~85%):
-
-| Requirement | Legal basis | Status |
-|-------------|------------|--------|
-| Consumer consent to electronic records | §101(c) | ✅ `consent_hash` (HMAC-SHA256 via KMS) |
-| Affirmative intent of agent | §101(a) | ✅ `buyer_agent_consent_context.consent_hash` + `payment_authorization_hash` |
-| Authorization chain to human | §101(a) | ✅ `agent_authorization_chain[]` (RFC 9421) |
-| Pre-transaction disclosure | §101(c)(1)(B) | ✅ `esign_disclosure_version` + `esign_disclosure_hash` |
-| 7-year retention | §101(d) + IRS §6501 | ✅ `retention-policy` US=7y |
-| Reproducible format / accessibility | §101(d) | ⚠️ Export bundle ZIP in progress |
-| Withdrawal right | §101(c)(1)(C) | ✅ `withdrawal_uri` in schema; no admin UI yet |
-| Consent evidence record | Best practice | ✅ Evidence vault + issuance guard |
-
-UETA (47 states + DC) covers the same requirements. California (Cal. Civ. Code §1633) and New York state variants are satisfied by the same v1.1 fields.
-
-### UK — Electronic Communications Act 2000 + DIATF
-
-**ECA 2000 / retained eIDAS:**
-
-| Instrument | Relevance | Status |
-|-----------|-----------|--------|
-| ECA 2000 §7 | Electronic signature admissibility in UK proceedings | ✅ JWS Ed25519 qualifies |
-| SI 2002/318 | Advanced electronic seal requirements (≡ eIDAS Art. 36) | ✅ v1.1 `statute` field: `"ECA 2000 §7 + SI 2002/318 + Limitation Act 1980 §5"` |
-| SI 2016/696 | Pre-Brexit eIDAS transposition (retained UK law) | ✅ Covered |
-| SI 2019/89 | Post-Brexit amendment; DSIT/UKAS governance | ✅ Covered |
-| Limitation Act 1980 §5 | Contractual action: 6-year retention | ✅ `retention_years=6` for UK jurisdiction |
-
-**UK DIATF (OfDIA — Office for Digital Identities and Attributes):**
-
-Current versions: v0.4 (certifiable from 1 December 2025); v1.0 pre-release (6 March 2026).
-
-What is implemented (schema-level, May 2026):
-- `trust_provider_assertions[].provider = "uk-diatf"` accepted in v1.1 schema
-- `assurance_level ∈ {"Low", "Medium", "High"}` pass-through from IDSP
-- Conformance vector `021-v11-uk-jurisdiction-export-bundle.json` covers acceptance path
-- Lint gate: UK DIATF levels not mapped to eIDAS LoA without counsel approval
-
-What is **not** implemented (deferred):
-- GPG 44 / GPG 45 score validation
-- Binding to a certified IDSP from the OfDIA register (Post Office, Yoti, etc.)
-- UKAS Conformity Assessment Body (CAB) verification
-- Per-claim `identity_confidence_level` for agent identity
-- Full assertion schema against DIATF 0.4 / 1.0 published profile
-
-If UK market is priority: ~3 weeks of implementation work (design + ~40 tasks).
 
 ---
 
 ## Quick verify
 
 ```bash
-npm install @agenticmcpstores/trust-receipt-verifier
+npm install trust-receipt-verifier
 ```
 
 ```typescript
-import { verifyTrustReceipt } from "@agenticmcpstores/trust-receipt-verifier";
+import { verifyTrustReceipt } from "trust-receipt-verifier";
 
 const result = await verifyTrustReceipt(jwsToken, {
   jwksUrl: "https://trusteed.xyz/.well-known/jwks.json",
@@ -238,7 +167,6 @@ const result = await verifyTrustReceipt(jwsToken, {
 
 if (result.valid) {
   console.log(result.receipt.policy_decision); // "allow"
-  console.log(result.receipt.legal_posture);   // "ades_candidate_timestamped" (v1.1)
 } else {
   console.error(result.reason, result.errors);
 }
@@ -248,127 +176,107 @@ if (result.valid) {
 
 ## Receipt anatomy
 
-### v1.0 fields (24 fields across 5 groups)
+A TrustReceipt payload contains 24 fields across five groups:
 
 **Core**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `receipt_id` | UUID v4 | Unique receipt identifier |
-| `schema_version` | `"1.0"` | Schema version literal |
-| `issued_at` | Unix seconds | When the receipt was created |
-| `expires_at` | Unix seconds | When the receipt expires |
-| `issuer` | string | Issuing platform domain |
+| Field            | Type         | Description                  |
+| ---------------- | ------------ | ---------------------------- |
+| `receipt_id`     | UUID v4      | Unique receipt identifier    |
+| `schema_version` | `"1.0"`      | Schema version literal       |
+| `issued_at`      | Unix seconds | When the receipt was created |
+| `expires_at`     | Unix seconds | When the receipt expires     |
+| `issuer`         | string       | Issuing platform domain      |
 
 **Participants**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `merchant_id` | string | Merchant identifier |
-| `agent_id` | string | Agent session or instance identifier |
+| Field            | Type   | Description                                      |
+| ---------------- | ------ | ------------------------------------------------ |
+| `merchant_id`    | string | Merchant identifier                              |
+| `agent_id`       | string | Agent session or instance identifier             |
 | `agent_provider` | string | AI provider (`anthropic`, `openai`, `google`, …) |
 
 **Transaction Evidence**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `user_intent_hash` | string (non-empty) | SHA-256 hex of the user's original intent text |
-| `cart_hash` | SHA-256 hex | Hash of cart contents at decision time (optional) |
-| `order_hash` | SHA-256 hex | Hash of settled order object (optional) |
-| `transaction_id` | string | Platform transaction reference (optional) |
-| `protocol` | enum | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP` |
-| `protocol_artifacts` | array | Hashes of protocol-specific evidence objects |
-| `payment_reference` | object | PSP name + reference, no raw payment data (optional) |
+| Field                | Type               | Description                                                                           |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------------- |
+| `user_intent_hash`   | string (non-empty) | Hash of the user's original intent text — must be non-empty (SHA-256 hex recommended) |
+| `cart_hash`          | SHA-256 hex        | Hash of cart contents at decision time (optional)                                     |
+| `order_hash`         | SHA-256 hex        | Hash of settled order object (optional)                                               |
+| `transaction_id`     | string             | Platform transaction reference (optional)                                             |
+| `protocol`           | enum               | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`                                            |
+| `protocol_artifacts` | array              | Hashes of protocol-specific evidence objects                                          |
+| `payment_reference`  | object             | PSP name + reference, no raw payment data (optional)                                  |
 
 **Trust Assertions**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `risk_signals` | array | Normalized signals from issuer or providers |
+| Field                       | Type  | Description                                                 |
+| --------------------------- | ----- | ----------------------------------------------------------- |
+| `risk_signals`              | array | Normalized signals from issuer or providers                 |
 | `trust_provider_assertions` | array | Scored assertions from ClearSale, Trulioo, Mastercard, etc. |
-| `policy_decision` | enum | `allow \| deny \| review \| challenge` |
+| `policy_decision`           | enum  | `allow \| deny \| review \| challenge`                      |
 
 **Compliance**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `liability_context` | object | Assertor and scope (optional) |
-| `consent_context` | object | Consent hash, scope, timestamp (optional) |
-| `privacy_classification` | object | PII flag, retention days, jurisdiction (optional) |
-| `verification_methods` | array | JWKS URL or DID for key resolution — at least one required |
-| `kid` | string | Key ID used to sign this receipt |
-| `hash_chain_prev` | SHA-256 hex | Previous receipt in audit chain (optional) |
-| `attachments` | array | Named, hashed file references (optional) |
-
-### v1.1 additional fields (eIDAS hardening)
-
-v1.1 drops the legacy rail-specific fields (`mandate_hash`, `permit2`, `mcp`) and introduces:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `payment_authorization_hash` | string | Rail-agnostic payment authorization hash (replaces per-rail fields) |
-| `authorization_scheme` | string | Rail identifier (`x402`, `ap2`, `acp`, `mcap`, …) |
-| `legal_posture` | enum | `ades_candidate_timestamped \| ades_candidate_no_tsa \| degraded_no_agent_identity \| merchant_admin_action` |
-| `legal_posture_warnings` | array | Non-fatal compliance notes (e.g. `tsa_fail_open_active`) |
-| `esign_disclosure_hash` | SHA-256 hex | Hash of the pre-transaction ESIGN/UETA disclosure shown to the user |
-| `timestamp_evidence` | object | RFC 3161 TST response + TSA certificate + nonce (eIDAS Art. 36 timestamp) |
-| `receipt_subject` | enum | `buyer_agent \| merchant_admin` |
-| `agent_authorization_chain` | array | RFC 9421 HTTP Signature chain proving agent ↔ human binding |
-| `consent_context.consent_disclosure_version` | semver | Disclosure document version at time of consent |
-| `consent_context.withdrawal_uri_hash` | SHA-256 hex | Hash of URI where consumer can withdraw consent |
-| `export_bundle` | object | ZIP bundle metadata: SHA-256, retention policy, jurisdiction |
+| Field                    | Type        | Description                                                      |
+| ------------------------ | ----------- | ---------------------------------------------------------------- |
+| `liability_context`      | object      | Assertor and scope (optional)                                    |
+| `consent_context`        | object      | Consent hash, scope, timestamp (optional)                        |
+| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional)                |
+| `verification_methods`   | array       | JWKS URL or DID for key resolution — at least one entry required |
+| `kid`                    | string      | Key ID used to sign this receipt                                 |
+| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                       |
+| `attachments`            | array       | Named, hashed file references (optional)                         |
 
 ---
 
 ## Protocol support
 
-| Protocol | Artifact mapping | Primary artifact types |
-|----------|-----------------|----------------------|
-| [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Defined | `mcap_consent_hash`, `mcap_nonce` |
-| [x402](https://github.com/x402-foundation/x402) | Defined | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
-| [AP2](https://github.com/google-agentic-commerce/AP2) | Defined | `mandate_hash`, `ap2_consent_hash` |
-| [MCP](https://modelcontextprotocol.io) | Defined | `mcp_call_hash`, `tool_call_hash` |
-| [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol) | Defined | `acp_session_hash`, `acp_policy_hash` |
-| [UCP](https://github.com/Universal-Commerce-Protocol/ucp) | Defined | `ucp_token_hash` |
-
-In v1.1, protocol-specific hash fields are unified under `payment_authorization_hash` + `authorization_scheme`. The per-protocol artifact types above are preserved in `protocol_artifacts[]` for backward compatibility.
+| Protocol                                                                                                  | Artifact mapping | Primary artifact types                                  |
+| --------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------- |
+| [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Defined          | `mcap_consent_hash`, `mcap_nonce`                       |
+| [x402](https://github.com/x402-foundation/x402)                                                           | Defined          | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
+| [AP2](https://github.com/google-agentic-commerce/AP2)                                                     | Defined          | `mandate_hash`, `ap2_consent_hash`                      |
+| [MCP](https://modelcontextprotocol.io)                                                                    | Defined          | `mcp_call_hash`, `tool_call_hash`                       |
+| [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                             | Defined          | `acp_session_hash`, `acp_policy_hash`                   |
+| [UCP](https://github.com/Universal-Commerce-Protocol/ucp)                                                 | Defined          | `ucp_token_hash`                                        |
 
 ---
 
 ## Conformance
 
-Three conformance levels:
+A verifier implementation must pass all 10 test vectors (v1.0) to claim TrustReceipt conformance. Three levels are defined:
 
-| Level | Name | Requirement |
-|-------|------|-------------|
-| 1 | Verifier | Passes all 10 v1.0 test vectors |
-| 2 | Issuer | Level 1 + correctly issues valid receipts |
-| 3 | Provider | Level 2 + co-authors ≥1 `trust_provider_assertions` type with real data |
+> **v1.1 status (2026-05-06)** — eIDAS hardening adds 11 v1.1 vectors under `test-vectors/v11/`. v1.1 schema drops legacy `mandate_hash` / `permit2` / `mcp` rail fields and introduces `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, and `esign_disclosure_hash`. Combined suite 58/58 passing.
 
-This reference implementation is **Level 2 conformant**.
+| Level | Name     | Requirement                                                             |
+| ----- | -------- | ----------------------------------------------------------------------- |
+| 1     | Verifier | Passes all 10 test vectors                                              |
+| 2     | Issuer   | Level 1 + correctly issues valid receipts                               |
+| 3     | Provider | Level 2 + co-authors ≥1 `trust_provider_assertions` type with real data |
 
-**Test vector status (2026-05-13):** 58/58 passing — 10 v1.0 vectors + 11 v1.1 eIDAS vectors + 37 additional compliance vectors (ESIGN, UK DIATF, TSA, KMS, agent identity).
+This reference implementation is Level 2 conformant. There are two ways to run the conformance suite:
 
-**(a) Unit tests:**
+**(a) Unit tests** — verifies all 10 vectors using pre-built test infrastructure (10 tests):
 
 ```bash
 pnpm test
 ```
 
-**(b) End-to-end JWS conformance** — generates a fresh keypair, signs all vectors, calls `verifyTrustReceipt`, and reports pass/fail:
+**(b) End-to-end JWS conformance** — generates a fresh keypair, signs all 10 vectors, calls `verifyTrustReceipt`, and reports pass/fail per vector:
 
 ```bash
-# Via CLI (requires build first)
+# Via CLI (requires the package to be built first)
 trust-receipt conformance
 
 # Or directly with tsx (no build required)
 npx tsx scripts/validate-vectors.ts
 ```
 
-Add the badge once all vectors pass:
+Add the badge to your project once all 10 pass:
 
 ```markdown
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
 ```
 
 ---
@@ -376,7 +284,7 @@ Add the badge once all vectors pass:
 ## Repo structure
 
 ```
-Trust-Receipt-Verifier/
+packages/trust-receipt-verifier/
 ├── SPEC.md                          — formal specification (authoritative)
 ├── CONTRIBUTING.md                  — how to contribute vectors, ports, and provider schemas
 ├── LICENSE                          — MIT
@@ -385,16 +293,14 @@ Trust-Receipt-Verifier/
 │   ├── verifier.ts                  — verifyTrustReceipt() + parseTrustReceiptUnsafe()
 │   ├── issuer.ts                    — issueTrustReceipt()
 │   └── schema/
-│       ├── trust-receipt.schema.ts  — Zod v1.0 schema
-│       └── zod-1.1.ts               — Zod v1.1 schema (eIDAS hardening)
+│       └── trust-receipt.schema.ts  — Zod schema (source of truth for TypeScript)
 ├── test-vectors/
 │   ├── README.md                    — how to use the vectors
-│   ├── vectors.json                 — v1.0 vector manifest (10 vectors)
+│   ├── vectors.json                 — vector manifest with expected outcomes
 │   ├── valid/                       — TC-001 through TC-005
-│   ├── invalid/                     — TC-006 through TC-010
-│   └── v11/                         — 11 v1.1 eIDAS vectors
+│   └── invalid/                     — TC-006 through TC-010
 ├── bin/
-│   └── trust-receipt.ts             — CLI: verify, inspect, generate-key, conformance
+│   └── trust-receipt.ts (source) → dist/bin/trust-receipt.js (compiled) — CLI: verify, inspect, generate-key, conformance
 └── demo/                            — runnable demo scripts
 ```
 
@@ -403,7 +309,7 @@ Trust-Receipt-Verifier/
 ## Issue a receipt
 
 ```typescript
-import { issueTrustReceipt } from "@agenticmcpstores/trust-receipt-verifier";
+import { issueTrustReceipt } from "trust-receipt-verifier";
 
 const jws = await issueTrustReceipt({
   payload: {
@@ -425,9 +331,7 @@ const jws = await issueTrustReceipt({
 });
 ```
 
-> **Canonicalization**: the payload is serialized with RFC 8785 (sorted keys, no whitespace) before signing, ensuring `SHA-256(payload)` is identical across all conformant implementations.
-
----
+> **Canonicalización**: el payload se serializa con RFC 8785 (claves ordenadas, sin whitespace) antes de firmar, garantizando que `SHA-256(payload)` sea idéntico en cualquier implementación conforme.
 
 ## CLI
 
@@ -441,7 +345,7 @@ trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwk
 # Inspect a receipt without verifying the signature
 trust-receipt inspect receipt.jws
 
-# Run full end-to-end conformance suite
+# Run full end-to-end conformance suite (signs + verifies all 10 vectors)
 trust-receipt conformance
 ```
 
@@ -449,20 +353,74 @@ trust-receipt conformance
 
 ## Documentation
 
-| Document | Description |
-| --- | --- |
-| [SPEC.md](SPEC.md) | Formal specification — wire format, field reference, conformance rules |
-| [docs/architecture.md](docs/architecture.md) | Architecture — signing envelope, key resolution, verification algorithm, security properties |
-| [schema/trust-receipt-v1.schema.json](schema/trust-receipt-v1.schema.json) | JSON Schema for machine validation |
-| [test-vectors/README.md](test-vectors/README.md) | How to run the 10 conformance vectors |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | How to add vectors, language ports, or trust provider schemas |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| Document                                     | Description                                                                                          |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                           | Formal specification — wire format, field reference, conformance rules                               |
+| [docs/architecture.md](docs/architecture.md) | Internal architecture — signing envelope, key resolution, verification pipeline, security properties |
+| [CONTRIBUTING.md](CONTRIBUTING.md)           | How to add conformance vectors, language ports, or trust provider schemas                            |
+| [CHANGELOG.md](CHANGELOG.md)                 | Version history and breaking changes                                                                 |
 
 ---
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add conformance vectors, port the verifier to another language, or co-author a `trust_provider_assertions` schema as a trust provider partner.
+
+---
+
+## What a TrustReceipt does NOT prove
+
+A receipt is technical evidence, not legal proof or operational guarantee. It deliberately does **not** assert:
+
+- **That the payment was captured or settled.** A receipt with `policy_decision: "allow"` records the decision and intent. Settlement is recorded by the underlying PSP / rail (Stripe charge, x402 on-chain tx, ACP completion, etc.) and referenced via `payment_reference` or `protocol_artifacts`, not by the receipt itself.
+- **That goods or services were delivered.** Fulfilment evidence lives in the merchant's order system.
+- **KYC / KYA compliance.** A receipt records that a trust provider asserted a level (e.g. `kya_status`) at issuance time. It is not a substitute for independent KYC/KYA verification.
+- **eIDAS Qualified Electronic Seal status.** Even with `legal_posture` populated, a TrustReceipt is at best an **Advanced** Electronic Seal candidate. Qualified seals require issuance by an EU-listed QTSP, which is out of scope for this package.
+- **Legal liability or admissibility.** A receipt is cryptographic evidence. Whether it is admissible or persuasive in a specific jurisdiction depends on local law, the parties' agreements, and facts beyond the receipt format.
+- **That the user actually intended what the agent did.** The receipt records `user_intent_hash` — i.e. that an intent text existed and was hashed — not that the hash matches a verified human utterance.
+
+If your use case needs any of the above guarantees, the receipt is a useful audit primitive _alongside_ those mechanisms, not a replacement for them.
+
+---
+
+## Threat model
+
+The verifier is designed to detect the following classes of tampering. For each, the verifier returns a structured `{ valid: false, reason }` rather than throwing.
+
+| Threat                                | Defence                                                                                                                    | Verifier behaviour                                               |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Signature forgery / payload tamper    | Ed25519 over RFC 8785 canonical bytes; `kid` pinned in header and payload                                                  | `reason: "signature_invalid"`                                    |
+| Wrong key used to sign                | `kid` mismatch between JWS header and JWKS entry                                                                           | `reason: "kid_not_found"` / `"signature_invalid"`                |
+| Expired receipt                       | `expires_at` checked against verifier clock with configurable tolerance                                                    | `reason: "expired"`                                              |
+| Receipt issued in the future          | `issued_at` checked against verifier clock with same tolerance                                                             | `reason: "issued_in_future"`                                     |
+| Schema downgrade / unknown fields     | Zod schema validation strict on known fields; unknown top-level keys rejected                                              | `reason: "schema_invalid"`                                       |
+| Replay of an old receipt              | **Out of scope for the verifier alone.** Consumers must enforce uniqueness via `receipt_id` + `issued_at` + business rules | n/a — verifier returns `valid: true` for not-yet-expired replays |
+| JWKS rotation while a receipt is live | JWKS fetch refreshes on `kid` miss; old keys can be retained in the JWKS set during the rotation grace window              | Verifies as long as `kid` is still published                     |
+| Compromised issuer key                | Key revocation is operator-side: remove the `kid` from the JWKS set; verifiers will fail closed                            | `reason: "kid_not_found"` once removed                           |
+| Clock skew between issuer/verifier    | `clockToleranceSeconds` option (default 60s)                                                                               | Within tolerance: pass. Outside: `expired` / `issued_in_future`  |
+| MITM on JWKS endpoint                 | TLS to JWKS host is the operator's responsibility; pinning the JWKS URL out-of-band defends against rogue substitution     | n/a — verifier trusts the configured URL                         |
+
+**Non-goals.** The verifier does **not** validate: (a) whether the underlying payment cleared, (b) whether merchant policy was correctly configured, (c) jurisdictional admissibility, (d) revocation lists external to the JWKS endpoint, or (e) protocol-specific evidence inside `protocol_artifacts` (those are caller-validated against the relevant protocol's spec).
+
+---
+
+## Versioning policy
+
+This package follows **Semantic Versioning** with respect to the public API _and_ the receipt wire format.
+
+| Change type                                         | Bump  | Compatibility                                                                                           |
+| --------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------- |
+| Add optional payload field                          | minor | Older verifiers ignore unknown fields **only if** the field is namespaced or explicitly marked optional |
+| Add required payload field                          | major | Older verifiers will reject — coordinated cutover required                                              |
+| Remove or rename payload field                      | major | Breaking — issuers must continue emitting v1.x receipts until verifier population catches up            |
+| Add new `protocol` enum value                       | minor | Older verifiers will reject unknown enum values; emit only after the verifier ecosystem supports it     |
+| Tighten Zod constraint (e.g. format, length)        | minor | Backward-compatible at parse time; new constraint is forward-only                                       |
+| Verifier library API change (function signature)    | major | Caller code must update                                                                                 |
+| Verifier library API change (new optional argument) | minor | Existing callers unaffected                                                                             |
+
+**Cross-version verification.** Verifier v1.1.x verifies receipts issued under schema v1.0 _and_ schema v1.1. v1.0 receipts will simply lack v1.1 fields (`legal_posture`, `consent_context`, etc.) and the verifier treats them as optional. There is no plan to drop v1.0 verification in any v1.x release — drop requires a v2.0 major bump and a deprecation window of at least 12 months.
+
+**`schema_version` field.** Receipts carry `schema_version: "1.0"` or `schema_version: "1.1"`. The verifier dispatches schema validation on this field. Receipts without a `schema_version` are rejected (`reason: "schema_invalid"`).
 
 ---
 
@@ -474,4 +432,4 @@ TrustReceipt is not affiliated with, endorsed by, or officially supported by Mas
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Copyright Trusteed.xyz, 2026.
+MIT — see [LICENSE](LICENSE). Copyright MCPWebStore (trusteed.xyz), 2026.
