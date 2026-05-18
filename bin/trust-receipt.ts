@@ -193,7 +193,7 @@ function detectArtifactKind(blob: string): VerifyType {
         typeof parsed.receipt === "string" &&
         typeof parsed.envelope_metadata === "object"
       ) {
-        return "receipt"; // v1.1 envelope
+        return "receipt-v11"; // v1.1 envelope — needs verifyReceiptEnvelope
       }
     } catch {
       /* fall through */
