@@ -411,7 +411,11 @@ async function cmdVerify(
   file: string,
   verifyType: VerifyType,
   jwksUrl: string | null,
-  jwksFile: string | null
+  jwksFile: string | null,
+  jwksHistoryFile: string | null,
+  trustAnchorSha256: string | null,
+  policyOids: string[],
+  allowStagingRoot: boolean
 ): Promise<number> {
   let blob: string;
   try {
@@ -426,7 +430,7 @@ async function cmdVerify(
 
   if (effective === "auto") {
     printError(
-      "Unable to autodetect artifact type. Pass --type receipt|erasure|manifest|jwks-history explicitly."
+      "Unable to autodetect artifact type. Pass --type receipt|receipt-v11|erasure|manifest|jwks-history explicitly."
     );
     return 2;
   }
@@ -434,6 +438,14 @@ async function cmdVerify(
   switch (effective) {
     case "receipt":
       return cmdVerifyReceipt(blob, jwksUrl, jwksFile);
+    case "receipt-v11":
+      return cmdVerifyReceiptV11(
+        blob,
+        jwksHistoryFile,
+        trustAnchorSha256,
+        policyOids,
+        allowStagingRoot
+      );
     case "erasure":
       return cmdVerifyExtensionArtifact(blob, "erasure", jwksUrl, jwksFile);
     case "manifest":
