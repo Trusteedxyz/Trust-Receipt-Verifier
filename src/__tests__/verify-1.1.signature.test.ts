@@ -82,6 +82,7 @@ function makeOptions(vector: VectorFile): VerifyOptions {
     // Staging stub root (SHA all-zeros) is not in the embedded anchor list.
     // Tests that exercise this code path must opt in explicitly.
     allowStagingRoot: true,
+    currentTimeSeconds: vector.verify_options.currentTime,
   };
 }
 
