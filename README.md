@@ -339,8 +339,21 @@ const jws = await issueTrustReceipt({
 # Generate an Ed25519 key pair
 trust-receipt generate-key
 
-# Verify a receipt file
+# Verify a v1.0 receipt (compact JWS)
 trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwks.json
+
+# Verify a v1.1 envelope (JSON object with `receipt` + `envelope_metadata`)
+trust-receipt verify envelope.json \
+  --type receipt-v11 \
+  --jwks-history-file issuer-jwks-history.json \
+  --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
+  --policy-oid 1.2.3.4.5.6.7.8.9
+
+# Staging / CI only — skip root-anchor check (never use in production)
+trust-receipt verify envelope.json --type receipt-v11 \
+  --jwks-history-file issuer-jwks-history.json \
+  --trust-anchor-sha256 <sha256> \
+  --allow-staging-root
 
 # Inspect a receipt without verifying the signature
 trust-receipt inspect receipt.jws
@@ -348,6 +361,8 @@ trust-receipt inspect receipt.jws
 # Run full end-to-end conformance suite (signs + verifies all 10 vectors)
 trust-receipt conformance
 ```
+
+> **`--type` autodetection**: when `--type` is omitted, the CLI inspects the input shape. A JSON object with both `receipt` and `envelope_metadata` keys is treated as `receipt-v11` automatically; a compact `header.payload.sig` string is treated as `receipt` (v1.0).
 
 ---
 
