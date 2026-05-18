@@ -6,3 +6,5 @@ dist-spec/
 .env
 .env.local
 coverage/
+pnpm-workspace.yaml
+pnpm-lock.yaml

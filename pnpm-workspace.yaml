@@ -1,3 +1,0 @@
-packages:
-  - "."
-  - "../MCPWebStore/packages/trust-receipt-tsa-client"
