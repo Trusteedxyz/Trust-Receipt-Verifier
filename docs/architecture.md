@@ -131,6 +131,8 @@ When an inline array of public JWKs is provided, no network request is made. Thi
 
 In v1.1, an issuer root certificate is embedded at compile time inside the verifier package. External verifiers can validate that a JWKS bundle was signed by a key chaining back to this root — preventing forged JWKS bundles even if the live endpoint were compromised. Rolling the root requires a SemVer MAJOR bump, giving downstream consumers explicit, auditable control.
 
+The `VerifyOptions.trustAnchorPemSha256` field pins the expected root SHA-256. If `jwksHistory.signed_by_root_sha256` does not match any embedded anchor the verifier **hard-fails** with `jwks_history_signature_invalid` by default. This behaviour can be suppressed in staging/CI environments by passing `allowStagingRoot: true` — this flag must never be set in production.
+
 ---
 
 ## 5. Verification algorithm
