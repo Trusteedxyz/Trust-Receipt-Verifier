@@ -132,6 +132,12 @@ export interface VerifyOptions {
    * DO NOT set this in production; it degrades the offline trust chain.
    */
   allowStagingRoot?: boolean;
+  /**
+   * Override the current wall-clock time used for `issued_at` / `expires_at`
+   * checks, expressed as Unix seconds. Useful in conformance tests that use
+   * static vector timestamps. Defaults to `Math.floor(Date.now() / 1000)`.
+   */
+  currentTimeSeconds?: number;
 }
 
 // ---------------------------------------------------------------------------
