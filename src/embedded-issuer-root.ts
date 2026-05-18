@@ -123,3 +123,64 @@ export function getActiveIssuerRoot(): IssuerRootEntry {
   }
   throw new Error("No active issuer root");
 }
+
+// ─── Chain validation ─────────────────────────────────────────────────────────
+
+/** One validation failure found by {@link validateChain}. */
+export interface ValidateChainError {
+  /** Index into the `roots` array, or -1 for list-level errors. */
+  index: number;
+  reason: string;
+}
+
+/** Result of {@link validateChain}. */
+export interface ValidateChainResult {
+  valid: boolean;
+  errors: ValidateChainError[];
+}
+
+/**
+ * Validate a chain of issuer root entries for structural correctness:
+ *  1. Exactly one entry must have `validTo === null` (the active root).
+ *  2. Entries must be ordered newest-first by `validFrom`.
+ *  3. Every retired entry must have `validTo >= validFrom`.
+ *
+ * Intended for use in CI and package-release gates, not in the hot verify path.
+ */
+export function validateChain(
+  roots: readonly IssuerRootEntry[]
+): ValidateChainResult {
+  const errors: ValidateChainError[] = [];
+
+  const activeCount = roots.filter((r) => r.validTo === null).length;
+  if (activeCount === 0) {
+    errors.push({ index: -1, reason: "No active root (validTo === null)" });
+  } else if (activeCount > 1) {
+    errors.push({
+      index: -1,
+      reason: `${activeCount} active roots — exactly one allowed`,
+    });
+  }
+
+  for (let i = 0; i < roots.length; i++) {
+    const entry = roots[i];
+    if (!entry) continue;
+    if (entry.validTo !== null && entry.validTo < entry.validFrom) {
+      errors.push({
+        index: i,
+        reason: `validTo=${entry.validTo} < validFrom=${entry.validFrom}`,
+      });
+    }
+    if (i > 0) {
+      const prev = roots[i - 1];
+      if (prev && prev.validFrom < entry.validFrom) {
+        errors.push({
+          index: i,
+          reason: `Root[${i - 1}].validFrom=${prev.validFrom} < Root[${i}].validFrom=${entry.validFrom} — list must be newest-first`,
+        });
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
