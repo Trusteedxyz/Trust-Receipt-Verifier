@@ -5,6 +5,12 @@ import {
 } from "@agenticmcpstores/trust-receipt-tsa-client";
 import type { ReceiptEnvelope, TrustReceiptV11Body } from "./types-1.1.js";
 
+/**
+ * Error code returned when the TSA root certificate is not in the verifier's
+ * trust anchor allowlist.
+ */
+export const TSA_ROOT_NOT_TRUSTED_ERROR_CODE = "tsa_root_not_trusted" as const;
+
 export interface VerifyTimestampEvidenceOptions {
   readonly envelope: ReceiptEnvelope;
   readonly receipt: TrustReceiptV11Body;
