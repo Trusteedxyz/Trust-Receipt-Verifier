@@ -158,6 +158,8 @@ _See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-
 npm install trust-receipt-verifier
 ```
 
+**v1.0 receipt (compact JWS):**
+
 ```typescript
 import { verifyTrustReceipt } from "trust-receipt-verifier";
 
@@ -171,6 +173,39 @@ if (result.valid) {
   console.error(result.reason, result.errors);
 }
 ```
+
+**v1.1 envelope (`receipt` + `envelope_metadata` + optional sidecars):**
+
+```typescript
+import { verifyReceiptEnvelope } from "trust-receipt-verifier";
+import type { VerifyOptions } from "trust-receipt-verifier";
+
+const opts: VerifyOptions = {
+  jwksHistory: {
+    jws_compact: "<SignedJwksHistory JWS>",
+    signed_by_root_sha256: "<issuer-root-sha256>",
+  },
+  trustAnchorPemSha256: "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
+  policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
+  // toleranceSeconds: 30,  // default clock-skew tolerance (seconds)
+  // allowStagingRoot: true, // staging/CI only — never set in production
+};
+
+const result = await verifyReceiptEnvelope(envelope, opts);
+
+if (result.outcome === "accepted") {
+  console.log(result.recomputedLegalPosture); // "ades_candidate_timestamped"
+  if (result.warnings.includes("unknown_trust_provider_present")) {
+    // envelope references a trust provider not yet recognised by this verifier version
+  }
+} else {
+  console.error(result.errorCode, result.detail);
+  // errorCode may be: "receipt_expired" | "receipt_not_yet_valid" |
+  // "jwks_history_signature_invalid" | "unknown_kid" | "schema_invalid" | …
+}
+```
+
+> **`allowStagingRoot`**: defaults to `false`. When `false` (production default) any `jwksHistory.signed_by_root_sha256` not present in the embedded trust anchor list causes immediate rejection (`jwks_history_signature_invalid`). Set to `true` only in staging or CI environments that use unsigned/stub JWKS history bundles.
 
 ---
 
