@@ -432,12 +432,12 @@ TrustReceipt is a cross-protocol evidence format. The following external parties
 
 | Protocol | Author | TrustReceipt schema field |
 | -------- | ------ | ------------------------- |
-| ACP (Agentic Commerce Protocol) | OpenAI + Stripe | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"` |
-| AP2 (Agent Payment Protocol v2) | Google | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash` |
-| x402 (stablecoin payment) | Coinbase + Cloudflare | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
-| MCAP (Mastercard Agent Pay) | Mastercard | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash` |
-| MCP (Model Context Protocol) | Anthropic | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"` |
-| UCP (Universal Commerce Protocol) | Trusteed | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
+| [ACP (Agentic Commerce Protocol)](https://github.com/agentcommerceprotocol/acp) | [OpenAI](https://openai.com) + [Stripe](https://stripe.com) | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"` |
+| [AP2 (Agent Payment Protocol v2)](https://developers.google.com/wallet) | [Google](https://google.com) | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash` |
+| [x402 (stablecoin payment)](https://github.com/coinbase/x402) | [Coinbase](https://coinbase.com) + [Cloudflare](https://cloudflare.com) | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
+| [MCAP (Mastercard Agent Pay)](https://developer.mastercard.com/product/agent-pay/) | [Mastercard](https://mastercard.com) | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash` |
+| [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/specification) | [Anthropic](https://anthropic.com) | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"` |
+| [UCP (Universal Commerce Protocol)](https://trusteed.xyz) | [Trusteed](https://trusteed.xyz) | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
 
 ### Active runtime providers (wired in `trust_provider_assertions[]`)
 
