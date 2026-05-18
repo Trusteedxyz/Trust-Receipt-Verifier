@@ -31,6 +31,8 @@ import {
 import { verifyJwksHistorySignature } from "../src/verify-jwks-history.js";
 import { getActiveIssuerRoot } from "../src/embedded-issuer-root.js";
 import type { SignedJwksHistory } from "../src/types-1.1.js";
+import { verifyReceiptEnvelope } from "../src/verify-1.1.js";
+import type { VerifyOptions as V11VerifyOptions } from "../src/verify-1.1.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
