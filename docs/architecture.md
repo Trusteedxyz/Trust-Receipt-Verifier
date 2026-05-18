@@ -1,7 +1,7 @@
 # TrustReceipt — Architecture
 
-**Spec version**: v1.0 (v1.1 eIDAS hardening in progress)
-**Last updated**: 2026-05-15
+**Spec version**: v1.1 (eIDAS hardening code-complete; v1.0 verification fully preserved)
+**Last updated**: 2026-05-18
 
 ---
 
