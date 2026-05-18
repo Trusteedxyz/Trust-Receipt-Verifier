@@ -2,30 +2,26 @@
  * Cryptographic verification of `SignedJwksHistory` against the embedded
  * issuer-root certificate.
  *
- * Closes the F1 CRITICAL Codex security finding: prior to this module the
- * verifier accepted any JWKS history payload merely by base64url-decoding the
- * middle JWS segment, which let an attacker bundle a forged history that
- * resolved any `kid` to a key under their control.
+ * Prior to this module the verifier accepted any JWKS history payload merely
+ * by base64url-decoding the middle JWS segment, which let an attacker bundle a
+ * forged history that resolved any `kid` to a key under their control.
  *
- * Flow (per spec-049 round 2 D3 — JWKS bundle trust anchor):
+ * Flow (JWKS bundle trust anchor):
  *
- *   1. Extract the Ed25519 SubjectPublicKeyInfo from the issuer-root X.509 PEM
- *      via `crypto.createPublicKey({ key: pem, format: "pem" })`.
- *   2. Run `jose.compactVerify(signed.jws_compact, publicKey)` to validate
- *      the signature end-to-end.
- *   3. On success, return the parsed payload to the caller.
+ * 1. Extract the Ed25519 SubjectPublicKeyInfo from the issuer-root X.509 PEM
+ *  via `crypto.createPublicKey({ key: pem, format: "pem" })`.
+ * 2. Run `jose.compactVerify(signed.jws_compact, publicKey)` to validate
+ *  the signature end-to-end.
+ * 3. On success, return the parsed payload to the caller.
  *
  * Production cutover: the embedded issuer-root PEM shipped today is a
  * structural placeholder (see `embedded-issuer-root.ts` → `_STAGING_STUB_ROOT_PEM`).
  * Its body bytes do NOT decode to a verifying-capable Ed25519 key by design —
  * `crypto.createPublicKey` throws `ERR_OSSL_*` on the placeholder. We surface
  * that condition as `embedded_root_not_production` so callers can branch into
- * a structural-fallback path during the staging window. Once T420's key
+ * a structural-fallback path during the staging window. Once's key
  * ceremony lands the production cert, this branch becomes dead-but-safe.
  *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-032b
- * @see specs/049-trust-receipt-eidas-hardening/research.md round 2 D3
- * @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md F1
  */
 
 import { compactVerify, decodeProtectedHeader } from "jose";
@@ -40,7 +36,7 @@ import { EMBEDDED_ISSUER_ROOTS } from "./embedded-issuer-root.js";
  * verifying-capable Ed25519 key (see `embedded-issuer-root.ts` JSDoc). When
  * `crypto.createPublicKey` rejects a PEM whose SHA-256 is in this set we
  * report `embedded_root_not_production` so callers can branch into the
- * staging-fallback path. Production cutover via T420 replaces these entries
+ * staging-fallback path. Production cutover via replaces these entries
  * and this set is updated to reflect the new constants — at which point the
  * fallback branch is dead-but-safe.
  */
@@ -100,7 +96,7 @@ function isJwsCompactShape(jws: string): boolean {
  * Detection of the staging stub is purely structural: any PEM that fails
  * `createPublicKey` parsing AND whose body contains the documented
  * placeholder marker is treated as the stub. The marker check is defensive —
- * production certs ceremonied via T420 will both parse successfully AND lack
+ * production certs ceremonied via will both parse successfully AND lack
  * the marker, so this path is unreachable in production.
  */
 type ImportResult =
@@ -114,7 +110,7 @@ function importIssuerRootPublicKey(pem: string): ImportResult {
   } catch {
     // Detect staging-stub roots by SHA-256 match against EMBEDDED_ISSUER_ROOTS.
     // The staging stubs have body bytes that fail X.509 parsing by design;
-    // production certs ceremonied via T420 will parse successfully and never
+    // production certs ceremonied via will parse successfully and never
     // reach this branch.
     const sha = pemSha256(pem);
     if (STAGING_STUB_ROOT_SHA256.has(sha)) {

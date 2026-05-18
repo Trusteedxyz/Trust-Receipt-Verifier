@@ -5,28 +5,20 @@
  * shipped in the public `trust-receipt-verifier` package. Downstream consumers
  * (api, dashboard, third-party verifiers) MUST import from here:
  *
- *     import type { TrustReceiptV11Body, ReceiptEnvelope } from
- *       "trust-receipt-verifier/types-1.1";
+ * import type { TrustReceiptV11Body, ReceiptEnvelope } from
+ * "trust-receipt-verifier/types-1.1";
  *
- * Companion file `zod-1.1.ts` (T013) mirrors every interface in this file as a
+ * Companion file `zod-1.1.ts` mirrors every interface in this file as a
  * runtime Zod schema. If you add or change a field here, update `zod-1.1.ts`
  * AND the canonical Zod definitions in
- * `specs/049-trust-receipt-eidas-hardening/data-model.md` §3 in the same PR.
+ * `zod-1.1.ts` in the same PR.
  *
- * Source of truth:
- * - `specs/049-trust-receipt-eidas-hardening/data-model.md` §2 (interfaces)
- * - `specs/049-trust-receipt-eidas-hardening/spec.md` (FR-019 family, FR-031,
- *   FR-040, FR-042, FR-051)
- * - `specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md`
- *
- * Constraints (per T012 + repo coding standards):
+ * Constraints (per repo coding standards):
  * - Pure types only — NO runtime code, NO Zod, NO classes.
  * - TypeScript strict mode; NO `any`; NO `@ts-ignore`.
  * - String-literal unions (NOT TS `enum`).
  * - Template-literal types where digest prefix matters.
  *
- * @see spec-049 §2 data-model
- * @see spec-049 FR-019, FR-019d, FR-019e, FR-019f, FR-031, FR-040, FR-051
  */
 
 // ---------------------------------------------------------------------------
@@ -41,8 +33,6 @@
  * in AWS KMS HMAC CMKs — see `TrustReceiptHmacKey` (data-model §1.2). The
  * `*_hmac_key_version` companion field selects the active key version.
  *
- * @see spec-049 data-model §1.2
- * @see spec-049 round 2 D32 (user_intent_hash MUST be HMAC-SHA-256)
  */
 export type HmacSha256Tagged = `hmac-sha256:${string}`;
 
@@ -68,13 +58,11 @@ export type TaggedDigest = Sha256Tagged | Sha512Tagged | HmacSha256Tagged;
 // ---------------------------------------------------------------------------
 
 /**
- * Receipt-level legal posture per FR-019.
+ * Receipt-level legal posture.
  *
  * Captures which evidentiary regime a receipt qualifies for at issuance.
  * Verifiers MAY surface degradation reasons via `LegalPostureWarning`.
  *
- * @see spec-049 FR-019
- * @see spec-049 round 1 H4, H5
  */
 export type LegalPosture =
   | "ades_candidate_timestamped"
@@ -88,8 +76,6 @@ export type LegalPosture =
  * issued under a degraded path (e.g. TSA outage). Allows downstream legal /
  * compliance tools to enumerate gaps without parsing free-form text.
  *
- * @see spec-049 round 2 D27
- * @see spec-049 FR-019
  */
 export interface LegalPostureWarning {
   reason:
@@ -108,7 +94,6 @@ export interface LegalPostureWarning {
  * context block (`buyer_agent_consent_context` vs
  * `merchant_admin_authorization_context`) MUST be present.
  *
- * @see spec-049 round 1 M14
  */
 export type ReceiptSubject = "buyer_agent" | "merchant_admin";
 
@@ -129,7 +114,7 @@ export type PolicyDecision = "allow" | "deny" | "review" | "challenge";
 
 /**
  * Protocol that produced the underlying transaction the receipt attests to.
- * Cross-protocol coverage is a core TrustReceipt invariant (FR-019).
+ * Cross-protocol coverage is a core TrustReceipt invariant.
  */
 export type Protocol = "x402" | "AP2" | "ACP" | "MCP" | "UCP" | "MCAP";
 
@@ -140,7 +125,6 @@ export type Protocol = "x402" | "AP2" | "ACP" | "MCP" | "UCP" | "MCAP";
  * not need rail-specific knowledge to locate the canonical authorization
  * artifact.
  *
- * @see spec-049 round 2 D24
  */
 export type AuthorizationScheme =
   | "ap2_mandate_jws"
@@ -164,15 +148,14 @@ export type AuthorizationScheme =
  * evidence record and a Unix-seconds timestamp; entries MUST be ordered
  * non-decreasing in `timestamp`.
  *
- * @see spec-049 data-model §2.1a
  */
 export interface AuthorizationChainEntry {
   /** Who acted at this step. */
   actor: "user" | "agent" | "delegated_agent";
   /**
-   * Authentication or authorization method. `rfc9421_signature` is wired in
-   * from spec-045 (HTTP Message Signatures); `session_token` covers Shopify
-   * App Bridge etc. for `merchant_admin` subjects.
+   * Authentication or authorization method. `rfc9421_signature` indicates an
+   * RFC 9421 HTTP Message Signature was verified; `session_token` covers
+   * Shopify App Bridge etc. for `merchant_admin` subjects.
    */
   method:
     | "OAuth"
@@ -197,12 +180,11 @@ export interface AuthorizationChainEntry {
 }
 
 /**
- * Tuple type encoding the FR-019d invariant that the agent authorization
+ * Tuple encoding the invariant that the agent authorization
  * chain MUST contain at least two entries (user → agent). Zod enforces this
  * at runtime via `.min(2)`; the TS tuple form gives compile-time assurance
  * for callers constructing receipts in code.
  *
- * @see spec-049 FR-019d
  */
 export type AgentAuthorizationChain = readonly [
   AuthorizationChainEntry,
@@ -219,11 +201,8 @@ export type AgentAuthorizationChain = readonly [
  *
  * All hashes use HMAC-SHA-256 keyed by per-merchant KMS-held HMAC keys; the
  * keying material NEVER leaves AWS KMS, so it cannot be exported or leaked
- * (replaces the deleted v1.0 `TrustReceiptSalt` design — round 1 D4 / R17).
+ * (replaces the deleted v1.0 `TrustReceiptSalt` design / ).
  *
- * @see spec-049 data-model §2.1a
- * @see spec-049 round 1 M14, H6, H8
- * @see spec-049 FR-019d
  */
 export interface BuyerAgentConsentContext {
   /** How consent was captured. */
@@ -241,11 +220,11 @@ export interface BuyerAgentConsentContext {
   consent_hmac_key_version: number;
   /** SemVer of merchant disclosure document at consent time (ESIGN). */
   consent_disclosure_version: string;
-  /** SHA-256 of withdrawal endpoint URL (FR-019d). */
+  /** SHA-256 of withdrawal endpoint URL. */
   consent_withdrawal_uri_hash: Sha256Tagged;
   /**
    * Pointer to evidence vault entry: signed UI screenshot or HTML hash
-   * (FR-019d).
+   *.
    */
   consent_evidence_ref: string;
   /**
@@ -260,8 +239,6 @@ export interface BuyerAgentConsentContext {
  * voids, configuration changes initiated by a merchant operator rather than a
  * buyer agent).
  *
- * @see spec-049 data-model §2.1b
- * @see spec-049 round 1 M14
  */
 export interface MerchantAdminAuthorizationContext {
   /** HMAC-SHA-256 of admin user id, keyed by merchant HMAC key. */
@@ -287,14 +264,11 @@ export interface MerchantAdminAuthorizationContext {
 
 /**
  * RFC 3161 timestamp evidence carried at the **envelope** level (NOT inside
- * the JWS-signed body — round 1 H9 + round 2 D22). Verifiers MUST recompute
+ * the JWS-signed body — round 1 H9). Verifiers MUST recompute
  * the imprint over the JWS Compact bytes and validate the TST end-to-end:
  * signature, cert chain to a pinned root, policy OID, nonce echo, and
  * revocation status at TSA `genTime`.
  *
- * @see spec-049 data-model §2.2
- * @see spec-049 round 1 H9
- * @see spec-049 round 2 D25 (added `tsr` — full TimeStampResp envelope)
  */
 export interface TimestampEvidence {
   type: "RFC3161";
@@ -302,7 +276,7 @@ export interface TimestampEvidence {
   tsa_endpoint: string;
   /**
    * Base64 of the **full** RFC 3161 `TimeStampResp` (status + token). Added
-   * post-Codex round 2 D25 so verifiers can inspect the TSA status response,
+   * so verifiers can inspect the TSA status response,
    * not just the embedded token.
    */
   tsr: string;
@@ -333,7 +307,6 @@ export interface TimestampEvidence {
  * reached and the merchant policy is `fail_open` (Q1). Never appears under
  * `fail_closed` policy — issuance is rejected instead.
  *
- * @see spec-049 data-model §2.2
  */
 export interface TimestampUnavailable {
   type: "unavailable";
@@ -353,13 +326,11 @@ export interface TimestampUnavailable {
 /**
  * Hashed evidence of intent → execution alignment.
  *
- * `user_intent_hash` is HMAC-SHA-256 (round 2 D32: PII source). The companion
+ * `user_intent_hash` is HMAC-SHA-256 (: PII source). The companion
  * `intent_hmac_key_version` field on the receipt body selects the active KMS
  * HMAC key version; this object only carries the hash itself plus an opaque
  * reference to the protocol-specific authorization artifact.
  *
- * @see spec-049 data-model §2.3
- * @see spec-049 round 2 D32
  */
 export interface AuthorizationEvidence {
   /** HMAC-SHA-256 of the user's intent text. */
@@ -386,10 +357,8 @@ export interface AuthorizationEvidence {
  * Both `jwks_sha256` and `trust_anchor_sha256` are REQUIRED for v1.1 (round 1
  * M17): they are bound inside the JWS-signed payload so an offline verifier
  * can perform a deterministic pin check against the expected JWKS document
- * and the embedded issuer root cert (R16 trust anchor).
+ * and the embedded issuer root cert ( trust anchor).
  *
- * @see spec-049 data-model §2.4
- * @see spec-049 round 1 M17
  */
 export interface VerificationMethods {
   /** Online resolution mechanism (HTTPS JWKS URI). */
@@ -398,7 +367,7 @@ export interface VerificationMethods {
   did?: { method: string; identifier: string; key_id: string };
   /** SHA-256 of the JWKS document at issuance time, for offline pin check (64-hex). */
   jwks_sha256: string;
-  /** SHA-256 of the embedded issuer root cert (R16 trust anchor) (64-hex). */
+  /** SHA-256 of the embedded issuer root cert ( trust anchor) (64-hex). */
   trust_anchor_sha256: string;
 }
 
@@ -408,12 +377,10 @@ export interface VerificationMethods {
 
 /**
  * Retention metadata attached to an export bundle. Resolves the merchant's
- * jurisdiction to the minimum statutory retention window (FR-031). When
+ * jurisdiction to the minimum statutory retention window. When
  * `jurisdiction = "OTHER"`, the platform default is applied and
  * `manual_review_required` is set so legal can refine.
  *
- * @see spec-049 data-model §2.5
- * @see spec-049 FR-031
  */
 export interface RetentionMetadata {
   jurisdiction: "EU" | "US" | "BR" | "MX" | "UK" | "OTHER";
@@ -421,7 +388,7 @@ export interface RetentionMetadata {
   jurisdiction_code: string;
   /** Statute reference (informational). */
   statute_ref?: string;
-  /** Minimum years per FR-031. */
+  /** Minimum years. */
   min_retention_years: number;
   /** True when "OTHER" default applied — merchant SHOULD escalate to legal review. */
   manual_review_required: boolean;
@@ -436,8 +403,6 @@ export interface RetentionMetadata {
  * One entry in the issuer's JWKS history. Replaces the deleted v1.0
  * `SaltSnapshot` (round 1 H8 — salts are no longer exported).
  *
- * @see spec-049 data-model §2.6
- * @see spec-049 round 1 C3, H8
  */
 export interface JwksHistoryEntry {
   kid: string;
@@ -465,7 +430,6 @@ export interface SignedJwksHistory {
  * placeholders (e.g. via Presidio); the record is signed so an external
  * verifier can confirm the redaction was performed by the issuer.
  *
- * @see spec-049 data-model §2.6
  */
 export interface RedactedConsentRecord {
   /** PII redacted to placeholders. */
@@ -486,7 +450,6 @@ export interface RedactedConsentRecord {
  * Informational metadata pinning the claims-policy document version that was
  * effective when the receipt was issued.
  *
- * @see spec-049 data-model §2.7
  */
 export interface ClaimsPolicyVersion {
   /** SemVer of `docs/legal/trust-receipt-claims-policy.md`. */
@@ -545,7 +508,7 @@ export interface Rfc9421ProviderAssertion {
    * Outcome of the RFC 9421 signature verification for this request.
    * - `"verified"` — signature valid, kid resolved, freshness satisfied.
    * - `"observed"` — signature present and structurally valid but not fully
-   *   verified (observe mode or JWKS miss resolved via cache grace).
+   * verified (observe mode or JWKS miss resolved via cache grace).
    * - `"spoofed"` — signature present but cryptographically invalid.
    * - `"unverified"` — no signature was present at evaluation time.
    */
@@ -633,19 +596,17 @@ export type PaymentReference = Record<string, unknown>;
  *
  * Canonical (JCS) serialization of this object MUST be ≤ 2900 bytes so that
  * the resulting JWS signing input is ≤ 4096 bytes after base64url
- * (round 2 D20). Issuance enforces the cap; Zod does NOT.
+ * . Issuance enforces the cap; Zod does NOT.
  *
  * Subject-discriminated invariants (enforced by Zod `superRefine`, NOT by the
  * TS shape):
  * - `receipt_subject = "buyer_agent"` ⇒ `buyer_agent_consent_context` present,
- *   `merchant_admin_authorization_context` absent, AND
- *   `payment_authorization_hash` + `authorization_scheme` +
- *   `esign_disclosure_version` + `esign_disclosure_hash` +
- *   `consent_evidence_ref` are ALL required (round 2 D24, D28).
+ * `merchant_admin_authorization_context` absent, AND
+ * `payment_authorization_hash` + `authorization_scheme` +
+ * `esign_disclosure_version` + `esign_disclosure_hash` +
+ * `consent_evidence_ref` are ALL required ().
  * - `receipt_subject = "merchant_admin"` ⇒ inverse.
  *
- * @see spec-049 data-model §2 + §3
- * @see spec-049 FR-019, FR-019e, FR-019f, FR-040, FR-051
  */
 export interface TrustReceiptV11Body {
   // -- identity & versioning --
@@ -676,7 +637,7 @@ export interface TrustReceiptV11Body {
   merchant_admin_authorization_context?: MerchantAdminAuthorizationContext;
 
   // -- intent / cart / order / payment hashes --
-  /** HMAC-SHA-256 of the user's intent text (round 2 D32: PII source). */
+  /** HMAC-SHA-256 of the user's intent text (: PII source). */
   user_intent_hash: HmacSha256Tagged;
   /** KMS-held HMAC key version used for `user_intent_hash`. */
   intent_hmac_key_version: number;
@@ -688,7 +649,7 @@ export interface TrustReceiptV11Body {
    * SHA-256 of the rail-specific payment-authorization artifact. REQUIRED
    * when `receipt_subject = "buyer_agent"` (enforced by Zod superRefine).
    * Replaces the v1.0 `mandate_hash` / `permit2_authorization_hash` /
-   * `mcp_tool_invocation_hash` triplet (round 2 D24).
+   * `mcp_tool_invocation_hash` triplet .
    */
   payment_authorization_hash?: Sha256Tagged;
   /**
@@ -697,7 +658,7 @@ export interface TrustReceiptV11Body {
    */
   authorization_scheme?: AuthorizationScheme;
 
-  // -- ESIGN compliance (REQUIRED for buyer_agent — round 2 D28) --
+  // -- ESIGN compliance (REQUIRED for buyer_agent — ) --
   /** SemVer of disclosure document at issuance. REQUIRED for buyer_agent. */
   esign_disclosure_version?: string;
   /** SHA-256 of the disclosure document content. REQUIRED for buyer_agent. */
@@ -751,13 +712,11 @@ export interface ProtocolArtifactSidecar {
 /**
  * Outer envelope wrapping a JWS-signed v1.1 receipt.
  *
- * Per FR-019e + FR-019f: envelope fields are NOT signed. The verifier MUST
+ * Envelope fields are NOT signed. The verifier MUST
  * recompute every envelope-level value (timestamp imprint, sidecar hashes,
  * `envelope_metadata` mirrors of `receipt_id` / `legal_posture` /
- * `legal_posture_warnings`) and reject any mismatch (round 2 D22).
+ * `legal_posture_warnings`) and reject any mismatch .
  *
- * @see spec-049 FR-019e, FR-019f
- * @see spec-049 round 2 D22
  */
 export interface ReceiptEnvelope {
   /** JWS Compact Serialization of the signed receipt body. */
@@ -769,7 +728,7 @@ export interface ReceiptEnvelope {
   timestamp_evidence: TimestampEvidence | TimestampUnavailable;
   /**
    * Mirror of selected signed fields, exposed unsigned for fast index/filter.
-   * Verifiers MUST recompute and compare against the JWS body (round 2 D22).
+   * Verifiers MUST recompute and compare against the JWS body .
    */
   envelope_metadata: {
     receipt_id: string;

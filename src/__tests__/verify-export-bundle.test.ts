@@ -1,5 +1,5 @@
 /**
- * Unit tests for verify-export-bundle.ts (spec-049 T173).
+ * Unit tests for verify-export-bundle.ts.
  *
  * Builds synthetic ZIP fixtures with adm-zip and asserts the verifier's
  * accept/reject paths + error codes.

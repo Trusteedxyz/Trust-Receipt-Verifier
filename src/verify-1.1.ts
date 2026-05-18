@@ -1,33 +1,25 @@
 /**
- * TrustReceipt v1.1 envelope verifier (spec-049 — eIDAS hardening).
+ * TrustReceipt v1.1 envelope verifier.
  *
- * Implements FR-018 (verifier accepts envelope, validates JWS, recomputes
- * envelope-level evidence) plus the post-Codex round 2 invariants:
+ * Accepts a v1.1 receipt envelope, validates the inner JWS (EdDSA/Ed25519),
+ * and recomputes envelope-level evidence fields:
  *
- * - D22: envelope_metadata fields (receipt_id, legal_posture,
- *   legal_posture_warnings) are NOT signed — verifier MUST recompute against
- *   the JWS-signed body and reject (or warn) on mismatch. The verifier is
- *   AUTHORITATIVE for `legal_posture`: it recomputes from observed evidence
- *   (TST present? agent identity verified? subject?) and surfaces the result
- *   in `recomputedLegalPosture`.
- * - D23: JWKS history validity-window check — both `body.issued_at` AND
- *   `timestamp_evidence.issued_at_attested` MUST fall inside the resolved
- *   `kid`'s `[valid_from, valid_to]` window.
- * - D27: structured legal_posture_warnings reasons.
+ * - `envelope_metadata` fields (`receipt_id`, `legal_posture`,
+ * `legal_posture_warnings`) are NOT signed — the verifier recomputes them
+ * from the JWS-signed body and rejects (or warns) on mismatch. The verifier
+ * is AUTHORITATIVE for `legal_posture`; callers MUST use
+ * `recomputedLegalPosture` from the result, not the unsigned envelope value.
+ * - JWKS history validity-window: both `body.issued_at` AND
+ * `timestamp_evidence.issued_at_attested` MUST fall inside the resolved
+ * `kid`'s `[valid_from, valid_to]` window.
+ * - Structured `legal_posture_warnings` reasons are surfaced in the result.
  *
- * Timestamp (RFC 3161) verification is intentionally STUBBED here — see
- * `verifyTimestampEvidenceStub` below. T430 (resolved 2026-05-05) shipped
- * the full RFC 3161 verification surface in
- * `@agenticmcpstores/trust-receipt-tsa-client` (`verifyTimestamp` orchestrator
- * + `verifyCmsSignerInfo` + `verifyCertPath` + `verifyRevocation`); the
- * remaining work tracked here is to bridge this verifier into that
- * function (passing `merchantPolicy` + `rootCertSha256Pins` from caller
- * config) so that v1.1 conformance tests stop relying on the stub.
+ * RFC 3161 timestamp verification is intentionally STUBBED here — the full
+ * verification surface (CMS signer info, cert path, revocation) lives in the
+ * sibling package `@agenticmcpstores/trust-receipt-tsa-client`
+ * (`verifyTimestamp` orchestrator). Pass `merchantPolicy` + `rootCertSha256Pins`
+ * via caller config to enable real timestamp verification.
  *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018, FR-019..FR-019g
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-020..FR-024, FR-032b
- * @see specs/049-trust-receipt-eidas-hardening/research.md R15, R16, R18
- * @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md
  */
 
 import { compactVerify, importJWK, decodeProtectedHeader } from "jose";
@@ -113,7 +105,7 @@ export interface V11VerifyResult {
  * `jwksHistory` is the issuer's signed JWKS history bundled into the export
  * bundle (or fetched online). `trustAnchorPemSha256` is the SHA-256 (64-hex)
  * of the embedded issuer root cert that the verifier pins against
- * (R16 trust anchor).
+ * ( trust anchor).
  */
 export interface VerifyOptions {
   jwksHistory: SignedJwksHistory;
@@ -128,7 +120,7 @@ export interface VerifyOptions {
    * Verifier recomputation is ALWAYS performed regardless of this flag.
    */
   rejectOnEnvelopePostureMismatch?: boolean;
-  /** Optional caller-supplied subject context (R18). */
+  /** Optional caller-supplied subject context (). */
   expectedSubject?: ReceiptSubject;
 }
 
@@ -234,7 +226,7 @@ function resolveKid(
 }
 
 /**
- * D23: both `body.issued_at` AND `timestamp_evidence.issued_at_attested` MUST
+ *: both `body.issued_at` AND `timestamp_evidence.issued_at_attested` MUST
  * fall inside the resolved kid's `[valid_from, valid_to]` window. A null
  * `valid_to` means "still active".
  */
@@ -261,7 +253,7 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 /**
  * Recompute the verifier-authoritative legal_posture from observed evidence
- * (post-Codex round 2 D22). The truth table:
+ * (). The truth table:
  *
  * - merchant_admin subject ⇒ `merchant_admin_action`
  * - buyer_agent + tst-present + agent-identity ⇒ `ades_candidate_timestamped`
@@ -271,19 +263,19 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
  *
  * Agent-identity is considered "verified" when ANY of the following is true:
  *  - `body.trust_provider_assertions` is a non-empty array (preferred signal
- *    from any agent-identity verifier). Known typed providers:
- *      · `"rfc9421-native"` — RFC 9421 HTTP Message Signature verifier.
- *        Use `isRfc9421ProviderAssertion` to narrow; check
- *        `verification_status === "verified" | "observed"`.
- *      · `"human"` — HUMAN AgenticTrust integration.
- *        Use `isHumanProviderAssertion`; check `human_verification_status`.
- *      · `"visa"` — Visa TAP (*.visa.com / *.visa.net signer, tag validated).
- *        Use `isVisaTapProviderAssertion`; check `tag` + `verification_status`.
- *    Unknown providers are treated as "some assertion present" for forwards
- *    compatibility — they count towards `hasAssertions` even if untyped.
+ *  from any agent-identity verifier). Known typed providers:
+ *  · `"rfc9421-native"` — RFC 9421 HTTP Message Signature verifier.
+ *  Use `isRfc9421ProviderAssertion` to narrow; check
+ *  `verification_status === "verified" | "observed"`.
+ *  · `"human"` — HUMAN AgenticTrust integration.
+ *  Use `isHumanProviderAssertion`; check `human_verification_status`.
+ *  · `"visa"` — Visa TAP (*.visa.com / *.visa.net signer, tag validated).
+ *  Use `isVisaTapProviderAssertion`; check `tag` + `verification_status`.
+ *  Unknown providers are treated as "some assertion present" for forwards
+ *  compatibility — they count towards `hasAssertions` even if untyped.
  *  - `body.authorization_evidence.protocol_authorization_ref` is set (the
- *    receipt cites a signed protocol mandate such as AP2/MCAP/UCP, which
- *    inherently binds an agent identity at the protocol layer).
+ *  receipt cites a signed protocol mandate such as AP2/MCAP/UCP, which
+ *  inherently binds an agent identity at the protocol layer).
  */
 function recomputeLegalPosture(
   body: {
@@ -311,14 +303,13 @@ function recomputeLegalPosture(
 }
 
 /**
- * STUB — full RFC 3161 verification lands in T430 (cert chain to pinned root,
+ * STUB — full RFC 3161 verification lands in (cert chain to pinned root,
  * policy OID allowlist match, nonce echo, imprint match against JWS Compact
  * bytes, OCSP/CRL freshness at TSA genTime). For now this returns
  * `{ valid: true }` so downstream code paths can be wired and tested.
  *
- * TODO(T430): replace with full RFC 3161 implementation per
- * specs/049-trust-receipt-eidas-hardening/research.md R15.
- */
+ * TODO: replace with full RFC 3161 implementation per
+ * */
 export function verifyTimestampEvidenceStub(
   envelope: {
     timestamp_evidence:
@@ -329,7 +320,7 @@ export function verifyTimestampEvidenceStub(
         }
       | { type: "unavailable"; reason: string };
   },
-  // T430 will use these:
+  // will use these:
   _options: Pick<
     VerifyOptions,
     "trustAnchorPemSha256" | "policyOidAllowlist" | "toleranceSeconds"
@@ -367,26 +358,25 @@ function reject(
 /**
  * Verify a TrustReceipt v1.1 envelope end-to-end.
  *
- * Flow (FR-018 + post-Codex round 2 D22, D23, D27):
+ * Flow (D23,):
  *  1. Parse envelope (string → JSON if needed) and validate against
- *     `ReceiptEnvelopeSchema`.
+ * `ReceiptEnvelopeSchema`.
  *  2. Decode the JWS Compact protected header to extract `kid`.
  *  3. Resolve `kid` in the bundled `jwksHistory`. Reject `unknown_kid` if
- *     missing.
+ * missing.
  *  4. Verify the JWS signature with the resolved JWK (Ed25519).
  *  5. Validate the parsed body against `TrustReceiptV11BodySchema`.
- *  6. D23 validity-window check — `issued_at` AND `issued_at_attested` MUST
- *     fall inside the resolved kid's `[valid_from, valid_to]`.
+ *  6. validity-window check — `issued_at` AND `issued_at_attested` MUST
+ * fall inside the resolved kid's `[valid_from, valid_to]`.
  *  7. Subject discrimination + missing-context guard.
  *  8. envelope_metadata.receipt_id mirror equality (D22).
  *  9. Recompute every protocol-artifact sidecar SHA-256 and confirm it matches
- *     a `body.protocol_artifacts[].hash` entry.
+ * a `body.protocol_artifacts[].hash` entry.
  * 10. Recompute `legal_posture` from observed evidence (D22). Reject or warn
- *     based on `rejectOnEnvelopePostureMismatch`.
+ * based on `rejectOnEnvelopePostureMismatch`.
  * 11. Verify timestamp evidence (STUB — see `verifyTimestampEvidenceStub`).
- * 12. Optional `expectedSubject` context check (R18).
+ * 12. Optional `expectedSubject` context check ().
  *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
  */
 export async function verifyReceiptEnvelope(
   envelopeInput: ReceiptEnvelope | string,
@@ -587,7 +577,7 @@ export async function verifyReceiptEnvelope(
   }
   const body = bodyParse.data;
 
-  // 6. D23 validity-window check ------------------------------------------
+  // 6. validity-window check ------------------------------------------
   const attestedAt =
     envelope.timestamp_evidence.type === "RFC3161"
       ? envelope.timestamp_evidence.issued_at_attested

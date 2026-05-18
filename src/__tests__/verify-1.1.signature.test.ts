@@ -3,7 +3,7 @@
  * verifies the bundled `SignedJwksHistory` against the embedded issuer root,
  * closing Codex F1 finding.
  *
- * Today's runtime ships the T420 staging-stub root, whose PEM body bytes do
+ * Today's runtime ships the staging-stub root, whose PEM body bytes do
  * not decode to a verifying-capable Ed25519 key. Under that root the
  * verifier falls back to structural-only history parsing AND emits warning
  * `jwks_history_signature_unverifiable_staging_root`. These tests pin that

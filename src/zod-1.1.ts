@@ -1,18 +1,14 @@
 /**
- * Zod v3 validators for TrustReceipt v1.1 (spec-049 — eIDAS hardening).
- *
- * Source of truth: specs/049-trust-receipt-eidas-hardening/data-model.md §3
- * and specs/049-trust-receipt-eidas-hardening/spec.md (FR-015..FR-019g, FR-040,
- * FR-024c).
+ * Zod v3 validators for TrustReceipt v1.1.
  *
  * Decoupled from `./types-1.1.ts` on purpose — this file defines schemas
  * standalone so callers can use either Zod parsing or pure TypeScript types
  * via `z.infer<typeof XxxSchema>`. Both surfaces stay in sync because the
  * type-level surface is the inferred output here.
  *
- * NOTE: The 2900-byte canonical-bytes cap on the receipt body (FR-019e + FR-040)
- * is **NOT** enforced in Zod — that lives at issuance time per the spec because
- * Zod operates on parsed JSON values, not canonical-encoded bytes.
+ * NOTE: The 2900-byte canonical-bytes cap on the receipt body is **NOT**
+ * enforced in Zod — that lives at issuance time because Zod operates on
+ * parsed JSON values, not canonical-encoded bytes.
  */
 
 import { z } from "zod";
@@ -26,7 +22,6 @@ import { z } from "zod";
  * `sha512` (128 hex), `hmac-sha256` (64 hex). Hex length is validated against
  * the algorithm via `.superRefine`.
  *
- * spec-049 §3 (data-model) — post-Codex round 2.
  */
 export const TaggedDigest = z
   .string()
@@ -60,16 +55,16 @@ export type Sha512Tagged = z.infer<typeof Sha512Tagged>;
 
 /**
  * HMAC-SHA-256 algorithm-tagged digest (`hmac-sha256:<64-hex>`). Required for
- * any field that hashes PII (post-Codex round 2 D32).
+ * any field that hashes PII.
  */
 export const HmacSha256Tagged = z.string().regex(/^hmac-sha256:[0-9a-f]{64}$/);
 export type HmacSha256Tagged = z.infer<typeof HmacSha256Tagged>;
 
 // ---------------------------------------------------------------------------
-// Authorization chain (FR-019d)
+// Authorization chain 
 // ---------------------------------------------------------------------------
 
-/** Single hop in the agent authorization chain. spec-049 FR-019d. */
+/** Single hop in the agent authorization chain. */
 export const AuthorizationChainEntrySchema = z.object({
   actor: z.enum(["user", "agent", "delegated_agent"]),
   method: z.enum([
@@ -96,8 +91,7 @@ export type AuthorizationChainEntry = z.infer<
 // ---------------------------------------------------------------------------
 
 /**
- * Buyer-agent consent context. spec-049 FR-019d (post-Codex round 2 D32:
- * `consent_hash` MUST be HMAC-SHA-256 because consent strings are PII).
+ * Buyer-agent consent context.
  */
 export const BuyerAgentConsentContextSchema = z.object({
   consent_type: z.enum([
@@ -119,7 +113,7 @@ export type BuyerAgentConsentContext = z.infer<
   typeof BuyerAgentConsentContextSchema
 >;
 
-/** Merchant-admin authorization context. spec-049 FR-019f. */
+/** Merchant-admin authorization context. */
 export const MerchantAdminAuthorizationContextSchema = z.object({
   admin_user_id_hash: HmacSha256Tagged,
   admin_action_type: z.string().min(1),
@@ -138,10 +132,10 @@ export type MerchantAdminAuthorizationContext = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
-// Legal posture (FR-019)
+// Legal posture 
 // ---------------------------------------------------------------------------
 
-/** Receipt-level legal posture. spec-049 FR-019. */
+/** Receipt-level legal posture. */
 export const LegalPostureSchema = z.enum([
   "ades_candidate_timestamped",
   "ades_candidate_no_tsa",
@@ -151,7 +145,7 @@ export const LegalPostureSchema = z.enum([
 ]);
 export type LegalPosture = z.infer<typeof LegalPostureSchema>;
 
-/** Structured degradation reason (post-Codex round 2 D27). */
+/** Structured degradation reason. */
 export const LegalPostureWarningSchema = z.object({
   reason: z.enum([
     "tsa_unavailable",
@@ -165,12 +159,11 @@ export const LegalPostureWarningSchema = z.object({
 export type LegalPostureWarning = z.infer<typeof LegalPostureWarningSchema>;
 
 // ---------------------------------------------------------------------------
-// Authorization scheme (post-Codex round 2 D24 — rail-aware)
+// Authorization scheme
 // ---------------------------------------------------------------------------
 
 /**
- * Rail-aware payment authorization scheme. spec-049 post-Codex round 2 D24 —
- * replaces v1.0 `mandate_hash` / `permit2_hash` / `mcp_tool_invocation_hash`
+ * Rail-aware payment authorization scheme.* replaces v1.0 `mandate_hash` / `permit2_hash` / `mcp_tool_invocation_hash`
  * fields with a single `payment_authorization_hash` discriminated by this
  * scheme.
  */
@@ -187,7 +180,7 @@ export const AuthorizationSchemeSchema = z.enum([
 export type AuthorizationScheme = z.infer<typeof AuthorizationSchemeSchema>;
 
 // ---------------------------------------------------------------------------
-// Timestamp evidence (FR-019e — RFC 3161, post-Codex H9)
+// Timestamp evidence (RFC 3161)
 // ---------------------------------------------------------------------------
 
 /**
@@ -233,12 +226,11 @@ export type TimestampEvidence = z.infer<typeof TimestampEvidenceSchema>;
 // ---------------------------------------------------------------------------
 
 /**
- * spec-049 §2.3 data-model — authorization-evidence binding.
+ * Authorization-evidence binding.
  *
- * post-Codex round 2 D32 (T562): `user_intent_hash` MUST use `hmac-sha256:`
- * prefix only — intent text is reversible PII and the SHA-256 fallback was
- * removed. `execution_hash` remains plain `sha256:` (non-PII canonical
- * payload digest).
+ * `user_intent_hash` MUST use the `hmac-sha256:` prefix — intent text is
+ * reversible PII. `execution_hash` remains plain `sha256:` (non-PII
+ * canonical payload digest).
  */
 export const AuthorizationEvidenceSchema = z.object({
   user_intent_hash: HmacSha256Tagged,
@@ -249,7 +241,7 @@ export const AuthorizationEvidenceSchema = z.object({
 export type AuthorizationEvidence = z.infer<typeof AuthorizationEvidenceSchema>;
 
 // ---------------------------------------------------------------------------
-// Verification methods (post-Codex M17 — `jwks_sha256` REQUIRED)
+// Verification methods
 // ---------------------------------------------------------------------------
 
 /**
@@ -281,10 +273,10 @@ export const VerificationMethodsSchema = z
 export type VerificationMethods = z.infer<typeof VerificationMethodsSchema>;
 
 // ---------------------------------------------------------------------------
-// Retention metadata (export bundle, FR-024c)
+// Retention metadata (export bundle)
 // ---------------------------------------------------------------------------
 
-/** Retention metadata for export bundles. spec-049 FR-024c. */
+/** Retention metadata for export bundles. */
 export const RetentionMetadataSchema = z.object({
   jurisdiction: z.enum(["EU", "US", "BR", "MX", "UK", "OTHER"]),
   jurisdiction_code: z.string().regex(/^[A-Z]{2}$/),
@@ -299,7 +291,7 @@ export type RetentionMetadata = z.infer<typeof RetentionMetadataSchema>;
 // Common enums
 // ---------------------------------------------------------------------------
 
-/** Supported protocols. spec-049 FR-015. */
+/** Supported protocols. */
 export const ProtocolSchema = z.enum([
   "x402",
   "AP2",
@@ -314,7 +306,7 @@ export type Protocol = z.infer<typeof ProtocolSchema>;
 export const ReceiptSubjectSchema = z.enum(["buyer_agent", "merchant_admin"]);
 export type ReceiptSubject = z.infer<typeof ReceiptSubjectSchema>;
 
-/** Privacy classification (FR-019g). */
+/** Privacy classification . */
 export const PrivacyClassificationSchema = z.enum([
   "pii_redacted",
   "pii_hashed_salted",
@@ -339,15 +331,15 @@ export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
  * TrustReceipt v1.1 body — payload of the JWS Compact serialization.
  *
  * Cross-field rules enforced via `.superRefine`:
- * - Subject-discriminated context (post-Codex M14 / round 2 D22):
- *   `buyer_agent` → MUST carry `buyer_agent_consent_context` only.
- *   `merchant_admin` → MUST carry `merchant_admin_authorization_context` only.
- * - Buyer-agent extras (post-Codex round 2 D24 + D28):
- *   `payment_authorization_hash` + `authorization_scheme` REQUIRED, and
- *   `esign_disclosure_version` + `esign_disclosure_hash` + `consent_evidence_ref`
- *   REQUIRED.
+ * - Subject-discriminated context:
+ * `buyer_agent` → MUST carry `buyer_agent_consent_context` only.
+ * `merchant_admin` → MUST carry `merchant_admin_authorization_context` only.
+ * - Buyer-agent extras:
+ * `payment_authorization_hash` + `authorization_scheme` REQUIRED, and
+ * `esign_disclosure_version` + `esign_disclosure_hash` + `consent_evidence_ref`
+ * REQUIRED.
  *
- * NOTE: The 2900-byte canonical-bytes cap (FR-019e + FR-040) is enforced at
+ * NOTE: The 2900-byte canonical-bytes cap  is enforced at
  * issuance time, NOT here — Zod operates on parsed JSON, not canonical bytes.
  */
 export const TrustReceiptV11BodySchema = z
@@ -367,15 +359,15 @@ export const TrustReceiptV11BodySchema = z
     buyer_agent_consent_context: BuyerAgentConsentContextSchema.optional(),
     merchant_admin_authorization_context:
       MerchantAdminAuthorizationContextSchema.optional(),
-    /** post-Codex round 2 D32: PII source — MUST be HMAC. */
+    /** PII source — MUST be HMAC. */
     user_intent_hash: HmacSha256Tagged,
     intent_hmac_key_version: z.number().int().nonnegative(),
     cart_hash: Sha256Tagged.optional(),
     order_hash: Sha256Tagged.optional(),
-    /** post-Codex round 2 D24. */
+    
     payment_authorization_hash: Sha256Tagged.optional(),
     authorization_scheme: AuthorizationSchemeSchema.optional(),
-    /** post-Codex round 2 D28. */
+    
     esign_disclosure_version: z
       .string()
       .regex(/^\d+\.\d+\.\d+$/)
@@ -409,7 +401,7 @@ export const TrustReceiptV11BodySchema = z
           code: z.ZodIssueCode.custom,
           path: ["buyer_agent_consent_context"],
           message:
-            "buyer_agent receipts MUST carry buyer_agent_consent_context only (post-Codex round 2 D22)",
+            "buyer_agent receipts MUST carry buyer_agent_consent_context only",
         });
       }
       if (
@@ -420,7 +412,7 @@ export const TrustReceiptV11BodySchema = z
           code: z.ZodIssueCode.custom,
           path: ["payment_authorization_hash"],
           message:
-            "buyer_agent receipts MUST carry payment_authorization_hash AND authorization_scheme (post-Codex round 2 D24)",
+            "buyer_agent receipts MUST carry payment_authorization_hash AND authorization_scheme",
         });
       }
       const esignFields = [
@@ -433,7 +425,7 @@ export const TrustReceiptV11BodySchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: [f],
-            message: `${f} is required for buyer_agent receipts (post-Codex round 2 D28)`,
+            message: `${f} is required for buyer_agent receipts`,
           });
         }
       }
@@ -445,7 +437,7 @@ export const TrustReceiptV11BodySchema = z
           code: z.ZodIssueCode.custom,
           path: ["merchant_admin_authorization_context"],
           message:
-            "merchant_admin receipts MUST carry merchant_admin_authorization_context only (post-Codex round 2 D22)",
+            "merchant_admin receipts MUST carry merchant_admin_authorization_context only",
         });
       }
     }
@@ -453,13 +445,13 @@ export const TrustReceiptV11BodySchema = z
 export type TrustReceiptV11Body = z.infer<typeof TrustReceiptV11BodySchema>;
 
 // ---------------------------------------------------------------------------
-// Envelope (FR-019e)
+// Envelope 
 // ---------------------------------------------------------------------------
 
 /**
  * Receipt envelope — wraps the JWS Compact `receipt` plus envelope-level
  * sidecars. `envelope_metadata` fields are NOT signed; verifiers MUST
- * recompute and reject mismatches (post-Codex round 2 D22).
+ * recompute and reject mismatches.
  */
 export const ReceiptEnvelopeSchema = z.object({
   /** JWS Compact serialization of the v1.1 body. */

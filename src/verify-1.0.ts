@@ -1,20 +1,14 @@
 /**
  * TrustReceipt v1.0 verification entry point.
  *
- * Spec-049 — eIDAS hardening (FR-018):
- *   v1.0 receipts MUST continue to verify after the v1.1 cutover. When this
- *   verifier is invoked from the v1.1 dispatcher (T052), the dispatcher will
- *   tag the result with the warning `legacy_pre_eidas_hardening` so callers
- *   can surface a soft-deprecation signal without breaking interop.
+ * v1.0 receipts continue to verify after the v1.1 cutover. When invoked from
+ * the schema-version dispatcher, the result is tagged with
+ * `legacy_pre_eidas_hardening` so callers can surface a soft-deprecation
+ * signal without breaking interop.
  *
- * Codex round 1 — D11 (cutover semantics):
- *   This file is a pure re-export / thin-wrapper of the pre-existing v1.0
- *   verification logic in `./verifier.ts`. The behavior MUST remain byte-for-byte
- *   identical to the v1.0 verifier shipped before spec-049; T052 introduces a
- *   schema-version dispatcher that routes "1.0" payloads here and "1.1"
- *   payloads to the hardened verifier. Do NOT extend v1.0 semantics here.
- *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
+ * This file is a pure thin-wrapper of the pre-existing v1.0 logic in
+ * `./verifier.ts`. Behavior MUST remain identical to the original v1.0
+ * verifier. Do NOT extend v1.0 semantics here.
  */
 
 import {
@@ -31,7 +25,7 @@ export interface V10VerifyResult {
   outcome: "accepted" | "rejected";
   schema_version: "1.0";
   /**
-   * Soft-warning channel. The v1.1 dispatcher (T052) appends
+   * Soft-warning channel. The v1.1 dispatcher appends
    * `"legacy_pre_eidas_hardening"` here when routing a v1.0 receipt under the
    * v1.1 cutover. The standalone v1.0 verifier itself emits no warnings.
    */
@@ -61,7 +55,7 @@ export interface VerifyV10Options {
  *
  * Behavioral contract: identical to {@link verifyTrustReceipt} for v1.0
  * payloads. Returns a normalized `{ outcome, schema_version, warnings, ... }`
- * shape suitable for the T052 dispatcher.
+ * shape suitable for the dispatcher.
  *
  * Accepts the JWKS as either an array of {@link PublicJwk} or a JWKS object
  * `{ keys: PublicJwk[] }` for ergonomic parity with the dispatcher contract.

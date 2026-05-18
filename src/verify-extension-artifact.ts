@@ -3,20 +3,20 @@
  *
  * Two artifact shapes are validated here:
  *  - `erasure`  — signed by the extension developer's Ed25519 key, asserting
- *    that merchant data has been destroyed after uninstall.
+ *  that merchant data has been destroyed after uninstall.
  *  - `manifest` — signed by the developer's Ed25519 key (and, for approved
- *    versions, countersigned by Trusteed). The CLI verifies the developer
- *    signature; full countersignature verification is a server-side concern.
+ *  versions, countersigned by Trusteed). The CLI verifies the developer
+ *  signature; full countersignature verification is a server-side concern.
  *
  * Scope and non-goals:
  *  - This module only checks **signature validity** and **payload shape**
- *    (presence + types of the small required field set). It does **not**
- *    enforce manifest-level rules (scope compatibility, PII redaction, region
- *    coverage), which live in the marketplace conformance suite and the
- *    server-side review pipeline.
+ *  (presence + types of the small required field set). It does **not**
+ *  enforce manifest-level rules (scope compatibility, PII redaction, region
+ *  coverage), which live in the marketplace conformance suite and the
+ *  server-side review pipeline.
  *  - JWKS resolution is caller-controlled: pass an inline JWKS array or a URL.
  *  - All failures return a structured `{ valid: false, reason }`; nothing
- *    throws.
+ *  throws.
  */
 
 import {

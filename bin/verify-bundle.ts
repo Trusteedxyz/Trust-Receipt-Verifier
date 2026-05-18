@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * verify-bundle CLI — spec-049 T154
+ * verify-bundle CLI
  *
  * Offline verifier for TrustReceipt export bundles (ZIP). Wraps the
- * clean-room verifier `verifyExportBundle` (T153 —
- * `../src/verify-export-bundle.js`) so users can run:
+ * clean-room verifier `verifyExportBundle`
+ * (`../src/verify-export-bundle.js`) so users can run:
  *
  *   npx @agenticmcpstores/trust-receipt-verifier verify-bundle ./trust-receipt-export-<id>.zip
  *
