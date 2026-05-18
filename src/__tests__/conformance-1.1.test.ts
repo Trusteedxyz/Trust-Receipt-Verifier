@@ -150,7 +150,7 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
     };
   }
 
-  // v1.1 path
+  // v1.1 path — all vectors use an all-zeros root SHA (staging stub).
   const opts: VerifyOptions = {
     jwksHistory: jwksToSignedHistory(
       vector.verify_options.jwks,
@@ -160,6 +160,7 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
       "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
     policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
     expectedSubject: vector.verify_options.expectedSubject,
+    allowStagingRoot: true,
   };
   const r = await verifyReceiptEnvelope(
     vector.envelope as unknown as Parameters<typeof verifyReceiptEnvelope>[0],
