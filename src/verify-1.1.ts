@@ -594,6 +594,22 @@ export async function verifyReceiptEnvelope(
   }
   const body = bodyParse.data;
 
+  // 5b. Temporal checks (issued_at / expires_at) --------------------------
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const tolerance = options.toleranceSeconds ?? 30;
+  if (body.issued_at > nowSeconds + tolerance) {
+    return reject(
+      "receipt_not_yet_valid",
+      `issued_at=${body.issued_at} is ${body.issued_at - nowSeconds}s in the future (tolerance=${tolerance}s)`
+    );
+  }
+  if (body.expires_at < nowSeconds - tolerance) {
+    return reject(
+      "receipt_expired",
+      `expires_at=${body.expires_at} expired ${nowSeconds - body.expires_at}s ago (tolerance=${tolerance}s)`
+    );
+  }
+
   // 6. validity-window check ------------------------------------------
   const attestedAt =
     envelope.timestamp_evidence.type === "RFC3161"
