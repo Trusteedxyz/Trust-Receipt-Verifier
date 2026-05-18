@@ -76,7 +76,9 @@ export type V11VerifyErrorCode =
   | "tsa_token_mismatch"
   | "agent_identity_required_strict"
   | "schema_unsupported"
-  | "jwks_history_signature_invalid";
+  | "jwks_history_signature_invalid"
+  | "receipt_expired"
+  | "receipt_not_yet_valid";
 
 /**
  * Result of `verifyReceiptEnvelope`. When `outcome === "accepted"` the
