@@ -79,6 +79,9 @@ function makeOptions(vector: VectorFile): VerifyOptions {
       "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
     policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
     expectedSubject: vector.verify_options.expectedSubject,
+    // Staging stub root (SHA all-zeros) is not in the embedded anchor list.
+    // Tests that exercise this code path must opt in explicitly.
+    allowStagingRoot: true,
   };
 }
 
