@@ -54,8 +54,9 @@ The CLI `trust-receipt verify` command previously routed all receipt-shaped inpu
 
 ### Tests
 
-- `src/__tests__/conformance-1.1.test.ts`: added `allowStagingRoot: true` to the v1.1 dispatch path so the all-zeros staging SHA continues to work in CI.
-- `src/__tests__/verify-1.1.signature.test.ts`: added `allowStagingRoot: true` to `makeOptions()` for the same reason.
+- `src/__tests__/conformance-1.1.test.ts`: added `allowStagingRoot: true` and `currentTimeSeconds: vector.verify_options.currentTime` to the v1.1 dispatch path so conformance vectors with static timestamps continue to pass after their `expires_at` elapses.
+- `src/__tests__/verify-1.1.signature.test.ts`: same additions to `makeOptions()`.
+- `VerifyOptions.currentTimeSeconds?: number` — injectable clock for the `issued_at`/`expires_at` checks; defaults to `Math.floor(Date.now() / 1000)` in production. Conformance tests use this to pin time to the vector's `currentTime`, avoiding spurious `receipt_expired` failures as static vector timestamps age.
 
 ---
 
