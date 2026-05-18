@@ -2,6 +2,63 @@
 
 All notable changes to the verifier package are documented here.
 
+## Unreleased — Codex Hardening (2026-05-18)
+
+Security and correctness hardening from Codex round-2 audit. No wire-format changes; schema version stays `1.1`. Proposed SemVer bump on release: **1.2.0**.
+
+### Build / export surface fixes
+
+Three build-blocking gaps in `index.ts` re-exports — callers who imported the named exports below would get a runtime crash or TypeScript error:
+
+- **`TSA_ROOT_NOT_TRUSTED_ERROR_CODE`** (`verify-timestamp-evidence.ts`) — constant was re-exported from `index.ts:55` but never defined in the source file. Added `export const TSA_ROOT_NOT_TRUSTED_ERROR_CODE = "tsa_root_not_trusted" as const`.
+- **`validateChain` / `ValidateChainError` / `ValidateChainResult`** (`embedded-issuer-root.ts`) — all three were re-exported from `index.ts:89-92` but absent from the source. Added `ValidateChainError` interface, `ValidateChainResult` interface, and `validateChain(roots)` implementation. The function enforces: exactly one active root (`validTo === null`), strictly newest-first ordering, and `validTo ≥ validFrom` on every entry.
+- **Package name mismatch** (`index.ts:72`) — `MerchantTsaPolicy` was imported from `@trusteed/trust-receipt-tsa-client` but `package.json` declares the dependency as `@agenticmcpstores/trust-receipt-tsa-client`. Fixed the import specifier.
+
+### JWKS history — hard-fail on unknown roots
+
+**Breaking behaviour change** (opt-out via new flag): previously, when `jwksHistory.signed_by_root_sha256` did not match any embedded trust anchor, the verifier silently fell back to structural-only parsing and emitted a warning. This meant any caller with an unsigned/unknown history would pass without cryptographic verification.
+
+- **`allowStagingRoot?: boolean`** added to `VerifyOptions` (default `false`). When `false` (the new default), an unrecognised root SHA returns `rejected / jwks_history_signature_invalid` immediately. Set `allowStagingRoot: true` only in staging/test environments.
+- The warning `jwks_history_signature_unverifiable_staging_root` is now emitted **only** when `allowStagingRoot: true` and the root is unrecognised.
+- Conformance tests and signature tests updated to pass `allowStagingRoot: true` (they intentionally use the all-zeros staging SHA).
+
+### Temporal validation for v1.1 receipts
+
+`verifyReceiptEnvelope` now checks `issued_at` and `expires_at` against wall-clock time. Both checks apply a configurable `toleranceSeconds` grace period (default `30` seconds) to absorb minor clock skew.
+
+- **New error code `"receipt_not_yet_valid"`** — returned when `issued_at > now + tolerance`. Indicates the receipt was issued in the future; likely a clock-skew issue or a replay of a pre-issued token.
+- **New error code `"receipt_expired"`** — returned when `expires_at < now - tolerance`. Indicates the receipt validity window has elapsed.
+- **`VerifyOptions.toleranceSeconds?: number`** added (default `30`). Operators with high clock-skew environments can raise this; production deployments should lower it.
+
+Both new error codes are added to the `V11VerifyErrorCode` union.
+
+### CLI — v1.1 envelope routing
+
+The CLI `trust-receipt verify` command previously routed all receipt-shaped inputs through the v1.0 path. A v1.1 envelope (`receipt` + `envelope_metadata` top-level keys) is structurally different and must be verified with `verifyReceiptEnvelope`.
+
+- **New `VerifyType` value `"receipt-v11"`** — distinct from `"receipt"` (v1.0 JWS compact).
+- **`detectArtifactKind`** updated: a JSON object with both `receipt` and `envelope_metadata` keys now returns `"receipt-v11"` instead of `"receipt"`.
+- **New `cmdVerifyReceiptV11()` function** — calls `verifyReceiptEnvelope` with options built from the new CLI flags below. Requires `--jwks-history-file` and `--trust-anchor-sha256`; exits with code `1` when either is missing.
+- **New CLI flags** (all optional unless noted):
+  - `--jwks-history-file <path>` — path to a `SignedJwksHistory` JSON file (required for `receipt-v11`).
+  - `--trust-anchor-sha256 <hex>` — expected `trustAnchorPemSha256` for root pinning (required for `receipt-v11`).
+  - `--policy-oid <oid>` — may be repeated; builds `policyOidAllowlist` passed to `verifyReceiptEnvelope`.
+  - `--allow-staging-root` — passes `allowStagingRoot: true` (staging/CI use only).
+- `cmdVerify()` dispatch switch now includes `case "receipt-v11"` routing to `cmdVerifyReceiptV11()`.
+
+### Unknown trust-provider warning
+
+`verifyReceiptEnvelope` now emits a warning when `trust_provider_assertions[]` contains an entry whose `provider` field is not one of the three known values (`"rfc9421-native"`, `"human"`, `"visa"`).
+
+- **New warning `"unknown_trust_provider_present"`** — added to the warnings array before `recomputeLegalPosture()`. At most one instance is emitted per call regardless of how many unknown providers are present. Does **not** cause rejection — forward compatibility for future providers is preserved.
+
+### Tests
+
+- `src/__tests__/conformance-1.1.test.ts`: added `allowStagingRoot: true` to the v1.1 dispatch path so the all-zeros staging SHA continues to work in CI.
+- `src/__tests__/verify-1.1.signature.test.ts`: added `allowStagingRoot: true` to `makeOptions()` for the same reason.
+
+---
+
 ## Unreleased — Typed Trust-Provider Assertions
 
 Adds typed interfaces and exported type predicates for the known `trust_provider_assertions[]` providers. No runtime behaviour changes; schema version stays `1.1`.
