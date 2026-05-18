@@ -69,7 +69,7 @@ export {
 // T-CR-007: re-export so downstream consumers (api, dashboard) can plumb
 // per-merchant TSA policy through `verifyTimestampEvidence` /
 // `verifyReceiptEnvelope` without taking a direct dep on the TSA client.
-export type { MerchantTsaPolicy } from "@trusteed/trust-receipt-tsa-client";
+export type { MerchantTsaPolicy } from "@agenticmcpstores/trust-receipt-tsa-client";
 
 // v1.1 types (envelope, body, posture, history) for downstream consumers.
 export type {
