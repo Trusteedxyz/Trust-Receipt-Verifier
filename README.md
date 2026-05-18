@@ -424,9 +424,43 @@ This package follows **Semantic Versioning** with respect to the public API _and
 
 ---
 
+## Acknowledgements
+
+TrustReceipt is a cross-protocol evidence format. The following external parties define schemas, protocols, or infrastructure that TrustReceipt receipts can reference or attest to. None of these organisations are formal collaborators on this repository; the relationships are interoperability integrations, not endorsements.
+
+### Protocol authors (define schema fields)
+
+| Protocol | Author | TrustReceipt schema field |
+| -------- | ------ | ------------------------- |
+| ACP (Agentic Commerce Protocol) | OpenAI + Stripe | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"` |
+| AP2 (Agent Payment Protocol v2) | Google | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash` |
+| x402 (stablecoin payment) | Coinbase + Cloudflare | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
+| MCAP (Mastercard Agent Pay) | Mastercard | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash` |
+| MCP (Model Context Protocol) | Anthropic | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"` |
+| UCP (Universal Commerce Protocol) | Trusteed | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
+
+### Active runtime providers (wired in `trust_provider_assertions[]`)
+
+These providers produce structured assertions that the `recomputeLegalPosture` logic in `verify-1.1.ts` reads when determining the verifier-authoritative `LegalPosture`. Use the exported type predicates (`isRfc9421ProviderAssertion`, `isHumanProviderAssertion`, `isVisaTapProviderAssertion`) to narrow to the typed shapes defined in `types-1.1.ts`.
+
+| Provider | Assertion `provider` field | Integration |
+| -------- | ------------------------- | ----------- |
+| [IETF RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) (HTTP Message Signatures) | `"rfc9421-native"` | Verifies HTTP Message Signatures from any agent with a public JWKS endpoint; issuer wires this optionally |
+| [HUMAN Security — AgenticTrust](https://www.humansecurity.com/agentictrust) | `"human"` | Optional agent-identity integration; no HUMAN SDK is imported in this verifier package |
+| [Visa TAP](https://developer.visa.com/) (Trusted Agent Protocol) | `"visa"` | Validated when signer domain is `*.visa.com` or `*.visa.net` with tag `"agent-browser-auth"` or `"agent-payer-auth"` |
+
+### Issuer-side infrastructure (not used by this verifier package)
+
+| Tool | Role |
+| ---- | ---- |
+| [freeTSA](https://freetsa.org/) | Default Phase-1 RFC 3161 timestamp authority; URL is per-receipt (`tsa_endpoint` field) — not hardcoded here |
+| [AWS KMS](https://aws.amazon.com/kms/) | Ed25519 issuer signing keys and HMAC CMKs for PII-sourced hashes; handled by sibling package `trust-receipt-kms-signer` |
+
+---
+
 ## Trademark Notice
 
-TrustReceipt is not affiliated with, endorsed by, or officially supported by Mastercard, Anthropic, Skyfire, Coinbase, or any other named protocol owner or company referenced in this specification. Protocol names (AP2, MCAP, ACP, MCP, x402, UCP) are used descriptively to indicate interoperability targets only. All trademarks and registered marks are the property of their respective owners.
+TrustReceipt is not affiliated with, endorsed by, or officially supported by Mastercard, Anthropic, Skyfire, Coinbase, HUMAN Security, Visa, or any other named protocol owner or company referenced in this specification. Protocol names (AP2, MCAP, ACP, MCP, x402, UCP) are used descriptively to indicate interoperability targets only. All trademarks and registered marks are the property of their respective owners.
 
 ---
 
