@@ -94,13 +94,23 @@ function help(): void {
 
 // ─── Arg parser ───────────────────────────────────────────────────────────────
 
-type VerifyType = "auto" | "receipt" | "erasure" | "manifest" | "jwks-history";
+type VerifyType =
+  | "auto"
+  | "receipt"
+  | "receipt-v11"
+  | "erasure"
+  | "manifest"
+  | "jwks-history";
 
 interface ParsedArgs {
   command: string | null;
   file: string | null;
   jwksUrl: string | null;
   jwksFile: string | null;
+  jwksHistoryFile: string | null;
+  trustAnchorSha256: string | null;
+  policyOids: string[];
+  allowStagingRoot: boolean;
   verifyType: VerifyType;
   showHelp: boolean;
   showVersion: boolean;
@@ -113,6 +123,10 @@ function parseArgs(argv: string[]): ParsedArgs {
     file: null,
     jwksUrl: null,
     jwksFile: null,
+    jwksHistoryFile: null,
+    trustAnchorSha256: null,
+    policyOids: [],
+    allowStagingRoot: false,
     verifyType: "auto",
     showHelp: false,
     showVersion: false,
@@ -125,17 +139,29 @@ function parseArgs(argv: string[]): ParsedArgs {
       result.showHelp = true;
     } else if (arg === "--version" || arg === "-v") {
       result.showVersion = true;
+    } else if (arg === "--allow-staging-root") {
+      result.allowStagingRoot = true;
     } else if (arg === "--jwks-url" && args[i + 1]) {
       result.jwksUrl = args[i + 1] ?? null;
       i++;
     } else if (arg === "--jwks-file" && args[i + 1]) {
       result.jwksFile = args[i + 1] ?? null;
       i++;
+    } else if (arg === "--jwks-history-file" && args[i + 1]) {
+      result.jwksHistoryFile = args[i + 1] ?? null;
+      i++;
+    } else if (arg === "--trust-anchor-sha256" && args[i + 1]) {
+      result.trustAnchorSha256 = args[i + 1] ?? null;
+      i++;
+    } else if (arg === "--policy-oid" && args[i + 1]) {
+      result.policyOids.push(args[i + 1] ?? "");
+      i++;
     } else if (arg === "--type" && args[i + 1]) {
       const next = args[i + 1];
       if (
         next === "auto" ||
         next === "receipt" ||
+        next === "receipt-v11" ||
         next === "erasure" ||
         next === "manifest" ||
         next === "jwks-history"
