@@ -360,13 +360,17 @@ async function cmdVerifyReceiptV11(
   }
 
   const options: V11VerifyOptions = {
-    jwksHistory: historyParsed as Parameters<typeof verifyReceiptEnvelope>[1]["jwksHistory"],
+    jwksHistory: historyParsed as SignedJwksHistory,
     trustAnchorPemSha256: trustAnchorSha256,
     policyOidAllowlist: policyOids,
     allowStagingRoot,
   };
 
-  const result = await verifyReceiptEnvelope(envelope, options);
+  // verifyReceiptEnvelope validates the shape via Zod internally.
+  const result = await verifyReceiptEnvelope(
+    envelope as Parameters<typeof verifyReceiptEnvelope>[0],
+    options
+  );
   print({ kind: "receipt-v11", ...result });
   return result.outcome === "accepted" ? 0 : 1;
 }
