@@ -676,6 +676,27 @@ export async function verifyReceiptEnvelope(
   }
 
   // 10. Recompute legal_posture (D22 — verifier authoritative) ------------
+  // Warn when assertions include providers the verifier doesn't recognise.
+  // Unknown providers still count toward agentIdentityVerified (forward-compat)
+  // but callers should not rely on them for legal claims without manual review.
+  const KNOWN_PROVIDERS = new Set(["rfc9421-native", "human", "visa"]);
+  const rawAssertions = body.trust_provider_assertions;
+  if (Array.isArray(rawAssertions)) {
+    for (const a of rawAssertions) {
+      if (
+        typeof a === "object" &&
+        a !== null &&
+        typeof (a as Record<string, unknown>)["provider"] === "string" &&
+        !KNOWN_PROVIDERS.has(
+          (a as Record<string, unknown>)["provider"] as string
+        )
+      ) {
+        warnings.push("unknown_trust_provider_present");
+        break; // one warning per receipt is enough
+      }
+    }
+  }
+
   const recomputedPosture = recomputeLegalPosture(body, envelope);
   const envelopePosture = envelope.envelope_metadata.legal_posture;
   if (envelopePosture !== recomputedPosture) {
