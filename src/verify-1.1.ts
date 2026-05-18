@@ -124,6 +124,14 @@ export interface VerifyOptions {
   rejectOnEnvelopePostureMismatch?: boolean;
   /** Optional caller-supplied subject context (). */
   expectedSubject?: ReceiptSubject;
+  /**
+   * When true, allows fallback to structural-only JWKS history parse when the
+   * root SHA-256 is not in the embedded trust anchor list (staging / pre-ceremony
+   * path). Default: false — unknown roots are a hard reject.
+   *
+   * DO NOT set this in production; it degrades the offline trust chain.
+   */
+  allowStagingRoot?: boolean;
 }
 
 // ---------------------------------------------------------------------------
