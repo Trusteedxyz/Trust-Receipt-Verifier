@@ -313,6 +313,64 @@ async function cmdVerifyExtensionArtifact(
   return result.valid ? 0 : 1;
 }
 
+async function cmdVerifyReceiptV11(
+  blob: string,
+  jwksHistoryFile: string | null,
+  trustAnchorSha256: string | null,
+  policyOids: string[],
+  allowStagingRoot: boolean
+): Promise<number> {
+  if (!jwksHistoryFile) {
+    printError(
+      "v1.1 receipt requires --jwks-history-file <path>. " +
+        "Provide the signed jwks-history.jws JSON bundled with the export."
+    );
+    return 2;
+  }
+  if (!trustAnchorSha256) {
+    printError(
+      "v1.1 receipt requires --trust-anchor-sha256 <hex>. " +
+        "Provide the SHA-256 of the issuer root PEM."
+    );
+    return 2;
+  }
+
+  let historyRaw: string;
+  try {
+    historyRaw = readFileSync(jwksHistoryFile, "utf8").trim();
+  } catch {
+    printError(`Cannot read jwks-history file: ${jwksHistoryFile}`);
+    return 2;
+  }
+
+  let envelope: unknown;
+  try {
+    envelope = JSON.parse(blob);
+  } catch {
+    printError("v1.1 receipt blob is not valid JSON");
+    return 2;
+  }
+
+  let historyParsed: unknown;
+  try {
+    historyParsed = JSON.parse(historyRaw);
+  } catch {
+    printError("jwks-history file is not valid JSON");
+    return 2;
+  }
+
+  const options: V11VerifyOptions = {
+    jwksHistory: historyParsed as Parameters<typeof verifyReceiptEnvelope>[1]["jwksHistory"],
+    trustAnchorPemSha256: trustAnchorSha256,
+    policyOidAllowlist: policyOids,
+    allowStagingRoot,
+  };
+
+  const result = await verifyReceiptEnvelope(envelope, options);
+  print({ kind: "receipt-v11", ...result });
+  return result.outcome === "accepted" ? 0 : 1;
+}
+
 async function cmdVerifyJwksHistory(blob: string): Promise<number> {
   let parsed: unknown;
   try {
