@@ -75,6 +75,8 @@ TrustReceipt aims for verifier implementations in TypeScript, Python, Java, Go, 
 
 **Failure reason codes your port must return:**
 
+*v1.0 (`verifyTrustReceipt`)*
+
 | Code                 | Condition                                                  |
 | -------------------- | ---------------------------------------------------------- |
 | `invalid_jws`        | Malformed compact serialization or missing `kid` in header |
@@ -84,6 +86,24 @@ TrustReceipt aims for verifier implementations in TypeScript, Python, Java, Go, 
 | `expired`            | `expires_at < now - tolerance`                             |
 | `not_yet_valid`      | `issued_at > now + tolerance`                              |
 | `jwks_fetch_failed`  | JWKS URL unreachable or fetch timed out                    |
+
+*v1.1 (`verifyReceiptEnvelope`) — additional codes*
+
+| Code                                 | Condition                                                                          |
+| ------------------------------------ | ---------------------------------------------------------------------------------- |
+| `jwks_history_signature_invalid`     | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust anchor    |
+| `receipt_expired`                    | `expires_at < now - toleranceSeconds` (v1.1 envelope path)                         |
+| `receipt_not_yet_valid`              | `issued_at > now + toleranceSeconds` (v1.1 envelope path)                          |
+| `missing_required_consent_context`   | `receipt_subject = "buyer_agent"` but `consent_context` absent                     |
+| `receipt_subject_mismatch`           | `expectedSubject` option provided but `receipt_subject` in envelope differs        |
+
+Non-fatal warnings emitted by `verifyReceiptEnvelope`:
+
+| Warning                                            | Meaning                                                                            |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `jwks_history_signature_unverifiable_staging_root` | Unknown root SHA but `allowStagingRoot: true` was set — structural parse only      |
+| `unknown_trust_provider_present`                   | A `trust_provider_assertions[].provider` value is not in the known set             |
+| `tsa_unavailable`                                  | RFC 3161 timestamp absent or unavailable; posture falls to `ades_candidate_no_tsa` |
 
 ---
 
