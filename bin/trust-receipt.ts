@@ -623,7 +623,11 @@ async function main(): Promise<void> {
         args.file,
         args.verifyType,
         args.jwksUrl,
-        args.jwksFile
+        args.jwksFile,
+        args.jwksHistoryFile,
+        args.trustAnchorSha256,
+        args.policyOids,
+        args.allowStagingRoot
       );
       break;
     }
