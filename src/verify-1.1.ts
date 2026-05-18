@@ -40,6 +40,9 @@ import type {
   ReceiptSubject,
   SignedJwksHistory,
   JwksHistoryEntry,
+  Rfc9421ProviderAssertion,
+  HumanProviderAssertion,
+  VisaTapProviderAssertion,
 } from "./types-1.1.js";
 import { verifyTimestampEvidence } from "./verify-timestamp-evidence.js";
 import {
@@ -130,6 +133,61 @@ export interface VerifyOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Trust-provider assertion type predicates (public API)
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrows an opaque `TrustProviderAssertion` to `Rfc9421ProviderAssertion`.
+ *
+ * @example
+ * const rfc9421 = receipt.trust_provider_assertions?.find(isRfc9421ProviderAssertion);
+ * if (rfc9421?.verification_status === "verified") { ... }
+ */
+export function isRfc9421ProviderAssertion(
+  a: unknown
+): a is Rfc9421ProviderAssertion {
+  return (
+    typeof a === "object" &&
+    a !== null &&
+    (a as Record<string, unknown>)["provider"] === "rfc9421-native"
+  );
+}
+
+/**
+ * Narrows an opaque `TrustProviderAssertion` to `HumanProviderAssertion`.
+ *
+ * @example
+ * const human = receipt.trust_provider_assertions?.find(isHumanProviderAssertion);
+ * if (human?.human_verification_status === "verified") { ... }
+ */
+export function isHumanProviderAssertion(
+  a: unknown
+): a is HumanProviderAssertion {
+  return (
+    typeof a === "object" &&
+    a !== null &&
+    (a as Record<string, unknown>)["provider"] === "human"
+  );
+}
+
+/**
+ * Narrows an opaque `TrustProviderAssertion` to `VisaTapProviderAssertion`.
+ *
+ * @example
+ * const visa = receipt.trust_provider_assertions?.find(isVisaTapProviderAssertion);
+ * if (visa?.tag === "agent-payer-auth") { ... }
+ */
+export function isVisaTapProviderAssertion(
+  a: unknown
+): a is VisaTapProviderAssertion {
+  return (
+    typeof a === "object" &&
+    a !== null &&
+    (a as Record<string, unknown>)["provider"] === "visa"
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
@@ -212,14 +270,20 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
  * - buyer_agent + tst-absent + no agent-identity ⇒ `simple_electronic_seal`
  *
  * Agent-identity is considered "verified" when ANY of the following is true:
- *  - `body.trust_provider_assertions` is a non-empty array (spec-045 adapter
- *    output — preferred signal), OR
+ *  - `body.trust_provider_assertions` is a non-empty array (preferred signal
+ *    from any agent-identity verifier). Known typed providers:
+ *      · `"rfc9421-native"` — RFC 9421 HTTP Message Signature verifier.
+ *        Use `isRfc9421ProviderAssertion` to narrow; check
+ *        `verification_status === "verified" | "observed"`.
+ *      · `"human"` — HUMAN AgenticTrust integration.
+ *        Use `isHumanProviderAssertion`; check `human_verification_status`.
+ *      · `"visa"` — Visa TAP (*.visa.com / *.visa.net signer, tag validated).
+ *        Use `isVisaTapProviderAssertion`; check `tag` + `verification_status`.
+ *    Unknown providers are treated as "some assertion present" for forwards
+ *    compatibility — they count towards `hasAssertions` even if untyped.
  *  - `body.authorization_evidence.protocol_authorization_ref` is set (the
  *    receipt cites a signed protocol mandate such as AP2/MCAP/UCP, which
  *    inherently binds an agent identity at the protocol layer).
- *
- * We stay loose because spec-045 adapter shapes vary and not every issuer
- * embeds a `trust_provider_assertions` field at issuance time.
  */
 function recomputeLegalPosture(
   body: {

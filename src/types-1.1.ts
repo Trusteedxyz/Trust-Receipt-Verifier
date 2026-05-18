@@ -524,13 +524,99 @@ export type RiskSignals = Record<string, unknown>;
 
 /**
  * Optional trust-provider assertions (e.g. RFC 9421 native, Visa TAP, HUMAN
- * AgenticTrust). Specific shapes live in spec-045 adapter types; we stay
- * deliberately loose here to avoid coupling the receipt schema to provider
- * evolution.
+ * AgenticTrust). Deliberately loose to avoid coupling the receipt schema to
+ * provider evolution.
  *
- * @see spec-045 (RFC 9421 verifier) ADR-026
+ * Use the narrower `KnownTrustProviderAssertion` union or the type predicates
+ * exported from `verify-1.1.ts` when accessing provider-specific fields.
  */
 export type TrustProviderAssertion = Record<string, unknown>;
+
+/**
+ * RFC 9421 (HTTP Message Signatures) native assertion, produced by an
+ * agent-identity verifier that validates HTTP signatures against a public
+ * JWKS endpoint.
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9421
+ */
+export interface Rfc9421ProviderAssertion {
+  provider: "rfc9421-native";
+  /**
+   * Outcome of the RFC 9421 signature verification for this request.
+   * - `"verified"` — signature valid, kid resolved, freshness satisfied.
+   * - `"observed"` — signature present and structurally valid but not fully
+   *   verified (observe mode or JWKS miss resolved via cache grace).
+   * - `"spoofed"` — signature present but cryptographically invalid.
+   * - `"unverified"` — no signature was present at evaluation time.
+   */
+  verification_status: "verified" | "observed" | "spoofed" | "unverified";
+  /** JWK `kid` identifying the signing key. */
+  kid?: string;
+  /** Fully-qualified URL of the agent's JWKS endpoint. */
+  signer_url?: string;
+  /**
+   * RFC 9421 Signature-Input `tag` component value, if present.
+   * Known values: `"agent-browser-auth"` and `"agent-payer-auth"` (Visa TAP).
+   */
+  tag?: string;
+  /** Unix seconds — when the verification was performed. */
+  evaluated_at?: number;
+}
+
+/**
+ * HUMAN AgenticTrust assertion, emitted when the optional HUMAN Security
+ * agent-identity integration is active.
+ *
+ * @see https://www.humansecurity.com/agentictrust
+ */
+export interface HumanProviderAssertion {
+  provider: "human";
+  /** HUMAN AgenticTrust verification outcome for this request. */
+  human_verification_status: "verified" | "unverified" | "error";
+  /** HUMAN-assigned transaction ID for audit correlation. Opaque string. */
+  human_transaction_id?: string;
+  /** HUMAN assurance level (e.g. `"bronze"` | `"silver"` | `"gold"`). */
+  human_assurance_level?: string;
+  /** Unix seconds — when the HUMAN check was performed. */
+  evaluated_at?: number;
+}
+
+/**
+ * Visa TAP (Trusted Agent Protocol) assertion, produced when the RFC 9421
+ * verifier validates a request signed by a Visa-controlled key.
+ * The signer domain MUST match `*.visa.com` or `*.visa.net`.
+ *
+ * @see https://developer.visa.com/
+ */
+export interface VisaTapProviderAssertion {
+  provider: "visa";
+  /**
+   * RFC 9421 Signature-Input `tag` from the Visa TAP request.
+   * Only `"agent-browser-auth"` and `"agent-payer-auth"` are accepted;
+   * any other tag is rejected before this assertion is emitted.
+   */
+  tag: "agent-browser-auth" | "agent-payer-auth";
+  /** Outcome of the Visa TAP signature check. */
+  verification_status: "verified" | "invalid";
+  /** JWK `kid` of the Visa signing key. */
+  kid?: string;
+  /** Unix seconds — when the verification was performed. */
+  evaluated_at?: number;
+}
+
+/**
+ * Discriminated union of all known, typed trust-provider assertions.
+ * Callers can use the `isRfc9421ProviderAssertion` / `isHumanProviderAssertion` /
+ * `isVisaTapProviderAssertion` type predicates (exported from `verify-1.1.ts`)
+ * to narrow from `TrustProviderAssertion` (= `Record<string, unknown>`) to one
+ * of these concrete shapes.
+ *
+ * Unknown or future providers remain as the base `TrustProviderAssertion`.
+ */
+export type KnownTrustProviderAssertion =
+  | Rfc9421ProviderAssertion
+  | HumanProviderAssertion
+  | VisaTapProviderAssertion;
 
 /**
  * Payment-reference object (rail-specific). Schema deliberately loose; rail
