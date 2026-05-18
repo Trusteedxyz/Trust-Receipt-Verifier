@@ -437,7 +437,7 @@ TrustReceipt is a cross-protocol evidence format. The following external parties
 | [x402 (stablecoin payment)](https://github.com/coinbase/x402) | [Coinbase](https://coinbase.com) + [Cloudflare](https://cloudflare.com) | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
 | [MCAP (Mastercard Agent Pay)](https://developer.mastercard.com/product/agent-pay/) | [Mastercard](https://mastercard.com) | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash` |
 | [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/specification) | [Anthropic](https://anthropic.com) | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"` |
-| [UCP (Universal Commerce Protocol)](https://trusteed.xyz) | [Trusteed](https://trusteed.xyz) | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
+| [UCP (Universal Commerce Protocol)](https://github.com/Universal-Commerce-Protocol/ucp) | [Google](https://google.com) | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
 
 ### Active runtime providers (wired in `trust_provider_assertions[]`)
 
