@@ -2,6 +2,42 @@
 
 All notable changes to the verifier package are documented here.
 
+## Unreleased — Typed Trust-Provider Assertions
+
+Adds typed interfaces and exported type predicates for the known `trust_provider_assertions[]` providers. No runtime behaviour changes; schema version stays `1.1`.
+
+### New library API
+
+- **`Rfc9421ProviderAssertion`** (`types-1.1.ts`) — typed shape for `provider: "rfc9421-native"` assertions. Fields: `verification_status` (`"verified" | "observed" | "spoofed" | "unverified"`), `kid?`, `signer_url?`, `tag?`, `evaluated_at?`.
+- **`HumanProviderAssertion`** (`types-1.1.ts`) — typed shape for `provider: "human"` assertions. Fields: `human_verification_status` (`"verified" | "unverified" | "error"`), `human_transaction_id?`, `human_assurance_level?`, `evaluated_at?`.
+- **`VisaTapProviderAssertion`** (`types-1.1.ts`) — typed shape for `provider: "visa"` assertions. Fields: `tag` (`"agent-browser-auth" | "agent-payer-auth"`), `verification_status` (`"verified" | "invalid"`), `kid?`, `evaluated_at?`.
+- **`KnownTrustProviderAssertion`** (`types-1.1.ts`) — discriminated union of the three typed shapes above.
+- **`isRfc9421ProviderAssertion(a)`** (`verify-1.1.ts`) — exported type predicate; narrows `TrustProviderAssertion` (= `Record<string, unknown>`) to `Rfc9421ProviderAssertion`.
+- **`isHumanProviderAssertion(a)`** (`verify-1.1.ts`) — exported type predicate; narrows to `HumanProviderAssertion`.
+- **`isVisaTapProviderAssertion(a)`** (`verify-1.1.ts`) — exported type predicate; narrows to `VisaTapProviderAssertion`.
+
+### Usage
+
+```ts
+import { isRfc9421ProviderAssertion, isHumanProviderAssertion, isVisaTapProviderAssertion } from "trust-receipt-verifier";
+
+const rfc9421 = receipt.trust_provider_assertions?.find(isRfc9421ProviderAssertion);
+if (rfc9421?.verification_status === "verified") { /* RFC 9421 signature confirmed */ }
+
+const human = receipt.trust_provider_assertions?.find(isHumanProviderAssertion);
+if (human?.human_verification_status === "verified") { /* HUMAN AgenticTrust confirmed */ }
+
+const visa = receipt.trust_provider_assertions?.find(isVisaTapProviderAssertion);
+if (visa?.tag === "agent-payer-auth") { /* Visa TAP payer-auth confirmed */ }
+```
+
+### Non-goals
+
+- No change to `recomputeLegalPosture` logic — any non-empty `trust_provider_assertions` array still counts as "some assertion present" for posture computation regardless of `provider`.
+- `TrustProviderAssertion = Record<string, unknown>` is unchanged — unknown or future providers remain untyped and are accepted for forwards compatibility.
+
+---
+
 ## Unreleased — Extension Artifact Verification
 
 Adds verification for two new artifact families produced by the Trusteed Extension Marketplace ecosystem: **erasure receipts** (developer-signed proof of merchant-data destruction post-uninstall) and **extension manifests** (developer-signed declarations of scopes, endpoints, and lifecycle metadata). Also surfaces existing JWKS-history verification through the CLI. Schema version remains `1.1` (no receipt payload changes). Proposed SemVer bump on release: **1.2.0** (additive, non-breaking).
