@@ -172,7 +172,44 @@ Step 7 — Return
   { valid: true, receipt: <decoded payload> }
 ```
 
-**Clock tolerance**: implementors should default to ±30 seconds to account for clock skew between issuer and verifier systems.
+**Clock tolerance**: implementors should default to ±30 seconds to account for clock skew between issuer and verifier systems. The `VerifyOptions.toleranceSeconds` field (default `30`) controls this.
+
+### 5.1 v1.1 envelope verification (`verifyReceiptEnvelope`)
+
+v1.1 adds a pre-flight JWKS history trust chain check before Steps 1–7:
+
+```
+Step 0 — Validate JWKS history signature
+  Parse jwksHistory.jws_compact (3 segments).
+  Check header.alg === "EdDSA".
+  Lookup signed_by_root_sha256 in embedded issuer root list.
+    Not found + allowStagingRoot=false → "jwks_history_signature_invalid" (hard fail).
+    Not found + allowStagingRoot=true  → structural-only parse, emit warning
+                                          "jwks_history_signature_unverifiable_staging_root".
+    Found → verify EdDSA signature against root public key.
+  Parse payload → SignedJwksHistoryPayload (entries[]).
+  Fail → "jwks_history_signature_invalid" if any check above fails.
+```
+
+Additional v1.1 error codes returned by `verifyReceiptEnvelope`:
+
+| Error code                         | Condition                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| `jwks_history_signature_invalid`   | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust list  |
+| `unknown_kid`                      | Receipt `kid` not found in the resolved JWKS history entries                   |
+| `receipt_expired`                  | `expires_at < now - toleranceSeconds`                                          |
+| `receipt_not_yet_valid`            | `issued_at > now + toleranceSeconds`                                           |
+| `missing_required_consent_context` | `receipt_subject = "buyer_agent"` but `consent_context` absent                 |
+| `receipt_subject_mismatch`         | `expectedSubject` option set but `receipt_subject` differs                     |
+| `schema_invalid`                   | Zod schema parse failed (missing required field, wrong type, etc.)             |
+
+v1.1 warnings (non-fatal, appended to `result.warnings`):
+
+| Warning                                               | Meaning                                                                           |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `jwks_history_signature_unverifiable_staging_root`    | Root SHA not in embedded list, but `allowStagingRoot: true` was set               |
+| `unknown_trust_provider_present`                      | `trust_provider_assertions[]` contains a `provider` not in the known set          |
+| `tsa_unavailable`                                     | RFC 3161 timestamp evidence absent or fetch failed; posture falls to `ades_candidate_no_tsa` |
 
 ---
 
