@@ -478,16 +478,23 @@ export async function verifyReceiptEnvelope(
     );
   }
 
-  // 3c. Signature verification or staging fallback
+  // 3c. Signature verification — hard-fail on unknown root unless staging flag
   let historyPayload: VerifiedJwksHistoryPayload | null;
   const rootEntry = findIssuerRootBySha256(
     options.jwksHistory.signed_by_root_sha256
   );
   if (!rootEntry) {
-    // Unknown root SHA — staging window or unknown issuer; fall back to
-    // structural-only parse and emit a non-fatal warning (F1 staging path).
-    warnings.push("jwks_history_signature_unverifiable_staging_root");
-    historyPayload = parseJwksHistoryPayload(options.jwksHistory);
+    if (options.allowStagingRoot === true) {
+      // Explicit staging opt-in: fall back to structural-only parse.
+      warnings.push("jwks_history_signature_unverifiable_staging_root");
+      historyPayload = parseJwksHistoryPayload(options.jwksHistory);
+    } else {
+      return reject(
+        "jwks_history_signature_invalid",
+        `JWKS history signed_by_root_sha256=${options.jwksHistory.signed_by_root_sha256} is not in the embedded trust anchor list. Pass allowStagingRoot=true only in staging environments.`,
+        warnings
+      );
+    }
   } else {
     const sigResult = await verifyJwksHistorySignature(
       options.jwksHistory,
