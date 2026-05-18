@@ -161,6 +161,7 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
     policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
     expectedSubject: vector.verify_options.expectedSubject,
     allowStagingRoot: true,
+    currentTimeSeconds: vector.verify_options.currentTime,
   };
   const r = await verifyReceiptEnvelope(
     vector.envelope as unknown as Parameters<typeof verifyReceiptEnvelope>[0],
