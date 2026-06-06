@@ -385,11 +385,18 @@ trust-receipt verify envelope.json \
   --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
   --policy-oid 1.2.3.4.5.6.7.8.9
 
+# Verify a v1.1 envelope in STRICT mode (semantic trust-anchor enforcement)
+trust-receipt verify envelope.json \
+  --type receipt-v11 \
+  --jwks-history-file issuer-jwks-history.json \
+  --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
+  --strict
+
 # Staging / CI only — skip root-anchor check (never use in production)
 trust-receipt verify envelope.json --type receipt-v11 \
   --jwks-history-file issuer-jwks-history.json \
   --trust-anchor-sha256 <sha256> \
-  --allow-staging-root
+  --allow-staging-roots
 
 # Inspect a receipt without verifying the signature
 trust-receipt inspect receipt.jws
