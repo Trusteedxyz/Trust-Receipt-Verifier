@@ -1,0 +1,54 @@
+{
+  "vector_id": "004a",
+  "name": "direct-issuer-happy",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-008a Rama A — direct merchant root issuer happy path.\n\nThe merchant publishes a single Ed25519 key in `keys[]` marked with\n`use:\"sig\"` AND `kid_uses` containing the literal marker\n\"receipt-issuance\". The receipt is signed directly with that key. The\nportable verifier (`validateDelegation` in @agenticmcpstores/trust-receipt-verifier)\nMUST short-circuit on Branch A and return outcome=accepted_direct WITHOUT\ninspecting authorized_delegates[]. No delegation signature is verified on\nthis path.\n\nThis vector is the canonical happy case for the simplest issuer topology\n(single key, no delegation chain) and exists to prove the marker is the\nsole admission criterion for Branch A.",
+  "test_kind": "delegation_resolution_direct",
+  "inputs": {
+    "jwks": {
+      "keys": [
+        {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "kid": "merchant-root-acme-004a",
+          "use": "sig",
+          "kid_uses": ["receipt-issuance"],
+          "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+        }
+      ]
+    },
+    "receipt_kid": "merchant-root-acme-004a",
+    "receipt_issued_at": "2026-05-15T12:00:00.000Z"
+  },
+  "expected": {
+    "outcome": "accepted_direct",
+    "branch": "direct",
+    "public_key_jwk": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "kid": "merchant-root-acme-004a",
+      "use": "sig",
+      "kid_uses": ["receipt-issuance"],
+      "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+    },
+    "merchant_root_kid": null,
+    "delegate_role": null
+  },
+  "acceptance_criteria": {
+    "must_match_kid_exactly": true,
+    "must_check_use_equals_sig": true,
+    "must_check_kid_uses_contains_receipt_issuance": true,
+    "must_not_invoke_delegation_signature_verification": true,
+    "must_not_require_authorized_delegates_field": true
+  },
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/merchant-jwks.schema.json"
+  ],
+  "notes": [
+    "ADR-054-001: FR-008a Rama A is the default 1-tier issuer model — no third-party delegation.",
+    "The `x` value is a deterministic placeholder public key; verifier MUST NOT trust this for production. Real keys are merchant-controlled at /.well-known/jwks.json.",
+    "If `kid_uses` is missing OR does NOT include `receipt-issuance`, the resolver MUST fall through to Branch B (delegated) and ultimately to `unknown_kid` if no delegate entry matches."
+  ]
+}

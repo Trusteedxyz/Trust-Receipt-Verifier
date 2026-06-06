@@ -1,0 +1,139 @@
+{
+  "vector_id": "003",
+  "name": "svm-token-authorization-happy",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-004/005/018 — Happy path Solana SVM token authorization async issuance with merkle_manifest output commitment.\n\nMerchant emits 402 with capability. Agent submits paymentPayload with SVM\ntoken authorization (signed transaction over recent blockhash). Facilitator\nsettles on Solana and reports SettlementEvidence. Output is a streamed\nresource so the merchant uses merkle_manifest commitment kind (FR-007 +\nADR-054-001 §merkle_manifest).\n\nThis vector exercises the full 'dynamic resource' path including manifest_hash\nanchor verification (verifier must validate sha256(manifest_bytes) ===\noutput_commitment.manifest_hash BEFORE trusting any leaf).",
+  "test_kind": "issuance_async_happy",
+  "inputs": {
+    "merchant_id": "merchant_acme_svm_002",
+    "payment_requirements": {
+      "scheme": "exact",
+      "network": "solana",
+      "maxAmountRequired": "1000000",
+      "resource": "https://merchant.example.com/api/streamed-resource",
+      "description": "Streamed dataset (1 USDC)",
+      "mimeType": "application/octet-stream",
+      "payTo": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+      "maxTimeoutSeconds": 300,
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    },
+    "payment_payload": {
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "authority": "BSJZ4P2gW3vMy3GVfYV8VPGuYpUDxR5VZkmYxJzN5G7p",
+      "amount": "1000000",
+      "expiry": "1900000000",
+      "recent_blockhash": "HxKBxBYqj9rqA8AAAAAA6F3iH9Cw4mE3wK4xKZ7d8mG5",
+      "signature": "5KdGq6mP3rJ2bWxJxA5wEpQqK8aH8b4dV2pZqVjQpYxK9mEzQ7sN4eA8wGfPrL3dV2pZqVjQpYxK9mEzQ7sN4eA8wG"
+    },
+    "authorization_scheme": "svm_token_authorization",
+    "resource_uri": "https://merchant.example.com/api/streamed-resource",
+    "settlement_evidence": {
+      "txHash": "4kJ8qN5tFvBp2X7sZyP9mEz3wK4xKZ7d8mG5HxKBxBYqj9rqA8AAAAAA6F3iH9Cw4mE3wK4xKZ7d8mG5HxKBxBYqj9rq",
+      "network": "solana",
+      "amount": "1000000",
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "payTo": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+      "payer": "BSJZ4P2gW3vMy3GVfYV8VPGuYpUDxR5VZkmYxJzN5G7p",
+      "blockHeight": 250000000,
+      "confirmations": 32,
+      "observedAt": "2026-05-18T10:20:45Z"
+    },
+    "output_commitment": {
+      "kind": "merkle_manifest",
+      "algorithm": "merkle-sha256-v1",
+      "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "manifest_url": "https://merchant.example.com/api/streamed-resource/manifest.json",
+      "manifest_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "chunk_size": 65536,
+      "chunk_count": 4
+    },
+    "intent": {
+      "intent_hash": "hmac-sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAw",
+      "allows_multi_settlement": false,
+      "pii_hmac_key_version": 1
+    },
+    "capability": {
+      "capable": true,
+      "issuer_jwks_url": "https://merchant.example.com/.well-known/jwks.json",
+      "kid_hint": "issuer-active-2026q2",
+      "binding_profile_version": "1.0.0",
+      "delivery_modes": ["async"],
+      "inline_supported": false,
+      "output_commitment_modes": ["static_sha256", "merkle_manifest"],
+      "verification_mode": "unverified",
+      "pii_hashing_method": "hmac-sha256-kms",
+      "pii_hmac_key_version": 1
+    }
+  },
+  "expected": {
+    "issuance": {
+      "http_status_initial": 202,
+      "response_body_initial": {
+        "trust_receipt_pending_url": "https://api.trusteed.xyz/api/v1/x402-binding/receipts/<binding_id>",
+        "binding_id": "<ULID 26 chars Crockford>"
+      },
+      "http_status_tracking_after_settlement": 200,
+      "response_body_tracking": {
+        "trust_receipt_envelope": {
+          "receipt": "<JWS Compact>",
+          "timestamp_evidence": "<TSA RFC 3161 evidence>",
+          "envelope_metadata": "<unsigned metadata>",
+          "protocol_artifact_sidecars": "[optional]"
+        },
+        "posture": "confirmed"
+      }
+    },
+    "envelope_payload_x402_binding": {
+      "binding_profile_version": "1.0.0",
+      "authorization_scheme": "svm_token_authorization",
+      "posture": "confirmed",
+      "verification_posture": "unverified",
+      "agent_authorization_chain": null,
+      "intent_allows_multi_settlement": false,
+      "output_commitment_kind_expected": "merkle_manifest",
+      "output_commitment_must_carry": [
+        "root",
+        "manifest_url",
+        "manifest_hash",
+        "chunk_size",
+        "chunk_count"
+      ],
+      "binding_hash_regex": "^sha256:[0-9a-f]{64}$",
+      "binding_id_regex": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "intent_hash_regex": "^hmac-sha256:[0-9a-f]{64}$"
+    },
+    "verifier_result": {
+      "valid": true,
+      "posture": "confirmed",
+      "verification_posture": "unverified",
+      "binding_hash_match": true,
+      "warnings": []
+    }
+  },
+  "acceptance_criteria": {
+    "must_pass_offline_with_manifest_fetched": true,
+    "must_validate_manifest_hash_BEFORE_trusting_leaves": true,
+    "must_recompute_merkle_root_via_padding_by_duplication_NOT_zero_padding": true,
+    "must_recompute_binding_hash": [
+      "sha256(jcs(payment_requirements))",
+      "sha256(jcs(payment_payload_subset_svm_token_authorization))",
+      "sha256(canonical_uri(resource_uri))",
+      "sha256(jcs(settlement_evidence_subset))",
+      "sha256(jcs(output_commitment))"
+    ]
+  },
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/output-commitment.schema.json",
+    "contracts/settlement-evidence.schema.json",
+    "contracts/binding-components-manifest.schema.json"
+  ],
+  "notes": [
+    "merkle_manifest path: manifest_url is a mutable pointer; manifest_hash is the cryptographic anchor.",
+    "RFC 6962-style padding-by-duplication (NOT zero-padding) for odd-leaf levels — second-preimage resistance verified in T015/T016 unit tests.",
+    "If manifest_url is unreachable at verification time, verifier MUST distinguish 'binding_unverifiable_manifest_unreachable' from 'binding_mismatch' (FR-007a).",
+    "Stream delivery is NOT observed by the system; agent verifies received chunks against leaves locally."
+  ]
+}

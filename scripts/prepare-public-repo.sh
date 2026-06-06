@@ -7,7 +7,7 @@ OUT_DIR="$PKG_DIR/dist-spec"
 
 echo "Preparing TrustReceipt public repo → $OUT_DIR"
 rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR/schema" "$OUT_DIR/test-vectors/valid" "$OUT_DIR/test-vectors/invalid" "$OUT_DIR/verifier"
+mkdir -p "$OUT_DIR/schema" "$OUT_DIR/test-vectors/valid" "$OUT_DIR/test-vectors/invalid" "$OUT_DIR/verifier" "$OUT_DIR/docs"
 
 # Core docs
 cp "$PKG_DIR/SPEC.md" "$OUT_DIR/"
@@ -15,6 +15,9 @@ cp "$PKG_DIR/README.md" "$OUT_DIR/"
 cp "$PKG_DIR/CONTRIBUTING.md" "$OUT_DIR/"
 cp "$PKG_DIR/LICENSE" "$OUT_DIR/"
 cp "$PKG_DIR/TRADEMARKS.md" "$OUT_DIR/"
+
+# Architecture doc
+cp "$PKG_DIR/docs/architecture.md" "$OUT_DIR/docs/"
 
 # Schema
 cp "$PKG_DIR/schema/trust-receipt-v1.schema.json" "$OUT_DIR/schema/"

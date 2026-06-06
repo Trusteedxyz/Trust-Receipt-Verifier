@@ -1,0 +1,52 @@
+{
+  "vector_id": "008",
+  "name": "pii-filter",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-012/FR-013/FR-014 — HMAC PII filter conformance vector.\n\nGiven the PII input fields below and the deterministic stub HMAC key listed in `stub_hmac` (a `PiiHmacKeyManagerLike` that returns `hmac-sha256:hex(HMAC_SHA256(HMAC_SHA256(STUB_KEY, 'v'||keyVersion), payload))`), the `PiiHmacFilterService` MUST return EXACTLY the `expected_privacy_filtered_hashes` map. Additionally, no literal value from `inputs.pii` may appear in the serialised output (FR-014).\n\nThis vector is the canonical happy case for the HMAC-keyed filter. Conformance runners SHOULD wire a stub HMAC key manager that reproduces the algorithm and assert byte-for-byte equality on the resulting `privacy_filtered_hashes` map.",
+  "test_kind": "pii_filter",
+  "stub_hmac": {
+    "algorithm": "hmac-sha256",
+    "stub_key_utf8": "conformance-008-pii-key-32bytes!!",
+    "derivation": "derivedKey = HMAC_SHA256(stub_key_utf8, 'v' || keyVersion); tag = HMAC_SHA256(derivedKey, payload); output = 'hmac-sha256:' || hex(tag)",
+    "key_version": 1
+  },
+  "inputs": {
+    "pii": {
+      "resource_description": "Premium Plan",
+      "reason": "First time customer",
+      "metadata": {
+        "order_id": "ORD-001"
+      },
+      "buyer_email": "jane@example.com",
+      "buyer_address": {
+        "street": "Main St 1",
+        "city": "Berlin"
+      }
+    },
+    "domain_prefixes": {
+      "resource_description": "pii:resource_description:",
+      "reason": "pii:reason:",
+      "metadata": "pii:metadata:<key>:",
+      "buyer_email": "pii:buyer_email:",
+      "buyer_address": "pii:buyer_address_<field>:"
+    }
+  },
+  "expected_privacy_filtered_hashes": {
+    "resource_description_hmac": "hmac-sha256:e29691cd97f07b1be78a6a5e50b3b98ac96fc354bfd85d07627d1fb9f51dfdf4",
+    "reason_hmac": "hmac-sha256:7d0c425226ebb69448aedf450859c368dea94d1501708ae589a1d42032d98aa9",
+    "metadata_hmacs": {
+      "order_id": "hmac-sha256:d89685bb38a2e7867a769a1ba87f8b36eed634edbae03ade58e66531752f7fb2"
+    },
+    "buyer_email_hmac": "hmac-sha256:09c97c81aeb967949605f0ed55c23791c584785f0dcd52bd2d9635c3888cf7c0",
+    "buyer_address_hmacs": {
+      "city": "hmac-sha256:2b50d124b7042b09cb7bf0a3cf39b35c040d0fb7092ca470741fc95a29d2e102",
+      "street": "hmac-sha256:a41f274d6c1320cfd89c235410368da31fabbe0596b67bbda9e3298e2011a518"
+    }
+  },
+  "expected_invariants": {
+    "no_literal_pii_in_output": true,
+    "domain_separation_enforced": true,
+    "deterministic": true
+  }
+}

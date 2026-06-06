@@ -1,18 +1,18 @@
 /**
- * TrustReceipt v1.1 conformance test vectors — runner.
+ * spec-049 v1.1 conformance test vectors — runner.
  *
- * Scope: 10 vectors in `test-vectors/v11/`:
- * - 011 buyer_agent happy path             — accepted
- * - 012 missing consent context             — rejected: missing_required_consent_context
- * - 013 receipt_subject mismatch            — rejected: receipt_subject_mismatch
- * - 017 legacy v1.0 receipt                — accepted via dispatcher → v1.0
- * - 018 pii_absent classification           — accepted
- * - 019 x402 evm_permit2                   — accepted (payment_authorization_hash + authorization_scheme)
- * - 019b x402 missing payment_authorization_hash   — rejected: schema_invalid
- * - 020 MCP mcp_tool_invocation             — accepted (authorization_scheme=mcp_tool_invocation)
+ * Scope: T060–T064 + T130/T131 + T132–T134 (10 vectors in `test-vectors/v11/`):
+ *   - 011 buyer_agent happy path (T060)             — accepted
+ *   - 012 missing consent context (T061)             — rejected: missing_required_consent_context
+ *   - 013 receipt_subject mismatch (T062)            — rejected: receipt_subject_mismatch
+ *   - 017 legacy v1.0 receipt (T063)                — accepted via dispatcher → v1.0
+ *   - 018 pii_absent classification (T064)           — accepted
+ *   - 019 x402 evm_permit2 (T132)                   — accepted (payment_authorization_hash + authorization_scheme D24)
+ *   - 019b x402 missing payment_authorization_hash   — rejected: schema_invalid (D24 enforcement)
+ *   - 020 MCP mcp_tool_invocation (T133)             — accepted (authorization_scheme=mcp_tool_invocation D24)
  *
  * Vector 016 (rotated key export bundle) is NOT in scope here — it belongs to
- *.
+ * T160.
  *
  * The vectors carry `verify_options.jwks` (raw JWKS) but the v1.1 verifier
  * accepts a `SignedJwksHistory` bundle. The runner builds an unsigned-but
@@ -24,7 +24,7 @@
  * The runner also implements a tiny dispatcher: legacy v1.0 envelopes
  * (carrying `legacy_v1_0: true` and a top-level `receipt` JWS) are routed to
  * `verifyReceiptV10` and the dispatcher appends `legacy_pre_eidas_hardening`
- * to the warnings list (per the expectation).
+ * to the warnings list (per the T063 expectation).
  */
 
 import { describe, it, expect } from "vitest";
@@ -150,7 +150,7 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
     };
   }
 
-  // v1.1 path — all vectors use an all-zeros root SHA (staging stub).
+  // v1.1 path
   const opts: VerifyOptions = {
     jwksHistory: jwksToSignedHistory(
       vector.verify_options.jwks,
@@ -159,8 +159,21 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
     trustAnchorPemSha256:
       "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
     policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
+    // T-CR-002: surface vector-declared TSA root pins as the operator
+    // allowlist so the fixture can self-describe its trusted TSA chain
+    // without smuggling envelope-supplied roots into the pin set.
+    tsaRootCertSha256Allowlist: vector.verify_options.tsa_root_pins,
     expectedSubject: vector.verify_options.expectedSubject,
-    allowStagingRoot: true,
+    // T-CR-001: conformance vectors run under the T420 staging-stub root.
+    // Opt into the structural-fallback path so the suite continues to
+    // round-trip pre-ceremony. Production callers omit this flag.
+    allowStagingRoots: true,
+    // GAP H1a: pin the verification clock to the vector's declared `currentTime`
+    // so the suite is deterministic and the temporal (issued_at/expires_at)
+    // check evaluates the receipt at the same instant the fixture was minted
+    // for. Without this the cross-spec temporal hardening (added 2026-05-18)
+    // rejects every fixture as `receipt_expired` once wall-clock drifts past
+    // the fixtures' expiry.
     currentTimeSeconds: vector.verify_options.currentTime,
   };
   const r = await verifyReceiptEnvelope(
@@ -181,7 +194,7 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("TrustReceipt v1.1 conformance vectors", () => {
+describe("spec-049 v1.1 conformance vectors (T060–T064)", () => {
   it.each(IN_SCOPE)("T06X — vector %s round-trips", async (name) => {
     const vector = loadVector(name);
     const result = await dispatch(vector);
@@ -262,10 +275,10 @@ describe("TrustReceipt v1.1 conformance vectors", () => {
     expect(r.recomputedLegalPosture).toBe("ades_candidate_timestamped");
   });
 
-  it("scope sanity — exactly 10 vectors covered by–T064 +/T131 +–T133", () => {
+  it("scope sanity — exactly 10 vectors covered by T060–T064 + T130/T131 + T132–T133", () => {
     expect(IN_SCOPE.length).toBe(10);
-    // Vector 016 (rotated key) belongs to.
-    // Vectors 019/019b/020 cover payment_authorization_hash + authorization_scheme.
+    // Vector 016 (rotated key) belongs to T160.
+    // Vectors 019/019b/020 cover post-Codex round-2 D24 new fields.
     const allFiles = readdirSync(VECTORS_DIR).filter((f) =>
       f.endsWith(".json")
     );

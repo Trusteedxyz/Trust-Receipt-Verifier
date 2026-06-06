@@ -1,0 +1,70 @@
+{
+  "vector_id": "001",
+  "name": "discovery-happy",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-001/002 — capability advertisement injection in the 402 response.\n\nAn agent that has never seen this merchant before issues a GET to a paid resource.\nThe merchant returns 402 with the `paymentRequirements.extra.trust_receipt`\ncapability advertisement populated. The agent can derive `issuer_jwks_url`,\n`kid_hint`, `binding_profile_version`, supported `delivery_modes` (async-only\nper ADR-054-001 v1.0), `output_commitment_modes`, `verification_mode`, and PII\nhashing parameters — all without prior coordination or external docs.",
+  "test_kind": "discovery",
+  "inputs": {
+    "http_method": "GET",
+    "http_url": "https://merchant.example.com/api/paid-resource",
+    "merchant_id": "merchant_acme_001"
+  },
+  "expected": {
+    "http_status": 402,
+    "response_body": {
+      "paymentRequirements": {
+        "scheme": "exact",
+        "network": "base",
+        "maxAmountRequired": "1000000",
+        "resource": "https://merchant.example.com/api/paid-resource",
+        "description": "Paid resource (commitment-bound)",
+        "mimeType": "application/json",
+        "payTo": "0xMerchantAddrPlaceholder",
+        "maxTimeoutSeconds": 300,
+        "asset": "0xUSDCBaseAddrPlaceholder",
+        "extra": {
+          "trust_receipt": {
+            "capable": true,
+            "issuer_jwks_url": "https://merchant.example.com/.well-known/jwks.json",
+            "kid_hint": "issuer-active-2026q2",
+            "binding_profile_version": "1.0.0",
+            "delivery_modes": ["async"],
+            "inline_supported": false,
+            "output_commitment_modes": ["static_sha256", "merkle_manifest"],
+            "verification_mode": "unverified",
+            "pii_hashing_method": "hmac-sha256-kms",
+            "pii_hmac_key_version": 1
+          }
+        }
+      },
+      "facilitator": {
+        "verify_url": "https://facilitator.example.com/v1/verify",
+        "settle_url": "https://facilitator.example.com/v1/settle"
+      }
+    }
+  },
+  "acceptance_criteria": {
+    "agent_can_derive_without_external_docs": [
+      "issuer_jwks_url",
+      "kid_hint",
+      "binding_profile_version",
+      "delivery_modes",
+      "inline_supported",
+      "output_commitment_modes",
+      "pii_hashing_method",
+      "pii_hmac_key_version"
+    ],
+    "delivery_modes_equals": ["async"],
+    "inline_supported_equals": false,
+    "output_commitment_modes_equals": ["static_sha256", "merkle_manifest"],
+    "pii_hashing_method_equals": "hmac-sha256-kms"
+  },
+  "schema_refs": ["contracts/capability-advertisement.schema.json"],
+  "notes": [
+    "ADR-054-001: Slice 1 v1.0 is async-only; inline_supported MUST be false.",
+    "PII hashing MUST be hmac-sha256-kms — no exported salts (spec-049 H8/R17 reuse).",
+    "JWKS URL MUST be https; verifier rejects http:// per security baseline.",
+    "verification_mode default is `unverified` until spec-045 RFC 9421 wired to x402 endpoints."
+  ]
+}

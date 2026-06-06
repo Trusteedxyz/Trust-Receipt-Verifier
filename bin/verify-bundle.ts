@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * verify-bundle CLI
+ * verify-bundle CLI — spec-049 T154
  *
  * Offline verifier for TrustReceipt export bundles (ZIP). Wraps the
- * clean-room verifier `verifyExportBundle`
- * (`../src/verify-export-bundle.js`) so users can run:
+ * clean-room verifier `verifyExportBundle` (T153 —
+ * `../src/verify-export-bundle.js`) so users can run:
  *
  *   npx @agenticmcpstores/trust-receipt-verifier verify-bundle ./trust-receipt-export-<id>.zip
  *
@@ -14,11 +14,22 @@
  *   verify-bundle <zip-path>
  *     [--trust-anchor-sha256 HEX]
  *     [--expected-bundle-sha256 HEX]
+ *     [--manifest URL]              (T502: fetch external signed manifest.jws)
  *     [--policy-oid OID]            (repeatable)
  *     [--expected-subject buyer_agent|merchant_admin]
  *     [--json]
  *     [--quiet]
  *     [--help]
+ *
+ * The bundle ZIP intentionally does NOT carry its own SHA-256 internally
+ * (Codex round 2 D31 — manifest is EXTERNAL). The bundle integrity record
+ * lives in the separately-signed `manifest.jws` returned by
+ * `GET /api/v1/trust/export/:receiptId/manifest.jws`. With `--manifest URL`
+ * the CLI fetches that endpoint, decodes the JWS Compact payload, extracts
+ * `bundle_sha256`, and pins the integrity check. If the fetch fails, the
+ * CLI emits a warning and falls back to partial offline verification — the
+ * bundle is still self-consistent (envelope + JWKS-history + retention) but
+ * its container integrity is NOT pinned.
  *
  * Exit codes:
  *   0  outcome === "accepted"
@@ -41,8 +52,11 @@ interface CliOptions {
   readonly zipPath: string;
   readonly trustAnchorSha256: string | undefined;
   readonly expectedBundleSha256: string | undefined;
+  readonly manifestUrl: string | undefined;
   readonly policyOids: readonly string[];
+  readonly tsaRootAllowlist: readonly string[];
   readonly expectedSubject: ExpectedSubject | undefined;
+  readonly allowStagingRoots: boolean;
   readonly json: boolean;
   readonly quiet: boolean;
 }
@@ -67,8 +81,23 @@ function printHelp(): void {
       "  --trust-anchor-sha256 HEX        Pinned issuer root SHA-256 (hex).",
       "                                   TODO(T423): replaced by embedded-issuer-root.ts.",
       "  --expected-bundle-sha256 HEX     Pinned bundle SHA-256 for integrity check.",
+      "  --manifest URL                   Fetch external signed manifest.jws (T502).",
+      "                                   Overrides --expected-bundle-sha256 on success.",
+      "                                   On fetch failure: warning + partial offline verify.",
       "  --policy-oid OID                 Required claims policy OID (repeatable).",
+      "  --tsa-root-allowlist HEX[,HEX]   Comma-separated 64-hex SHA-256 of",
+      "                                   pre-approved TSA root certs. Default empty",
+      "                                   ⇒ fail-closed on any RFC 3161 timestamp",
+      "                                   (T-CR-002 — envelope-supplied roots are",
+      "                                   never trusted on their own).",
       "  --expected-subject SUBJECT       'buyer_agent' or 'merchant_admin'.",
+      "  --allow-staging-roots            Opt-in: accept staging-stub embedded",
+      "                                   issuer roots (T-CR-001). Default OFF —",
+      "                                   bundles whose JWKS history root is not in",
+      "                                   the verifier's trust anchor list are",
+      "                                   REJECTED with detail",
+      "                                   'root_not_in_trust_anchor'. NEVER enable",
+      "                                   in production.",
       "  --json                           Emit JSON BundleVerifyResult instead of text.",
       "  --quiet                          Suppress per-check lines (final verdict only).",
       "  --help                           Show this help and exit 0.",
@@ -90,8 +119,11 @@ function parseCliArgs(argv: readonly string[]): CliOptions | null {
     options: {
       "trust-anchor-sha256": { type: "string" },
       "expected-bundle-sha256": { type: "string" },
+      manifest: { type: "string" },
       "policy-oid": { type: "string", multiple: true },
+      "tsa-root-allowlist": { type: "string" },
       "expected-subject": { type: "string" },
+      "allow-staging-roots": { type: "boolean", default: false },
       json: { type: "boolean", default: false },
       quiet: { type: "boolean", default: false },
       help: { type: "boolean", default: false },
@@ -128,6 +160,26 @@ function parseCliArgs(argv: readonly string[]): CliOptions | null {
   }
 
   const policyOids = parsed.values["policy-oid"];
+  const tsaRootAllowlistRaw = parsed.values["tsa-root-allowlist"];
+  let tsaRootAllowlist: readonly string[] = [];
+  if (
+    typeof tsaRootAllowlistRaw === "string" &&
+    tsaRootAllowlistRaw.length > 0
+  ) {
+    const items = tsaRootAllowlistRaw
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 0);
+    for (const hex of items) {
+      if (!/^[0-9a-f]{64}$/.test(hex)) {
+        err(
+          `verify-bundle: --tsa-root-allowlist entry must be 64-hex (got "${hex}")`
+        );
+        process.exit(2);
+      }
+    }
+    tsaRootAllowlist = items;
+  }
   return {
     zipPath: positionals[0] ?? "",
     trustAnchorSha256:
@@ -138,8 +190,14 @@ function parseCliArgs(argv: readonly string[]): CliOptions | null {
       typeof parsed.values["expected-bundle-sha256"] === "string"
         ? parsed.values["expected-bundle-sha256"]
         : undefined,
+    manifestUrl:
+      typeof parsed.values.manifest === "string"
+        ? parsed.values.manifest
+        : undefined,
     policyOids: Array.isArray(policyOids) ? policyOids : [],
+    tsaRootAllowlist,
     expectedSubject,
+    allowStagingRoots: parsed.values["allow-staging-roots"] === true,
     json: parsed.values.json === true,
     quiet: parsed.values.quiet === true,
   };
@@ -228,6 +286,89 @@ function renderHuman(result: BundleVerifyResult, opts: CliOptions): void {
     );
 }
 
+interface ManifestFetchResult {
+  readonly bundleSha256: string | undefined;
+  readonly warning: string | undefined;
+}
+
+/**
+ * Fetch external manifest.jws from `url`, decode the JWS Compact payload, and
+ * extract `bundle_sha256`. Returns `{ bundleSha256: undefined, warning }` on
+ * any failure so the caller can fall back to partial offline verification.
+ *
+ * NOTE: This step does NOT cryptographically verify the manifest signature —
+ * the embedded issuer root + JWS verifier path lives in
+ * `verify-export-bundle.ts` (T423). Here we only extract the integrity hash
+ * to feed into the bundle verifier as `expectedBundleSha256`.
+ */
+async function fetchManifestBundleSha256(
+  url: string
+): Promise<ManifestFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { Accept: "application/jose" },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      bundleSha256: undefined,
+      warning: `manifest_fetch_failed:${msg}`,
+    };
+  }
+  if (!response.ok) {
+    return {
+      bundleSha256: undefined,
+      warning: `manifest_fetch_http_${response.status}`,
+    };
+  }
+  let jwsCompact: string;
+  try {
+    jwsCompact = (await response.text()).trim();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      bundleSha256: undefined,
+      warning: `manifest_body_read_failed:${msg}`,
+    };
+  }
+  const parts = jwsCompact.split(".");
+  if (parts.length !== 3 || !parts[1]) {
+    return {
+      bundleSha256: undefined,
+      warning: "manifest_jws_malformed",
+    };
+  }
+  let payload: { bundle_sha256?: unknown };
+  try {
+    payload = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf8")
+    ) as { bundle_sha256?: unknown };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      bundleSha256: undefined,
+      warning: `manifest_payload_decode_failed:${msg}`,
+    };
+  }
+  const raw = payload.bundle_sha256;
+  if (typeof raw !== "string") {
+    return {
+      bundleSha256: undefined,
+      warning: "manifest_bundle_sha256_missing",
+    };
+  }
+  // Manifest emits `sha256:<hex>` (per ManifestPayload contract). Strip prefix.
+  const hex = raw.startsWith("sha256:") ? raw.slice("sha256:".length) : raw;
+  if (!/^[0-9a-f]{64}$/.test(hex)) {
+    return {
+      bundleSha256: undefined,
+      warning: "manifest_bundle_sha256_invalid_format",
+    };
+  }
+  return { bundleSha256: hex, warning: undefined };
+}
+
 async function main(): Promise<void> {
   const opts = parseCliArgs(process.argv);
   if (opts === null) {
@@ -245,6 +386,26 @@ async function main(): Promise<void> {
     return;
   }
 
+  // T502: External manifest fetch. If --manifest is supplied, override the
+  // explicit --expected-bundle-sha256 with the value from manifest.jws. On
+  // fetch failure, emit a warning to stderr and continue with whatever pin
+  // the operator already supplied (partial offline verification).
+  let effectiveExpectedSha256 = opts.expectedBundleSha256;
+  if (opts.manifestUrl !== undefined) {
+    const { bundleSha256, warning } = await fetchManifestBundleSha256(
+      opts.manifestUrl
+    );
+    if (warning && !opts.quiet) {
+      err(
+        `verify-bundle: WARNING manifest fetch incomplete (${warning}) — ` +
+          `partial offline verification: bundle integrity NOT pinned externally.`
+      );
+    }
+    if (bundleSha256) {
+      effectiveExpectedSha256 = bundleSha256;
+    }
+  }
+
   // TODO(T423 / Phase 9): replace --trust-anchor-sha256 flag with the
   // embedded issuer root from `src/embedded-issuer-root.ts`. Until then,
   // the CLI relies on the operator pinning the anchor explicitly.
@@ -256,15 +417,20 @@ async function main(): Promise<void> {
         expectedBundleSha256?: string;
         expectedPolicyOids?: readonly string[];
         expectedSubject?: ExpectedSubject;
+        allowStagingRoots?: boolean;
+        tsaRootCertSha256Allowlist?: readonly string[];
       }
     ) => Promise<BundleVerifyResult>;
   };
   const verifyResult = await mod.verifyExportBundle(zipBuffer, {
     trustAnchorSha256: opts.trustAnchorSha256,
-    expectedBundleSha256: opts.expectedBundleSha256,
+    expectedBundleSha256: effectiveExpectedSha256,
     expectedPolicyOids:
       opts.policyOids.length > 0 ? opts.policyOids : undefined,
     expectedSubject: opts.expectedSubject,
+    allowStagingRoots: opts.allowStagingRoots,
+    tsaRootCertSha256Allowlist:
+      opts.tsaRootAllowlist.length > 0 ? opts.tsaRootAllowlist : undefined,
   });
 
   if (opts.json) {

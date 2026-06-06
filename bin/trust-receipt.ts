@@ -57,8 +57,6 @@ function help(): void {
       "",
       "Usage:",
       "  trust-receipt verify <file> [--type <kind>] [--jwks-url <url>] [--jwks-file <path>]",
-      "                             [--jwks-history-file <path>] [--trust-anchor-sha256 <hex>]",
-      "                             [--policy-oid <oid>] [--allow-staging-root]",
       "  trust-receipt inspect <file>",
       "  trust-receipt generate-key",
       "  trust-receipt conformance",
@@ -72,21 +70,20 @@ function help(): void {
       "  conformance  Run all 10 conformance test vectors end-to-end.",
       "",
       "Options for verify:",
-      "  --type <kind>              auto (default) | receipt | receipt-v11 | erasure | manifest | jwks-history",
-      "  --jwks-url <url>           Remote JWKS URL (v1.0 receipt | erasure | manifest)",
-      "  --jwks-file <path>         Local JWKS JSON file (v1.0)",
-      "  --jwks-history-file <path> Signed jwks-history.jws JSON file (required for v1.1 receipt)",
-      "  --trust-anchor-sha256 <h>  SHA-256 hex of the issuer root PEM (required for v1.1 receipt)",
-      "  --policy-oid <oid>         Allowed TSA policy OID (repeatable, v1.1 receipt)",
-      "  --allow-staging-root       Accept unverifiable JWKS history root (staging only)",
+      "  --type <kind>       auto (default) | receipt | erasure | manifest | jwks-history",
+      "                      Bundle (.zip) verification is deferred to v1.2.",
+      "  --jwks-url <url>    Remote JWKS URL (used by receipt | erasure | manifest)",
+      "  --jwks-file <path>  Path to local JWKS JSON file",
+      "  --strict            (v1.1 receipts) Reject opaque-stub trust_anchor_sha256 /",
+      "                      jwks_sha256 pins, anchors that do not match",
+      "                      --trust-anchor-sha256, and receipts with no agent",
+      "                      identity. Default (compat) downgrades these to warnings.",
       "",
       "Notes:",
-      "  - v1.0 receipt: bare JWS Compact; requires --jwks-url or --jwks-file.",
-      "  - v1.1 receipt: JSON envelope {receipt, envelope_metadata}; requires --jwks-history-file",
-      "    and --trust-anchor-sha256.",
-      "  - `erasure` validates extension erasure receipts (Ed25519 JWS).",
-      "  - `manifest` validates extension manifests (Ed25519 JWS, shape gate only).",
-      "  - `jwks-history` validates jwks-history.jws against the embedded issuer root.",
+      "  - `receipt` validates Trusteed trust receipts (v1.0 JWS or v1.1 envelope).",
+      "  - `erasure` validates Trusteed extension erasure receipts (Ed25519 JWS, developer-signed).",
+      "  - `manifest` validates Trusteed extension manifests (Ed25519 JWS, shape gate only).",
+      "  - `jwks-history` validates Trusteed jwks-history.jws against the embedded issuer root.",
       "",
     ].join("\n")
   );
@@ -110,14 +107,15 @@ interface ParsedArgs {
   jwksHistoryFile: string | null;
   trustAnchorSha256: string | null;
   policyOids: string[];
-  allowStagingRoot: boolean;
+  allowStagingRoots: boolean;
+  strict: boolean;
   verifyType: VerifyType;
   showHelp: boolean;
   showVersion: boolean;
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const args = argv.slice(2); // strip node + script path
+  const args = argv.slice(2);
   const result: ParsedArgs = {
     command: null,
     file: null,
@@ -126,7 +124,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     jwksHistoryFile: null,
     trustAnchorSha256: null,
     policyOids: [],
-    allowStagingRoot: false,
+    allowStagingRoots: false,
+    strict: false,
     verifyType: "auto",
     showHelp: false,
     showVersion: false,
@@ -139,8 +138,10 @@ function parseArgs(argv: string[]): ParsedArgs {
       result.showHelp = true;
     } else if (arg === "--version" || arg === "-v") {
       result.showVersion = true;
-    } else if (arg === "--allow-staging-root") {
-      result.allowStagingRoot = true;
+    } else if (arg === "--allow-staging-roots") {
+      result.allowStagingRoots = true;
+    } else if (arg === "--strict") {
+      result.strict = true;
     } else if (arg === "--jwks-url" && args[i + 1]) {
       result.jwksUrl = args[i + 1] ?? null;
       i++;
@@ -318,7 +319,8 @@ async function cmdVerifyReceiptV11(
   jwksHistoryFile: string | null,
   trustAnchorSha256: string | null,
   policyOids: string[],
-  allowStagingRoot: boolean
+  allowStagingRoots: boolean,
+  strict: boolean
 ): Promise<number> {
   if (!jwksHistoryFile) {
     printError(
@@ -363,7 +365,8 @@ async function cmdVerifyReceiptV11(
     jwksHistory: historyParsed as SignedJwksHistory,
     trustAnchorPemSha256: trustAnchorSha256,
     policyOidAllowlist: policyOids,
-    allowStagingRoot,
+    allowStagingRoots,
+    mode: strict ? "strict" : "compat",
   };
 
   // verifyReceiptEnvelope validates the shape via Zod internally.
@@ -419,7 +422,8 @@ async function cmdVerify(
   jwksHistoryFile: string | null,
   trustAnchorSha256: string | null,
   policyOids: string[],
-  allowStagingRoot: boolean
+  allowStagingRoots: boolean,
+  strict: boolean
 ): Promise<number> {
   let blob: string;
   try {
@@ -448,7 +452,8 @@ async function cmdVerify(
         jwksHistoryFile,
         trustAnchorSha256,
         policyOids,
-        allowStagingRoot
+        allowStagingRoots,
+        strict
       );
     case "erasure":
       return cmdVerifyExtensionArtifact(blob, "erasure", jwksUrl, jwksFile);
@@ -631,7 +636,8 @@ async function main(): Promise<void> {
         args.jwksHistoryFile,
         args.trustAnchorSha256,
         args.policyOids,
-        args.allowStagingRoot
+        args.allowStagingRoots,
+        args.strict
       );
       break;
     }

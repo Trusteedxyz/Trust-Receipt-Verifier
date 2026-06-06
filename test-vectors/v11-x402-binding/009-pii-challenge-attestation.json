@@ -1,0 +1,34 @@
+{
+  "vector_id": "009",
+  "name": "pii-challenge-attestation",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-013a/FR-014 — challenge/attestation flow.\n\nThe merchant has computed `expected_hmac_hex` over `pii:buyer_email:audit@example.com` under `key_version=1` using the stub HMAC algorithm from vector 008. The auditor presents `candidate_value` and `expected_hmac_hex` to the merchant attestation service. The merchant computes the candidate digest, finds it matches, and signs an attestation with the merchant root key whose public JWK is published in `jwks_snapshot`.\n\nConformance runners MUST invoke `verifyPiiAttestation({ attestationJws, jwks: jwks_snapshot })` from `@agenticmcpstores/trust-receipt-verifier` and assert:\n\n  - `result.valid === true`\n  - `result.matches === true`\n  - `result.candidateDigest === expected_hmac_hex`\n  - `result.keyVersion === 1`\n\nThe Ed25519 private key behind `merchant-root-009` is intentionally NOT included — verifier conformance only requires the public JWK to validate the attestation signature.",
+  "test_kind": "pii_challenge_attestation",
+  "inputs": {
+    "merchant_id": "merchant-conformance-009",
+    "pii_field": "buyer_email",
+    "candidate_value": "audit@example.com",
+    "key_version": 1,
+    "expected_hmac_hex": "hmac-sha256:f63c980a006dcbcb644ea967e2f259a3b6eade6f24b7fd6143bd5dcfa4742197",
+    "attestation_jws": "eyJhbGciOiJFZERTQSIsImtpZCI6Im1lcmNoYW50LXJvb3QtMDA5In0.eyJjYW5kaWRhdGVfZGlnZXN0IjoiaG1hYy1zaGEyNTY6ZjYzYzk4MGEwMDZkY2JjYjY0NGVhOTY3ZTJmMjU5YTNiNmVhZGU2ZjI0YjdmZDYxNDNiZDVkY2ZhNDc0MjE5NyIsImV4cGVjdGVkX2htYWNfaGV4IjoiaG1hYy1zaGEyNTY6ZjYzYzk4MGEwMDZkY2JjYjY0NGVhOTY3ZTJmMjU5YTNiNmVhZGU2ZjI0YjdmZDYxNDNiZDVkY2ZhNDc0MjE5NyIsImtleV92ZXJzaW9uIjoxLCJtYXRjaGVzIjp0cnVlfQ.G20fp7ZSng2mLhw8Q0YbfUaABaSu6t2HqaRQ5CQ2FVr0jAKum-kV4Ef8lkPuQ5od1AfxIy6ma9MbamV91qanAA"
+  },
+  "jwks_snapshot": {
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "kid": "merchant-root-009",
+        "use": "sig",
+        "x": "RYjueYQLRlrqFRz9m6E47b5hkAO5Mazl6c_rCohyJUU",
+        "kid_uses": ["receipt-issuance", "pii-attestation"]
+      }
+    ]
+  },
+  "expected": {
+    "valid": true,
+    "matches": true,
+    "candidate_digest": "hmac-sha256:f63c980a006dcbcb644ea967e2f259a3b6eade6f24b7fd6143bd5dcfa4742197",
+    "key_version": 1
+  }
+}

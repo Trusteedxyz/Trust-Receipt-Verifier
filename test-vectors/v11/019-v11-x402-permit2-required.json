@@ -34,7 +34,7 @@
     "recomputed_legal_posture": "ades_candidate_timestamped",
     "warnings": []
   },
-  "title": "v1.1 buyer_agent on x402 REQUIRES payment_authorization_hash + authorization_scheme=evm_permit2",
+  "title": "v1.1 buyer_agent on x402 REQUIRES payment_authorization_hash + authorization_scheme=evm_permit2 (FR-019c, D24)",
   "vector_id": "019",
   "verify_options": {
     "currentTime": 1777593660,

@@ -1,5 +1,5 @@
 /**
- * Unit tests for verify-export-bundle.ts.
+ * Unit tests for verify-export-bundle.ts (spec-049 T173).
  *
  * Builds synthetic ZIP fixtures with adm-zip and asserts the verifier's
  * accept/reject paths + error codes.
@@ -124,6 +124,8 @@ describe("verifyExportBundle", () => {
     const zip = buildFixtureZip();
     const result = await verifyExportBundle(zip, {
       trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      // T-CR-001: fixture runs under staging-stub embedded root.
+      allowStagingRoots: true,
     });
 
     expect(result.outcome).toBe("accepted");
@@ -131,6 +133,25 @@ describe("verifyExportBundle", () => {
     expect(result.envelopeVerifyResult).toBeDefined();
     expect(result.filesPresent).toContain("receipt-envelope.json");
     expect(result.filesPresent).toContain("trust-anchor.pem");
+  });
+
+  it("[T-CR-001] default (no allowStagingRoots) rejects bundle under staging-stub root", async () => {
+    verifyReceiptEnvelope.mockResolvedValue({
+      outcome: "accepted",
+      schema_version: "1.1",
+      warnings: [],
+    });
+    const zip = buildFixtureZip();
+    const result = await verifyExportBundle(zip, {
+      trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      // No allowStagingRoots → default false → fail-closed.
+    });
+    expect(result.outcome).toBe("rejected");
+    expect(result.errorCode).toBe("jwks_history_signature_invalid");
+    expect(result.errorDetail).toBe("root_not_in_trust_anchor");
+    // Inner envelope verifier MUST NOT have been invoked — fail-closed
+    // happens before delegation.
+    expect(verifyReceiptEnvelope).not.toHaveBeenCalled();
   });
 
   it("rejects when bundle SHA-256 does not match expected", async () => {
@@ -159,6 +180,7 @@ describe("verifyExportBundle", () => {
     const zip = buildFixtureZip({ omit: ["receipt-envelope.json"] });
     const result = await verifyExportBundle(zip, {
       trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
     });
 
     expect(result.outcome).toBe("rejected");
@@ -169,6 +191,7 @@ describe("verifyExportBundle", () => {
     const zip = buildFixtureZip({ omit: ["trust-anchor.pem"] });
     const result = await verifyExportBundle(zip, {
       trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
     });
     expect(result.outcome).toBe("rejected");
     expect(result.errorCode).toMatch(/required_artifact_missing|missing/);
@@ -185,6 +208,7 @@ describe("verifyExportBundle", () => {
     const zip = buildFixtureZip();
     const result = await verifyExportBundle(zip, {
       trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
     });
     expect(result.outcome).toBe("rejected");
     expect(result.errorCode).toBeDefined();
@@ -194,6 +218,7 @@ describe("verifyExportBundle", () => {
     const zip = buildFixtureZip({ jwksHistoryJws: "not-a-jws" });
     const result = await verifyExportBundle(zip, {
       trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
     });
     expect(result.outcome).toBe("rejected");
   });

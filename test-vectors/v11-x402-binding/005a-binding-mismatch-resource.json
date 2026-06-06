@@ -1,0 +1,122 @@
+{
+  "vector_id": "005a",
+  "name": "binding-mismatch-resource",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-009 — Adversarial mismatch in component (c) resource_uri.\n\nThe ReceiptEnvelope is correctly signed (valid JWS, valid kid in JWKS, valid\ntimestamp_evidence) and declares resource_uri = '/api/paid-resource'. At verify\ntime the auditor is presented with verification_inputs.resource_uri =\n'/api/different-resource'. When the verifier recomputes binding_hash over the\n5 components using the auditor's resource_uri, the resulting hash does NOT\nmatch the binding_hash declared in the signed payload.\n\nVerifier MUST reject with typed reason 'binding_mismatch' and identify the\nmismatched component as 'resource_uri'. It MUST NOT reject as 'unknown_kid',\n'delegation_invalid', or any signature-level reason — the envelope signature\nis cryptographically valid; only the semantic binding fails.",
+  "test_kind": "binding_mismatch_resource",
+  "inputs": {
+    "merchant_id": "merchant_acme_evm_001",
+    "binding_hash_declared": "sha256:DECLARED_PLACEHOLDER_RECOMPUTE_FROM_DECLARED_COMPONENTS",
+    "payment_requirements_declared": {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "1000000",
+      "resource": "https://merchant.example.com/api/paid-resource",
+      "description": "Premium API access (1 USDC)",
+      "mimeType": "application/json",
+      "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+      "maxTimeoutSeconds": 300,
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    },
+    "payment_payload_declared": {
+      "permit2_authorization": {
+        "permitted": {
+          "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "amount": "1000000"
+        },
+        "nonce": "1",
+        "deadline": "1900000000"
+      },
+      "owner": "0xabcdef1234567890abcdef1234567890abcdef12",
+      "spender": "0x1234567890abcdef1234567890abcdef12345678",
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "1000000",
+      "nonce": "1",
+      "deadline": "1900000000",
+      "signature": "0xdeadbeef0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001b"
+    },
+    "authorization_scheme": "evm_permit2",
+    "resource_uri_declared": "https://merchant.example.com/api/paid-resource",
+    "settlement_evidence_declared": {
+      "txHash": "0xfeedface00000000000000000000000000000000000000000000000000000001",
+      "network": "base",
+      "amount": "1000000",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+      "payer": "0xabcdef1234567890abcdef1234567890abcdef12",
+      "blockHeight": 12345678,
+      "confirmations": 12,
+      "observedAt": "2026-05-18T10:15:30Z"
+    },
+    "output_commitment": {
+      "kind": "static_sha256",
+      "algorithm": "sha256",
+      "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "content_type": "application/json",
+      "content_length": 256
+    },
+    "intent": {
+      "intent_hash": "hmac-sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAg",
+      "allows_multi_settlement": false,
+      "pii_hmac_key_version": 1
+    },
+    "capability": {
+      "capable": true,
+      "issuer_jwks_url": "https://merchant.example.com/.well-known/jwks.json",
+      "kid_hint": "issuer-active-2026q2",
+      "binding_profile_version": "1.0.0",
+      "delivery_modes": ["async"],
+      "inline_supported": false,
+      "output_commitment_modes": ["static_sha256", "merkle_manifest"],
+      "verification_mode": "unverified",
+      "pii_hashing_method": "hmac-sha256-kms",
+      "pii_hmac_key_version": 1
+    },
+    "verification_inputs": {
+      "payment_requirements": "<same as payment_requirements_declared>",
+      "payment_payload": "<same as payment_payload_declared>",
+      "resource_uri": "https://merchant.example.com/api/different-resource",
+      "settlement_evidence": "<same as settlement_evidence_declared>",
+      "output_commitment": "<same as output_commitment>"
+    }
+  },
+  "expected": {
+    "verifier_result": {
+      "valid": false,
+      "reason": "binding_mismatch",
+      "binding_hash_match": false,
+      "mismatched_component": "resource_uri",
+      "posture": "confirmed",
+      "warnings": []
+    }
+  },
+  "acceptance_criteria": {
+    "must_reject_with_typed_reason": "binding_mismatch",
+    "must_identify_mismatched_component": "resource_uri",
+    "must_NOT_reject_with_unknown_kid": true,
+    "must_NOT_reject_with_delegation_invalid": true,
+    "must_NOT_reject_with_signature_invalid": true,
+    "must_recompute_binding_hash": [
+      "sha256(jcs(payment_requirements))",
+      "sha256(jcs(payment_payload_subset_evm_permit2))",
+      "sha256(canonical_uri(resource_uri))",
+      "sha256(jcs(settlement_evidence_subset))",
+      "sha256(jcs(output_commitment))"
+    ],
+    "domain_separator_must_appear": "trtx402:v1:"
+  },
+  "notes": [
+    "ADR-054-001: component (c) of binding hash is sha256(canonical_uri(resource_uri)). When the auditor presents a resource_uri distinct from the one bound in the signed receipt, the recomputed hash diverges at component (c).",
+    "Adversarial scenario: agent or auditor suspects the merchant served a different resource than the one declared in paymentRequirements.resource. The envelope JWS signature remains valid (kid + signature intact), but the binding does NOT semantically tie payment to the actually-served URI.",
+    "Test runner MUST recompute the canonical binding hash from inputs.*_declared (using verification_inputs.resource_uri for component c) and assert hash != binding_hash_declared.",
+    "binding_hash_declared placeholder is informational — implementations compute the real value dynamically from the canonical 5-component pipeline."
+  ],
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/output-commitment.schema.json",
+    "contracts/settlement-evidence.schema.json",
+    "contracts/binding-components-manifest.schema.json"
+  ]
+}

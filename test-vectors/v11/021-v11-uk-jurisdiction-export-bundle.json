@@ -51,7 +51,7 @@
     },
     "warnings": []
   },
-  "notes": "UK merchant export bundle. Receipt carries trust_provider_assertions with provider='uk-diatf', assurance_level='Medium' (GPG 45 SPC0038). Export bundle retention.jurisdiction='UK', min_retention_years=6, statute_ref='ECA 2000 §7 + SI 2002/318 + Limitation Act 1980 §5'. Verifier must: (1) accept legal_posture 'ades_candidate_timestamped' for UK jurisdiction; (2) confirm min_retention_years >= 6 for UK; (3) accept 'uk-diatf' provider in trust_provider_assertions without mapping to eIDAS LoA.",
+  "notes": "UK merchant export bundle. Receipt carries trust_provider_assertions with provider='uk-diatf', assurance_level='Medium' (GPG 45 SPC0038). Export bundle retention.jurisdiction='UK', min_retention_years=6, statute_ref='ECA 2000 §7 + SI 2002/318 + Limitation Act 1980 §5'. Verifier must: (1) accept legal_posture 'ades_candidate_timestamped' for UK jurisdiction; (2) confirm min_retention_years >= 6 for UK; (3) accept 'uk-diatf' provider in trust_provider_assertions without mapping to eIDAS LoA. See docs/legal/trust-receipt-claims-policy.md §5a and spec-049 research.md R20.",
   "title": "v1.1 UK jurisdiction export bundle: ECA 2000 + SI 2002/318 retention, uk-diatf Medium assurance",
   "vector_id": "021",
   "verify_options": {

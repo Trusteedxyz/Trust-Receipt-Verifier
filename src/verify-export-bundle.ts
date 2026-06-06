@@ -1,9 +1,9 @@
 /**
- * Clean-room export-bundle verifier.
+ * Clean-room export-bundle verifier (spec-049 T153).
  *
  * Validates an export bundle ZIP entirely offline: unzips in memory, pins
  * the trust anchor, structurally validates the JWKS history JWS, delegates
- * envelope verification to {@link verifyReceiptEnvelope}, and
+ * envelope verification to {@link verifyReceiptEnvelope} (T051), and
  * surfaces retention metadata.
  *
  * Required artifacts: receipt-envelope.json, jwks-snapshot.json,
@@ -14,13 +14,15 @@
  * TODO(T420/T421): full root-cert chain verify of jwks-history.jws against
  * trust-anchor.pem (Phase 9). Today we structurally validate the JWS and
  * pin the trust anchor by SHA-256 — that pin prevents arbitrary root
- * substitution by the bundle producer. tightens this by ALSO
+ * substitution by the bundle producer. T425 tightens this by ALSO
  * requiring the bundle's `trust-anchor.pem` to match either the
- * caller-supplied pin () OR an entry in {@link EMBEDDED_ISSUER_ROOTS}
- * — bundles whose anchor is unknown to both are rejected with
+ * caller-supplied pin (R16) OR an entry in {@link EMBEDDED_ISSUER_ROOTS}
+ * (T423) — bundles whose anchor is unknown to both are rejected with
  * `trust_anchor_unknown`. A JWKS bundled alone is NOT a trust anchor
- * ().
+ * (post-Codex round 2 D3).
  *
+ * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-032, FR-032b, FR-033, FR-033b
+ * @see specs/049-trust-receipt-eidas-hardening/research.md R6, R16, post-Codex round 2 D3
  */
 
 import AdmZip from "adm-zip";
@@ -82,6 +84,8 @@ export type BundleVerifyErrorCode =
   | "bundle_integrity_mismatch"
   | "bundle_zip_invalid"
   | "required_artifact_missing"
+  | "missing_trust_anchor"
+  | "missing_jwks_history"
   | "trust_anchor_pin_mismatch"
   | "trust_anchor_unknown"
   | "jwks_history_jws_invalid"
@@ -95,15 +99,29 @@ export interface BundleVerifyOptions {
   /**
    * Optional integrity check: expected SHA-256 of the ZIP bytes (lower-hex).
    * Typically passed by the caller from the HTTP `X-Bundle-Sha256` header
-   *.
+   * per FR-033b.
    */
   expectedBundleSha256?: string;
-  /** Trust anchor pinning (): SHA-256 of issuer root cert (lower-hex). */
+  /** Trust anchor pinning (R16): SHA-256 of issuer root cert (lower-hex). */
   trustAnchorPemSha256: string;
   /** Optional policy OID allowlist for TSA validation. */
   policyOidAllowlist?: readonly string[];
   /** Optional expected receipt subject. */
   expectedSubject?: ReceiptSubject;
+  /**
+   * Opt-in escape hatch for staging-stub trust anchors (T-CR-001). Forwarded
+   * to {@link verifyReceiptEnvelope} via its own `allowStagingRoots` flag.
+   * Default `false` (production fail-closed). See `verify-1.1.ts` for the
+   * full security rationale.
+   */
+  allowStagingRoots?: boolean;
+  /**
+   * Operator-controlled allowlist of TSA root cert SHA-256 hashes (64-hex,
+   * lowercase). Forwarded to {@link verifyReceiptEnvelope}. Default `[]` ⇒
+   * fail-closed: any RFC 3161 timestamp is rejected with
+   * `tsa_root_not_trusted`. (T-CR-002)
+   */
+  tsaRootCertSha256Allowlist?: readonly string[];
 }
 
 export interface BundleRetentionMetadata {
@@ -122,7 +140,7 @@ export interface BundleVerifyResult {
   retentionMetadata?: BundleRetentionMetadata;
   /** Subset of bundle file names actually present (informational). */
   filesPresent?: BundleArtifactName[];
-  /** Inner v1.1 envelope verifier result, if it ran. */
+  /** Inner v1.1 envelope verifier (T051) result, if it ran. */
   envelopeVerifyResult?: V11VerifyResult;
 }
 
@@ -209,6 +227,7 @@ function unzipInMemory(zipBuffer: Buffer): {
 
 /**
  * Verify an export bundle ZIP entirely offline. See file-level JSDoc.
+ * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-032, FR-032b, FR-033, FR-033b
  */
 export async function verifyExportBundle(
   zipBuffer: Buffer,
@@ -216,7 +235,7 @@ export async function verifyExportBundle(
 ): Promise<BundleVerifyResult> {
   const warnings: string[] = [];
 
-  // 1. Integrity check -------------------------------------------
+  // 1. Integrity check (FR-033b) -------------------------------------------
   if (options.expectedBundleSha256) {
     const actual = sha256Hex(zipBuffer);
     const expected = options.expectedBundleSha256.toLowerCase();
@@ -239,13 +258,18 @@ export async function verifyExportBundle(
   }
 
   // 3. Required-artifact check --------------------------------------------
+  // T425: trust-anchor.pem + jwks-history.jws emit specific error codes so
+  // callers can distinguish "bundle missing trust anchor entirely" (security
+  // posture) from a generic missing-file (operator error).
   for (const required of REQUIRED_ARTIFACTS) {
     if (!files.has(required)) {
-      return reject(
-        "required_artifact_missing",
-        `missing required artifact: ${required}`,
-        warnings
-      );
+      const code: BundleVerifyErrorCode =
+        required === "trust-anchor.pem"
+          ? "missing_trust_anchor"
+          : required === "jwks-history.jws"
+            ? "missing_jwks_history"
+            : "required_artifact_missing";
+      return reject(code, `missing required artifact: ${required}`, warnings);
     }
   }
 
@@ -253,11 +277,11 @@ export async function verifyExportBundle(
   // Required-artifact loop above guarantees these `.get()` calls return bytes.
   const mustGet = (name: BundleArtifactName): Uint8Array => files.get(name)!;
 
-  // 4. Trust anchor pin + embedded-root fallback.
+  // 4. Trust anchor pin (R16) + embedded-root fallback (FR-032b, D3).
   // Bundle's `trust-anchor.pem` must match EITHER (a) caller-supplied pin
-  // OR (b) an entry in EMBEDDED_ISSUER_ROOTS (current/retired keys).
+  // OR (b) an entry in EMBEDDED_ISSUER_ROOTS (T423, current/retired).
   // Otherwise → `trust_anchor_unknown`. A JWKS bundled alone is NOT a
-  // trust anchor ().
+  // trust anchor (post-Codex round 2 D3).
   const trustAnchorActual = sha256Hex(mustGet("trust-anchor.pem"));
   const expectedAnchor = options.trustAnchorPemSha256.toLowerCase();
   const matchesPin = trustAnchorActual === expectedAnchor;
@@ -277,7 +301,7 @@ export async function verifyExportBundle(
   }
 
   // 5. JWKS history JWS structural validation. Full root-cert chain verify
-  // of jwks-history.jws against trust-anchor.pem is deferred to/T421.
+  // of jwks-history.jws against trust-anchor.pem is deferred to T420/T421.
   const historyJwsCompact = utf8(mustGet("jwks-history.jws")).trim();
   if (!isJwsCompact(historyJwsCompact)) {
     return reject(
@@ -304,7 +328,7 @@ export async function verifyExportBundle(
 
   // 5b. Cryptographic signature verification of jwks-history.jws against the
   // embedded issuer-root cert (Codex F1 finding). Staging stub root → fall
-  // back to structural-only with a warning. ceremony makes this a hard
+  // back to structural-only with a warning. T420 ceremony makes this a hard
   // requirement.
   const rootEntry = getActiveIssuerRoot();
   const historyVerify = await verifyJwksHistorySignature(
@@ -313,6 +337,18 @@ export async function verifyExportBundle(
   );
   if (!historyVerify.valid) {
     if (historyVerify.reason === "embedded_root_not_production") {
+      // T-CR-001 / Codex round 2 D2/D3: staging fallback is opt-in only.
+      // Without `allowStagingRoots: true`, the bundle is REJECTED with
+      // detail `root_not_in_trust_anchor` so a forged JWKS cannot piggy-back
+      // on an unverifiable staging root.
+      if (!(options.allowStagingRoots ?? false)) {
+        return reject(
+          "jwks_history_signature_invalid",
+          "root_not_in_trust_anchor",
+          warnings,
+          { filesPresent }
+        );
+      }
       warnings.push("jwks_history_signature_unverifiable_staging_root");
     } else {
       return reject(
@@ -348,12 +384,14 @@ export async function verifyExportBundle(
     );
   }
 
-  // 7. Envelope verification (delegate to) ----------------------------
+  // 7. Envelope verification (delegate to T051) ----------------------------
   const v11Options: V11VerifyOptions = {
     jwksHistory: signedJwksHistory,
     trustAnchorPemSha256: expectedAnchor,
     policyOidAllowlist: [...(options.policyOidAllowlist ?? [])],
+    tsaRootCertSha256Allowlist: options.tsaRootCertSha256Allowlist,
     expectedSubject: options.expectedSubject,
+    allowStagingRoots: options.allowStagingRoots ?? false,
   };
   let envelopeResult: V11VerifyResult;
   try {

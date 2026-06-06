@@ -1,0 +1,133 @@
+{
+  "vector_id": "005c",
+  "name": "binding-mismatch-settlement",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-009 — Adversarial mismatch in component (d) settlement_evidence subset.\n\nThe ReceiptEnvelope is correctly signed (valid JWS, valid kid in JWKS, valid\ntimestamp_evidence) and declares settlement_evidence with txHash =\n'0xfeedface...0001'. At verify time the auditor is presented with\nverification_inputs.settlement_evidence.txHash = '0xdeadbeef...0002' (a\ndifferent on-chain transaction). All other subset fields (network, amount,\nasset, payTo, payer) remain identical. When the verifier recomputes\nbinding_hash using the auditor's settlement subset, component (d) does NOT\nmatch.\n\nVerifier MUST reject with typed reason 'binding_mismatch' and identify the\nmismatched component as 'settlement_evidence_subset'. The envelope signature\nstays valid — only the semantic binding to the on-chain settlement fails.",
+  "test_kind": "binding_mismatch_settlement",
+  "inputs": {
+    "merchant_id": "merchant_acme_evm_001",
+    "binding_hash_declared": "sha256:DECLARED_PLACEHOLDER_RECOMPUTE_FROM_DECLARED_COMPONENTS",
+    "payment_requirements_declared": {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "1000000",
+      "resource": "https://merchant.example.com/api/paid-resource",
+      "description": "Premium API access (1 USDC)",
+      "mimeType": "application/json",
+      "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+      "maxTimeoutSeconds": 300,
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    },
+    "payment_payload_declared": {
+      "permit2_authorization": {
+        "permitted": {
+          "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "amount": "1000000"
+        },
+        "nonce": "1",
+        "deadline": "1900000000"
+      },
+      "owner": "0xabcdef1234567890abcdef1234567890abcdef12",
+      "spender": "0x1234567890abcdef1234567890abcdef12345678",
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "1000000",
+      "nonce": "1",
+      "deadline": "1900000000",
+      "signature": "0xdeadbeef0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001b"
+    },
+    "authorization_scheme": "evm_permit2",
+    "resource_uri_declared": "https://merchant.example.com/api/paid-resource",
+    "settlement_evidence_declared": {
+      "txHash": "0xfeedface00000000000000000000000000000000000000000000000000000001",
+      "network": "base",
+      "amount": "1000000",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+      "payer": "0xabcdef1234567890abcdef1234567890abcdef12",
+      "blockHeight": 12345678,
+      "confirmations": 12,
+      "observedAt": "2026-05-18T10:15:30Z"
+    },
+    "output_commitment": {
+      "kind": "static_sha256",
+      "algorithm": "sha256",
+      "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "content_type": "application/json",
+      "content_length": 256
+    },
+    "intent": {
+      "intent_hash": "hmac-sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAg",
+      "allows_multi_settlement": false,
+      "pii_hmac_key_version": 1
+    },
+    "capability": {
+      "capable": true,
+      "issuer_jwks_url": "https://merchant.example.com/.well-known/jwks.json",
+      "kid_hint": "issuer-active-2026q2",
+      "binding_profile_version": "1.0.0",
+      "delivery_modes": ["async"],
+      "inline_supported": false,
+      "output_commitment_modes": ["static_sha256", "merkle_manifest"],
+      "verification_mode": "unverified",
+      "pii_hashing_method": "hmac-sha256-kms",
+      "pii_hmac_key_version": 1
+    },
+    "verification_inputs": {
+      "payment_requirements": "<same as payment_requirements_declared>",
+      "payment_payload": "<same as payment_payload_declared>",
+      "resource_uri": "<same as resource_uri_declared>",
+      "settlement_evidence": {
+        "txHash": "0xdeadbeef00000000000000000000000000000000000000000000000000000002",
+        "network": "base",
+        "amount": "1000000",
+        "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+        "payer": "0xabcdef1234567890abcdef1234567890abcdef12",
+        "blockHeight": 12345678,
+        "confirmations": 12,
+        "observedAt": "2026-05-18T10:15:30Z"
+      },
+      "output_commitment": "<same as output_commitment>"
+    }
+  },
+  "expected": {
+    "verifier_result": {
+      "valid": false,
+      "reason": "binding_mismatch",
+      "binding_hash_match": false,
+      "mismatched_component": "settlement_evidence_subset",
+      "posture": "confirmed",
+      "warnings": []
+    }
+  },
+  "acceptance_criteria": {
+    "must_reject_with_typed_reason": "binding_mismatch",
+    "must_identify_mismatched_component": "settlement_evidence_subset",
+    "must_NOT_reject_with_unknown_kid": true,
+    "must_NOT_reject_with_delegation_invalid": true,
+    "must_NOT_reject_with_signature_invalid": true,
+    "must_hash_settlement_subset_fields": [
+      "txHash",
+      "network",
+      "amount",
+      "asset",
+      "payTo",
+      "payer"
+    ],
+    "domain_separator_must_appear": "trtx402:v1:"
+  },
+  "notes": [
+    "ADR-054-001: component (d) of binding hash is sha256(jcs(settlement_evidence_subset)) with 6 canonical fields. Block-level fields (blockHeight, confirmations, observedAt) are NOT part of the subset — only the 6 fields enumerated in must_hash_settlement_subset_fields are hashed.",
+    "Adversarial scenario: txHash tampering. An agent attempts to bind its receipt to a different on-chain settlement (e.g. claiming a third party's tx as proof of its own payment). The binding hash rejects because txHash is part of the canonical settlement subset.",
+    "This vector tests the most economically critical mismatch: a verifier that fails to detect a settlement tx swap would accept fraudulent proofs of payment. The typed reason 'binding_mismatch' with mismatched_component 'settlement_evidence_subset' is the audit-grade signal.",
+    "Test runner MUST recompute binding hash using verification_inputs.settlement_evidence (6-field subset per binding-components-manifest v1.0.0) and assert hash != binding_hash_declared."
+  ],
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/output-commitment.schema.json",
+    "contracts/settlement-evidence.schema.json",
+    "contracts/binding-components-manifest.schema.json"
+  ]
+}

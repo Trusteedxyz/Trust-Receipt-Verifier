@@ -1,5 +1,5 @@
 /**
- * Tests for the extension artifact verifier (erasure receipts +
+ * Tests for the spec-052 extension artifact verifier (erasure receipts +
  * extension manifests). Uses real Ed25519 keypairs generated in beforeAll; no
  * network mocks — JWKS is always passed inline.
  */

@@ -1,29 +1,37 @@
 /**
- * TrustReceipt v1.1 envelope verifier.
+ * TrustReceipt v1.1 envelope verifier (spec-049 — eIDAS hardening).
  *
- * Accepts a v1.1 receipt envelope, validates the inner JWS (EdDSA/Ed25519),
- * and recomputes envelope-level evidence fields:
+ * Implements FR-018 (verifier accepts envelope, validates JWS, recomputes
+ * envelope-level evidence) plus the post-Codex round 2 invariants:
  *
- * - `envelope_metadata` fields (`receipt_id`, `legal_posture`,
- * `legal_posture_warnings`) are NOT signed — the verifier recomputes them
- * from the JWS-signed body and rejects (or warns) on mismatch. The verifier
- * is AUTHORITATIVE for `legal_posture`; callers MUST use
- * `recomputedLegalPosture` from the result, not the unsigned envelope value.
- * - JWKS history validity-window: both `body.issued_at` AND
- * `timestamp_evidence.issued_at_attested` MUST fall inside the resolved
- * `kid`'s `[valid_from, valid_to]` window.
- * - Structured `legal_posture_warnings` reasons are surfaced in the result.
+ * - D22: envelope_metadata fields (receipt_id, legal_posture,
+ *   legal_posture_warnings) are NOT signed — verifier MUST recompute against
+ *   the JWS-signed body and reject (or warn) on mismatch. The verifier is
+ *   AUTHORITATIVE for `legal_posture`: it recomputes from observed evidence
+ *   (TST present? agent identity verified? subject?) and surfaces the result
+ *   in `recomputedLegalPosture`.
+ * - D23: JWKS history validity-window check — both `body.issued_at` AND
+ *   `timestamp_evidence.issued_at_attested` MUST fall inside the resolved
+ *   `kid`'s `[valid_from, valid_to]` window.
+ * - D27: structured legal_posture_warnings reasons.
  *
- * RFC 3161 timestamp verification is intentionally STUBBED here — the full
- * verification surface (CMS signer info, cert path, revocation) lives in the
- * sibling package `@agenticmcpstores/trust-receipt-tsa-client`
- * (`verifyTimestamp` orchestrator). Pass `merchantPolicy` + `rootCertSha256Pins`
- * via caller config to enable real timestamp verification.
+ * Timestamp (RFC 3161) verification is delegated to
+ * `verifyTimestampEvidence` (`verify-timestamp-evidence.ts`), which wraps the
+ * full RFC 3161 surface from `@agenticmcpstores/trust-receipt-tsa-client`
+ * (`verifyTimestamp` orchestrator + `verifyCmsSignerInfo` + `verifyCertPath`
+ * + `verifyRevocation`). Caller passes `merchantTsaPolicy` +
+ * `tsaRootCertSha256Allowlist` via `VerifyOptions`. T-CR-012 (2026-05-10)
+ * removed the legacy `verifyTimestampEvidenceStub` that lived here.
  *
+ * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018, FR-019..FR-019g
+ * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-020..FR-024, FR-032b
+ * @see specs/049-trust-receipt-eidas-hardening/research.md R15, R16, R18
+ * @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md
  */
 
 import { compactVerify, importJWK, decodeProtectedHeader } from "jose";
 import type { JWK } from "jose";
+import type { MerchantTsaPolicy } from "@agenticmcpstores/trust-receipt-tsa-client";
 import { ReceiptEnvelopeSchema, TrustReceiptV11BodySchema } from "./zod-1.1.js";
 import type {
   ReceiptEnvelope,
@@ -71,14 +79,20 @@ export type V11VerifyErrorCode =
   | "tsa_eku_missing"
   | "tsa_chain_invalid"
   | "tsa_cert_revoked"
+  | "tsa_revocation_unavailable"
   | "tsa_gen_time_out_of_tolerance"
   | "tsa_imprint_mismatch"
   | "tsa_token_mismatch"
+  | "tsa_root_not_trusted"
   | "agent_identity_required_strict"
   | "schema_unsupported"
   | "jwks_history_signature_invalid"
   | "receipt_expired"
-  | "receipt_not_yet_valid";
+  | "receipt_not_yet_valid"
+  // T-AUD-012 (GAP H4) — strict-mode semantic anchor/jwks verification.
+  | "trust_anchor_stub_rejected"
+  | "jwks_sha256_stub_rejected"
+  | "trust_anchor_mismatch";
 
 /**
  * Result of `verifyReceiptEnvelope`. When `outcome === "accepted"` the
@@ -107,13 +121,26 @@ export interface V11VerifyResult {
  * `jwksHistory` is the issuer's signed JWKS history bundled into the export
  * bundle (or fetched online). `trustAnchorPemSha256` is the SHA-256 (64-hex)
  * of the embedded issuer root cert that the verifier pins against
- * ( trust anchor).
+ * (R16 trust anchor).
  */
 export interface VerifyOptions {
   jwksHistory: SignedJwksHistory;
   trustAnchorPemSha256: string;
   policyOidAllowlist: string[];
+  /**
+   * Operator-controlled allowlist of TSA root cert SHA-256 hashes (64-hex,
+   * lowercase). Default `[]` ⇒ fail-closed: any RFC 3161 TST is rejected
+   * with `tsa_root_not_trusted`. See {@link verifyTimestampEvidence} for
+   * back-compat semantics with `trustAnchorPemSha256`. (T-CR-002)
+   */
+  tsaRootCertSha256Allowlist?: readonly string[];
   toleranceSeconds?: number;
+  /**
+   * T-CR-007: per-merchant TSA policy (spec-049 FR-024). Default is
+   * `fail_open` (resolved at the TSA client layer). Pass `fail_closed` to
+   * reject any receipt whose revocation status could not be obtained.
+   */
+  merchantTsaPolicy?: MerchantTsaPolicy;
   /**
    * When true (default), an envelope `legal_posture` that disagrees with the
    * verifier-recomputed value yields `envelope_legal_posture_mismatch`. When
@@ -122,35 +149,86 @@ export interface VerifyOptions {
    * Verifier recomputation is ALWAYS performed regardless of this flag.
    */
   rejectOnEnvelopePostureMismatch?: boolean;
-  /** Optional caller-supplied subject context (). */
+  /** Optional caller-supplied subject context (R18). */
   expectedSubject?: ReceiptSubject;
   /**
-   * When true, allows fallback to structural-only JWKS history parse when the
-   * root SHA-256 is not in the embedded trust anchor list (staging / pre-ceremony
-   * path). Default: false — unknown roots are a hard reject.
+   * Opt-in escape hatch for staging-stub trust anchors (T-CR-001 / Codex
+   * round 2 D2/D3). When the bundled `jwksHistory.signed_by_root_sha256` does
+   * NOT resolve to an entry in the embedded issuer-root list, OR resolves to
+   * an entry whose private-key material has not yet been provisioned (the
+   * `embedded_root_not_production` staging stub case), the verifier behaves
+   * as follows:
    *
-   * DO NOT set this in production; it degrades the offline trust chain.
+   *  - `false` (default — production fail-closed): the receipt is REJECTED
+   *    with `errorCode: "jwks_history_signature_invalid"` and
+   *    `errorDetail: "root_not_in_trust_anchor"`. NO structural fallback to
+   *    `parseJwksHistoryPayload` is performed, so a bundle CANNOT smuggle a
+   *    forged `kid` past verification by pointing at an unknown root.
+   *
+   *  - `true` (staging / dev / pre-T420 ceremony): the verifier falls back to
+   *    structural-only parsing of the JWKS history payload and emits the
+   *    non-fatal warning `jwks_history_signature_unverifiable_staging_root`.
+   *    This path MUST NOT be enabled in production deployments — the
+   *    embedded issuer root must be production-validated before relying on
+   *    chain-of-trust assertions.
+   *
+   * @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md D2/D3
    */
-  allowStagingRoot?: boolean;
+  allowStagingRoots?: boolean;
   /**
-   * Override the current wall-clock time used for `issued_at` / `expires_at`
-   * checks, expressed as Unix seconds. Useful in conformance tests that use
-   * static vector timestamps. Defaults to `Math.floor(Date.now() / 1000)`.
+   * Injectable verification clock (UNIX seconds) for the temporal
+   * `issued_at` / `expires_at` checks. Defaults to wall-clock
+   * `Math.floor(Date.now() / 1000)` when omitted, so production callers need
+   * not supply it. Conformance/test harnesses pass a fixed value so the suite
+   * is deterministic regardless of the host clock — the temporal check itself
+   * is NOT weakened, it merely honors the caller-supplied "now". (GAP H1a)
    */
   currentTimeSeconds?: number;
+  /**
+   * T-AUD-012 (GAP H4) — semantic trust-anchor / jwks-pin verification mode.
+   *
+   * The Zod layer validates `verification_methods.trust_anchor_sha256` and
+   * `jwks_sha256` only by REGEX FORMAT, so an all-zeros opaque stub anchor
+   * passes shape validation. This option adds the SEMANTIC layer:
+   *
+   *  - `"compat"` (default, canary rollout): a stub (`all-zeros`) anchor / jwks
+   *    pin, an anchor that does not match the operator-pinned
+   *    `trustAnchorPemSha256`, or a buyer_agent receipt with no agent-identity
+   *    binding are surfaced as NON-FATAL warnings — verification still
+   *    succeeds. This keeps the rollout non-breaking while observability
+   *    accumulates.
+   *
+   *  - `"strict"`: the same conditions are FATAL rejections
+   *    (`trust_anchor_stub_rejected`, `jwks_sha256_stub_rejected`,
+   *    `trust_anchor_mismatch`, `agent_identity_required_strict`).
+   *
+   * Default is `"compat"` so existing callers are unaffected during the canary.
+   */
+  mode?: "strict" | "compat";
+}
+
+/**
+ * The all-zeros / opaque SHA-256 stub. A `trust_anchor_sha256` or `jwks_sha256`
+ * equal to this is structurally well-formed (passes the Zod regex) but carries
+ * NO real chain-of-trust binding — it is the placeholder emitted by issuers
+ * before a production anchor ceremony. Strict mode rejects it. (T-AUD-012)
+ */
+const STUB_SHA256 = "0".repeat(64);
+
+/**
+ * A SHA-256 hex value is treated as an opaque/synthetic stub when it is the
+ * all-zeros placeholder or any single repeated nibble (e.g. all-`f`). These
+ * carry no entropy and cannot be a genuine digest.
+ */
+function isOpaqueStubSha256(value: string): boolean {
+  if (value === STUB_SHA256) return true;
+  return /^([0-9a-f])\1{63}$/.test(value);
 }
 
 // ---------------------------------------------------------------------------
 // Trust-provider assertion type predicates (public API)
 // ---------------------------------------------------------------------------
 
-/**
- * Narrows an opaque `TrustProviderAssertion` to `Rfc9421ProviderAssertion`.
- *
- * @example
- * const rfc9421 = receipt.trust_provider_assertions?.find(isRfc9421ProviderAssertion);
- * if (rfc9421?.verification_status === "verified") { ... }
- */
 export function isRfc9421ProviderAssertion(
   a: unknown
 ): a is Rfc9421ProviderAssertion {
@@ -161,13 +239,6 @@ export function isRfc9421ProviderAssertion(
   );
 }
 
-/**
- * Narrows an opaque `TrustProviderAssertion` to `HumanProviderAssertion`.
- *
- * @example
- * const human = receipt.trust_provider_assertions?.find(isHumanProviderAssertion);
- * if (human?.human_verification_status === "verified") { ... }
- */
 export function isHumanProviderAssertion(
   a: unknown
 ): a is HumanProviderAssertion {
@@ -178,13 +249,6 @@ export function isHumanProviderAssertion(
   );
 }
 
-/**
- * Narrows an opaque `TrustProviderAssertion` to `VisaTapProviderAssertion`.
- *
- * @example
- * const visa = receipt.trust_provider_assertions?.find(isVisaTapProviderAssertion);
- * if (visa?.tag === "agent-payer-auth") { ... }
- */
 export function isVisaTapProviderAssertion(
   a: unknown
 ): a is VisaTapProviderAssertion {
@@ -242,7 +306,7 @@ function resolveKid(
 }
 
 /**
- *: both `body.issued_at` AND `timestamp_evidence.issued_at_attested` MUST
+ * D23: both `body.issued_at` AND `timestamp_evidence.issued_at_attested` MUST
  * fall inside the resolved kid's `[valid_from, valid_to]` window. A null
  * `valid_to` means "still active".
  */
@@ -269,7 +333,7 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 /**
  * Recompute the verifier-authoritative legal_posture from observed evidence
- * (). The truth table:
+ * (post-Codex round 2 D22). The truth table:
  *
  * - merchant_admin subject ⇒ `merchant_admin_action`
  * - buyer_agent + tst-present + agent-identity ⇒ `ades_candidate_timestamped`
@@ -278,20 +342,14 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
  * - buyer_agent + tst-absent + no agent-identity ⇒ `simple_electronic_seal`
  *
  * Agent-identity is considered "verified" when ANY of the following is true:
- *  - `body.trust_provider_assertions` is a non-empty array (preferred signal
- *  from any agent-identity verifier). Known typed providers:
- *  · `"rfc9421-native"` — RFC 9421 HTTP Message Signature verifier.
- *  Use `isRfc9421ProviderAssertion` to narrow; check
- *  `verification_status === "verified" | "observed"`.
- *  · `"human"` — HUMAN AgenticTrust integration.
- *  Use `isHumanProviderAssertion`; check `human_verification_status`.
- *  · `"visa"` — Visa TAP (*.visa.com / *.visa.net signer, tag validated).
- *  Use `isVisaTapProviderAssertion`; check `tag` + `verification_status`.
- *  Unknown providers are treated as "some assertion present" for forwards
- *  compatibility — they count towards `hasAssertions` even if untyped.
+ *  - `body.trust_provider_assertions` is a non-empty array (spec-045 adapter
+ *    output — preferred signal), OR
  *  - `body.authorization_evidence.protocol_authorization_ref` is set (the
- *  receipt cites a signed protocol mandate such as AP2/MCAP/UCP, which
- *  inherently binds an agent identity at the protocol layer).
+ *    receipt cites a signed protocol mandate such as AP2/MCAP/UCP, which
+ *    inherently binds an agent identity at the protocol layer).
+ *
+ * We stay loose because spec-045 adapter shapes vary and not every issuer
+ * embeds a `trust_provider_assertions` field at issuance time.
  */
 function recomputeLegalPosture(
   body: {
@@ -318,41 +376,6 @@ function recomputeLegalPosture(
   return "simple_electronic_seal";
 }
 
-/**
- * STUB — full RFC 3161 verification lands in (cert chain to pinned root,
- * policy OID allowlist match, nonce echo, imprint match against JWS Compact
- * bytes, OCSP/CRL freshness at TSA genTime). For now this returns
- * `{ valid: true }` so downstream code paths can be wired and tested.
- *
- * TODO: replace with full RFC 3161 implementation per
- * */
-export function verifyTimestampEvidenceStub(
-  envelope: {
-    timestamp_evidence:
-      | {
-          type: "RFC3161";
-          issued_at_attested: number;
-          tsa_endpoint: string;
-        }
-      | { type: "unavailable"; reason: string };
-  },
-  // will use these:
-  _options: Pick<
-    VerifyOptions,
-    "trustAnchorPemSha256" | "policyOidAllowlist" | "toleranceSeconds"
-  >
-): { valid: boolean; attestedAt?: number; tsa?: string; reason?: string } {
-  const ev = envelope.timestamp_evidence;
-  if (ev.type === "unavailable") {
-    return { valid: false, reason: ev.reason };
-  }
-  return {
-    valid: true,
-    attestedAt: ev.issued_at_attested,
-    tsa: ev.tsa_endpoint,
-  };
-}
-
 function reject(
   code: V11VerifyErrorCode,
   detail: string,
@@ -374,25 +397,26 @@ function reject(
 /**
  * Verify a TrustReceipt v1.1 envelope end-to-end.
  *
- * Flow (D23,):
+ * Flow (FR-018 + post-Codex round 2 D22, D23, D27):
  *  1. Parse envelope (string → JSON if needed) and validate against
- * `ReceiptEnvelopeSchema`.
+ *     `ReceiptEnvelopeSchema`.
  *  2. Decode the JWS Compact protected header to extract `kid`.
  *  3. Resolve `kid` in the bundled `jwksHistory`. Reject `unknown_kid` if
- * missing.
+ *     missing.
  *  4. Verify the JWS signature with the resolved JWK (Ed25519).
  *  5. Validate the parsed body against `TrustReceiptV11BodySchema`.
- *  6. validity-window check — `issued_at` AND `issued_at_attested` MUST
- * fall inside the resolved kid's `[valid_from, valid_to]`.
+ *  6. D23 validity-window check — `issued_at` AND `issued_at_attested` MUST
+ *     fall inside the resolved kid's `[valid_from, valid_to]`.
  *  7. Subject discrimination + missing-context guard.
  *  8. envelope_metadata.receipt_id mirror equality (D22).
  *  9. Recompute every protocol-artifact sidecar SHA-256 and confirm it matches
- * a `body.protocol_artifacts[].hash` entry.
+ *     a `body.protocol_artifacts[].hash` entry.
  * 10. Recompute `legal_posture` from observed evidence (D22). Reject or warn
- * based on `rejectOnEnvelopePostureMismatch`.
- * 11. Verify timestamp evidence (STUB — see `verifyTimestampEvidenceStub`).
- * 12. Optional `expectedSubject` context check ().
+ *     based on `rejectOnEnvelopePostureMismatch`.
+ * 11. Verify timestamp evidence — delegated to `verifyTimestampEvidence`.
+ * 12. Optional `expectedSubject` context check (R18).
  *
+ * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
  */
 export async function verifyReceiptEnvelope(
   envelopeInput: ReceiptEnvelope | string,
@@ -484,23 +508,29 @@ export async function verifyReceiptEnvelope(
     );
   }
 
-  // 3c. Signature verification — hard-fail on unknown root unless staging flag
+  // 3c. Signature verification or (opt-in) staging fallback ----------------
+  //
+  // T-CR-001 / Codex round 2 D2/D3: when the bundled root SHA is unknown to
+  // the verifier OR resolves to a non-production "(STAGING)" stub, default
+  // behavior is FAIL-CLOSED. Without `allowStagingRoots: true` a forged
+  // bundle pointing at an unknown root cannot smuggle its own `kid` past us
+  // via structural-only parsing.
+  const allowStagingRoots = options.allowStagingRoots ?? false;
   let historyPayload: VerifiedJwksHistoryPayload | null;
   const rootEntry = findIssuerRootBySha256(
     options.jwksHistory.signed_by_root_sha256
   );
   if (!rootEntry) {
-    if (options.allowStagingRoot === true) {
-      // Explicit staging opt-in: fall back to structural-only parse.
-      warnings.push("jwks_history_signature_unverifiable_staging_root");
-      historyPayload = parseJwksHistoryPayload(options.jwksHistory);
-    } else {
+    // Unknown root SHA — staging window or unknown issuer.
+    if (!allowStagingRoots) {
       return reject(
         "jwks_history_signature_invalid",
-        `JWKS history signed_by_root_sha256=${options.jwksHistory.signed_by_root_sha256} is not in the embedded trust anchor list. Pass allowStagingRoot=true only in staging environments.`,
+        "root_not_in_trust_anchor",
         warnings
       );
     }
+    warnings.push("jwks_history_signature_unverifiable_staging_root");
+    historyPayload = parseJwksHistoryPayload(options.jwksHistory);
   } else {
     const sigResult = await verifyJwksHistorySignature(
       options.jwksHistory,
@@ -508,7 +538,14 @@ export async function verifyReceiptEnvelope(
     );
     if (!sigResult.valid) {
       if (sigResult.reason === "embedded_root_not_production") {
-        // Staging stub root — structural fallback is safe per spec
+        // Staging stub root — gated structural fallback (opt-in only).
+        if (!allowStagingRoots) {
+          return reject(
+            "jwks_history_signature_invalid",
+            "root_not_in_trust_anchor",
+            warnings
+          );
+        }
         warnings.push("jwks_history_signature_unverifiable_staging_root");
         historyPayload = parseJwksHistoryPayload(options.jwksHistory);
       } else {
@@ -601,22 +638,69 @@ export async function verifyReceiptEnvelope(
   const body = bodyParse.data;
 
   // 5b. Temporal checks (issued_at / expires_at) --------------------------
-  const nowSeconds = options.currentTimeSeconds ?? Math.floor(Date.now() / 1000);
+  // Honor the caller-supplied verification clock when provided (deterministic
+  // conformance harnesses) and fall back to wall-clock otherwise (production).
+  // The expiry/not-yet-valid enforcement itself is unchanged. (GAP H1a)
+  const nowSeconds =
+    options.currentTimeSeconds ?? Math.floor(Date.now() / 1000);
   const tolerance = options.toleranceSeconds ?? 30;
   if (body.issued_at > nowSeconds + tolerance) {
     return reject(
       "receipt_not_yet_valid",
-      `issued_at=${body.issued_at} is ${body.issued_at - nowSeconds}s in the future (tolerance=${tolerance}s)`
+      `issued_at=${body.issued_at} is ${body.issued_at - nowSeconds}s in the future (tolerance=${tolerance}s)`,
+      warnings
     );
   }
   if (body.expires_at < nowSeconds - tolerance) {
     return reject(
       "receipt_expired",
-      `expires_at=${body.expires_at} expired ${nowSeconds - body.expires_at}s ago (tolerance=${tolerance}s)`
+      `expires_at=${body.expires_at} expired ${nowSeconds - body.expires_at}s ago (tolerance=${tolerance}s)`,
+      warnings
     );
   }
 
-  // 6. validity-window check ------------------------------------------
+  // 5c. T-AUD-012 (GAP H4) — semantic trust-anchor / jwks-pin verification ---
+  // The Zod layer only enforces the 64-hex REGEX FORMAT, so an all-zeros
+  // opaque stub anchor passes shape validation. Here we add the SEMANTIC
+  // layer: reject stub pins and verify the body's declared
+  // `trust_anchor_sha256` against the operator-pinned anchor.
+  const strict = (options.mode ?? "compat") === "strict";
+  const vm = body.verification_methods;
+  if (isOpaqueStubSha256(vm.trust_anchor_sha256)) {
+    if (strict) {
+      return reject(
+        "trust_anchor_stub_rejected",
+        `verification_methods.trust_anchor_sha256 is an opaque stub (${vm.trust_anchor_sha256})`,
+        warnings
+      );
+    }
+    warnings.push("trust_anchor_sha256_stub");
+  } else if (
+    vm.trust_anchor_sha256.toLowerCase() !==
+    options.trustAnchorPemSha256.toLowerCase()
+  ) {
+    // The receipt cites an anchor that is not the one the verifier pins.
+    if (strict) {
+      return reject(
+        "trust_anchor_mismatch",
+        `body trust_anchor_sha256=${vm.trust_anchor_sha256} does not match pinned anchor=${options.trustAnchorPemSha256}`,
+        warnings
+      );
+    }
+    warnings.push("trust_anchor_sha256_mismatch");
+  }
+  if (isOpaqueStubSha256(vm.jwks_sha256)) {
+    if (strict) {
+      return reject(
+        "jwks_sha256_stub_rejected",
+        `verification_methods.jwks_sha256 is an opaque stub (${vm.jwks_sha256})`,
+        warnings
+      );
+    }
+    warnings.push("jwks_sha256_stub");
+  }
+
+  // 6. D23 validity-window check ------------------------------------------
   const attestedAt =
     envelope.timestamp_evidence.type === "RFC3161"
       ? envelope.timestamp_evidence.issued_at_attested
@@ -683,8 +767,6 @@ export async function verifyReceiptEnvelope(
 
   // 10. Recompute legal_posture (D22 — verifier authoritative) ------------
   // Warn when assertions include providers the verifier doesn't recognise.
-  // Unknown providers still count toward agentIdentityVerified (forward-compat)
-  // but callers should not rely on them for legal claims without manual review.
   const KNOWN_PROVIDERS = new Set(["rfc9421-native", "human", "visa"]);
   const rawAssertions = body.trust_provider_assertions;
   if (Array.isArray(rawAssertions)) {
@@ -698,7 +780,7 @@ export async function verifyReceiptEnvelope(
         )
       ) {
         warnings.push("unknown_trust_provider_present");
-        break; // one warning per receipt is enough
+        break;
       }
     }
   }
@@ -716,13 +798,35 @@ export async function verifyReceiptEnvelope(
     warnings.push("envelope_legal_posture_mismatch_recomputed");
   }
 
+  // 10b. T-AUD-012 (GAP H4) — agent-identity binding gate -----------------
+  // A buyer_agent receipt with no verifiable agent-identity binding recomputes
+  // to a degraded posture. Strict mode treats that as fatal; compat warns.
+  if (
+    body.receipt_subject === "buyer_agent" &&
+    (recomputedPosture === "degraded_no_agent_identity" ||
+      recomputedPosture === "simple_electronic_seal")
+  ) {
+    if (strict) {
+      return reject(
+        "agent_identity_required_strict",
+        `buyer_agent receipt has no agent-identity binding (recomputed posture=${recomputedPosture})`,
+        warnings
+      );
+    }
+    warnings.push("agent_identity_absent");
+  }
+
   // 11. Timestamp verification -------------------------------------------
   const tsResult = await verifyTimestampEvidence({
     envelope: envelope as unknown as ReceiptEnvelope,
     receipt: body as unknown as TrustReceiptV11Body,
     trustAnchorPemSha256: options.trustAnchorPemSha256,
+    tsaRootCertSha256Allowlist: options.tsaRootCertSha256Allowlist,
     policyOidAllowlist: options.policyOidAllowlist,
     toleranceSeconds: options.toleranceSeconds ?? 60,
+    ...(options.merchantTsaPolicy !== undefined
+      ? { merchantTsaPolicy: options.merchantTsaPolicy }
+      : {}),
   });
 
   if (tsResult.evidenceType === "unavailable") {
@@ -759,9 +863,11 @@ function mapTimestampError(code: string | undefined): V11VerifyErrorCode {
     case "tsa_eku_missing":
     case "tsa_chain_invalid":
     case "tsa_cert_revoked":
+    case "tsa_revocation_unavailable":
     case "tsa_gen_time_out_of_tolerance":
     case "tsa_imprint_mismatch":
     case "tsa_token_mismatch":
+    case "tsa_root_not_trusted":
       return code;
     default:
       return "tsa_invalid";

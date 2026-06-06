@@ -1,0 +1,70 @@
+{
+  "vector_id": "005d",
+  "name": "binding-mismatch-unknown-kid",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 US2 — Receipt presented with a `kid` that does NOT appear in `keys[]` nor in `authorized_delegates[]`.\n\nThis is the anti-confused-deputy failure mode: a hostile facilitator (or any\nthird party) signs a receipt with its own Ed25519 key and attempts to pass\nit off as merchant-issued. The portable verifier MUST short-circuit at the\nkid-lookup step and reject with the typed code `unknown_kid` — distinct\nfrom the binding-mismatch family (`005a` resource, `005b` payload, `005c`\nsettlement) because the failure occurs BEFORE any binding-hash recomputation.\n\nDiagnostic distinction matters for operators: `unknown_kid` indicates a\ntrust-graph miss (or stale JWKS cache), while a true `binding_mismatch_*`\nindicates field tampering on a receipt signed by a legitimate kid.",
+  "test_kind": "delegation_resolution_rejected",
+  "inputs": {
+    "jwks": {
+      "keys": [
+        {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "kid": "merchant-root-acme-005d",
+          "use": "sig",
+          "kid_uses": ["receipt-issuance"],
+          "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+        },
+        {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "kid": "issuer-delegate-acme-005d-alt",
+          "use": "sig",
+          "x": "Oyz-7gsNUMeXqjQqE0vKWfFVL4EdUkpgWwPnGq5kyow"
+        }
+      ],
+      "authorized_delegates": [
+        {
+          "kid": "issuer-delegate-acme-005d-alt",
+          "role": "issuer-backup",
+          "valid_from": "2026-01-01T00:00:00.000Z",
+          "valid_until": "2027-01-01T00:00:00.000Z",
+          "merchant_root_kid": "merchant-root-acme-005d",
+          "authorization_signature": "placeholder-signature-not-exercised-on-this-path"
+        }
+      ]
+    },
+    "receipt_kid": "facilitator-hostile-evil-2026",
+    "receipt_issued_at": "2026-05-15T12:00:00.000Z"
+  },
+  "expected": {
+    "outcome": "unknown_kid",
+    "branch": null,
+    "public_key_jwk": null,
+    "merchant_root_kid": null,
+    "delegate_role": null
+  },
+  "acceptance_criteria": {
+    "must_reject_with_typed_code": "unknown_kid",
+    "must_not_emit_binding_mismatch_codes": [
+      "binding_mismatch_resource",
+      "binding_mismatch_payload",
+      "binding_mismatch_settlement_evidence",
+      "binding_mismatch_output_commitment"
+    ],
+    "must_short_circuit_before_signature_verification": true,
+    "must_not_attempt_authorization_signature_verification_on_unrelated_delegate_entries": true,
+    "must_not_leak_authorized_delegates_internals_in_reason": true
+  },
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/merchant-jwks.schema.json"
+  ],
+  "notes": [
+    "The merchant publishes a legitimate root + a legitimate delegate, but the receipt's `kid` matches NEITHER. This proves that the presence of unrelated valid delegates does NOT poison the resolver into accepting a hostile kid.",
+    "The `authorization_signature` on the legit delegate entry is a placeholder string because this code path never reaches signature verification — `unknown_kid` is decided by the kid-lookup step.",
+    "Operators must distinguish this outcome from `005a/005b/005c` family in dashboards: `unknown_kid` → trust-graph hygiene issue (key rotation, stale cache, hostile actor). `binding_mismatch_*` → field tampering on a legitimately-signed receipt.",
+    "FR-008a Rama A (direct) and Rama B (delegated) are BOTH exercised here — both must fail kid lookup for `unknown_kid` to apply."
+  ]
+}

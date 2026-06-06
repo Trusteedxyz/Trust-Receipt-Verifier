@@ -1,0 +1,48 @@
+{
+  "envelope": {
+    "envelope_metadata": {
+      "created_at": 1777593601,
+      "legal_posture": "ades_candidate_no_tsa",
+      "legal_posture_warnings": [],
+      "receipt_id": "00000000-0000-4000-8000-000000000003"
+    },
+    "receipt": "eyJhbGciOiJFZERTQSIsImtpZCI6InRyLWVkMjU1MTktc3RyaWN0LTIwMjYiLCJ0eXAiOiJKV1QifQ.eyJhZ2VudF9pZCI6ImFnZW50LXN0cmljdC0wMDEiLCJhZ2VudF9wcm92aWRlciI6IkFudGhyb3BpYyIsImF1dGhvcml6YXRpb25fZXZpZGVuY2UiOnsiZXhlY3V0aW9uX2hhc2giOiJzaGEyNTY6OTJhYjFiMTk0YWM4YjFiMzdlMDUyNmUxZmM5YmExODgwYTY1Yzc5MWNlOWM0ZDczNzExZmE5N2M4ZTYyMmRkMCIsImludGVudF9obWFjX2tleV92ZXJzaW9uIjoxLCJwcm90b2NvbF9hdXRob3JpemF0aW9uX3JlZiI6ImFwMi1tYW5kYXRlLXN0cmljdC0wMDEiLCJ1c2VyX2ludGVudF9oYXNoIjoiaG1hYy1zaGEyNTY6MGU2MTdlZTU0NTExYjI4ZDgxM2JiMzhlYjRmMTEyOTNmZTM3OGFhNDMyOThjMzM4ODFlNGI0Mzk5NDIzNmQyZCJ9LCJhdXRob3JpemF0aW9uX3NjaGVtZSI6ImFwMl9tYW5kYXRlX2p3cyIsImJ1eWVyX2FnZW50X2NvbnNlbnRfY29udGV4dCI6eyJhZ2VudF9hdXRob3JpemF0aW9uX2NoYWluIjpbeyJhY3RvciI6InVzZXIiLCJoYXNoIjoiaG1hYy1zaGEyNTY6MDlkYjE0NTU2NDg5NTg3NTFkYjU2NzQ0NzNmYmNlMTUyNDM0ZDQ1NmY1NzViNmViY2JkMWQxY2NmYTFkMWY0ZiIsIm1ldGhvZCI6Ik9BdXRoK01GQSIsInRpbWVzdGFtcCI6MTc3NzU5MzU3MH0seyJhY3RvciI6ImFnZW50IiwiaGFzaCI6ImhtYWMtc2hhMjU2OmIwM2Q5Nzc4OTFmMDA2ZGNjNzE5N2RiNDE1M2FlMzNiMTg3MDYwZTU2YjZhNTRhNGRjNTAzZjk4ZGRkMDQ3M2UiLCJtZXRob2QiOiJyZmM5NDIxX3NpZ25hdHVyZSIsInJlZiI6ImFnZW50LXN0cmljdC0wMDEiLCJ0aW1lc3RhbXAiOjE3Nzc1OTM1NzF9XSwiY29uc2VudF9kaXNjbG9zdXJlX3ZlcnNpb24iOiIxLjAuMCIsImNvbnNlbnRfZXZpZGVuY2VfcmVmIjoidmF1bHQ6Ly9jb25zZW50L3N0cmljdCIsImNvbnNlbnRfaGFzaCI6ImhtYWMtc2hhMjU2OjgwY2YzOWY4MTc2ZGFhZjY0YmM1NDZkZWU4NGNjZDBkNDdmZjI3NjhlZGIzYzBkNmU2MzhiZjhhZDkwZTMxNWMiLCJjb25zZW50X2htYWNfa2V5X3ZlcnNpb24iOjEsImNvbnNlbnRfdGltZXN0YW1wIjoxNzc3NTkzNTcwLCJjb25zZW50X3R5cGUiOiJleHBsaWNpdF9hY3Rpb24iLCJjb25zZW50X3dpdGhkcmF3YWxfdXJpX2hhc2giOiJzaGEyNTY6NTAyMDVkYWFiMTVmNzMwZjY5NmFlMDhiMzBlZmI4NzFhZDQwNzA4YzdiNDgzZjVhYzUyMGMyNzQ4ZDlmZDE0MiJ9LCJjYXJ0X2hhc2giOiJzaGEyNTY6YTI3MzQ2MWJiNzZlYmZlNWJjNGI3OTNiZWEwYjJjOGFkNmZmZWY3NDBmM2NiY2NmODk4NjlmOWEyZDEzMzhlNSIsImNvbnNlbnRfZXZpZGVuY2VfcmVmIjoidmF1bHQ6Ly9jb25zZW50L3N0cmljdCIsImVzaWduX2Rpc2Nsb3N1cmVfaGFzaCI6InNoYTI1NjphZjBkN2JjMjg0YWU5NTFmYmYwMTQ5MGM1NDUwMmQ5YmI5NjM2ZjhjYWU3ZjhkNzg0Y2M2YmZmNmZhNDdiZmU3IiwiZXNpZ25fZGlzY2xvc3VyZV92ZXJzaW9uIjoiMS4wLjAiLCJleHBpcmVzX2F0IjoxNzc3NjgwMDAwLCJpbnRlbnRfaG1hY19rZXlfdmVyc2lvbiI6MSwiaXNzdWVkX2F0IjoxNzc3NTkzNjAwLCJpc3N1ZXIiOiJodHRwczovL3Rlc3QudHJ1c3RlZWQueHl6IiwibGVnYWxfcG9zdHVyZSI6ImFkZXNfY2FuZGlkYXRlX25vX3RzYSIsImxlZ2FsX3Bvc3R1cmVfd2FybmluZ3MiOltdLCJtZXJjaGFudF9pZCI6Im1lcmNoYW50X3N0cmljdF90ZXN0Iiwib3JkZXJfaGFzaCI6InNoYTI1NjpkNGEyY2JkYjk2NWJiMDUzODY3MzFhMmM2YTNmYzlhY2MyMTQyMzIzZDA5OWUyMWE1NjA2MGFkZjYyMDk4MzRhIiwicGF5bWVudF9hdXRob3JpemF0aW9uX2hhc2giOiJzaGEyNTY6MzU3Y2Q5NWMwYzNhNjlhMzRlMDAzZjhmYzE2NjQyNTgwOGYyMmY0ZjE5NTA2ZGZkM2VmYjJjNzU2OTYxZGFmNCIsInBvbGljeV9kZWNpc2lvbiI6ImFsbG93IiwicHJpdmFjeV9jbGFzc2lmaWNhdGlvbiI6InBpaV9oYXNoZWRfc2FsdGVkIiwicHJvdG9jb2wiOiJBUDIiLCJwcm90b2NvbF9hcnRpZmFjdHMiOltdLCJyZWNlaXB0X2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAzIiwicmVjZWlwdF9zdWJqZWN0IjoiYnV5ZXJfYWdlbnQiLCJzY2hlbWFfdmVyc2lvbiI6IjEuMSIsInRyYW5zYWN0aW9uX2lkIjoidHgtMDMiLCJ1c2VyX2ludGVudF9oYXNoIjoiaG1hYy1zaGEyNTY6MGU2MTdlZTU0NTExYjI4ZDgxM2JiMzhlYjRmMTEyOTNmZTM3OGFhNDMyOThjMzM4ODFlNGI0Mzk5NDIzNmQyZCIsInZlcmlmaWNhdGlvbl9tZXRob2RzIjp7Imp3a3MiOnsia2lkIjoidHItZWQyNTUxOS1zdHJpY3QtMjAyNiIsInVyaSI6Imh0dHBzOi8vdGVzdC50cnVzdGVlZC54eXovLndlbGwta25vd24vandrcy5qc29uIn0sImp3a3Nfc2hhMjU2IjoiZGExZDk1Yjk3YjA1ZTAzZjAwYzM0YzgxMGIzZDY2NjJmOWMwMzk2NjhlZTVmNWM5ODdkZDhjMDcwMTJmZWJlNCIsInRydXN0X2FuY2hvcl9zaGEyNTYiOiJlNGQ1NzVhNTE4NDc1NTdjYWEyZjY0YjhmYTZlNTQ1MGVmZDU5MDU5OGVhMDQyYjU3MmZlNTY3YjQ4NTcwM2JkIn19.IRciUS7Ok1ogs3jr89P4ym7pwluQnkyDKf3Jhc156HP9ONXQcF0mg7NiZe57SVs2n2HEvduvaVBI8ScJajqvBg",
+    "timestamp_evidence": {
+      "attempted_at": 1777593600,
+      "attempted_tsa": ["https://test-tsa.trusteed.xyz/tsa"],
+      "reason": "tsa_unavailable",
+      "type": "unavailable"
+    }
+  },
+  "expected_compat": {
+    "errorCode": null,
+    "outcome": "accepted",
+    "warning": "tsa_unavailable"
+  },
+  "expected_strict": {
+    "errorCode": null,
+    "outcome": "accepted"
+  },
+  "title": "LOTL / TSA degraded — accepted-with-warning in both strict and compat",
+  "vector_id": "03",
+  "verify_options": {
+    "currentTime": 1777593660,
+    "expectedSubject": "buyer_agent",
+    "jwks": {
+      "keys": [
+        {
+          "alg": "EdDSA",
+          "crv": "Ed25519",
+          "kid": "tr-ed25519-strict-2026",
+          "kty": "OKP",
+          "use": "sig",
+          "x": "eR08btz2izblHgvDS1v_vglKeHiRbaBc0jSeRgC9fvE"
+        }
+      ]
+    },
+    "trust_anchor_sha256": "e4d575a51847557caa2f64b8fa6e5450efd590598ea042b572fe567b485703bd",
+    "tsa_root_pins": [
+      "4d3fccb9262fddb58cdfdc4fc5415ce63738ce8b76910dafe832f62c4b327ff8"
+    ]
+  }
+}

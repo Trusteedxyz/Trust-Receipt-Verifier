@@ -34,7 +34,7 @@
     "recomputed_legal_posture": null,
     "warnings": []
   },
-  "title": "v1.1 buyer_agent on x402 MISSING payment_authorization_hash → rejected",
+  "title": "v1.1 buyer_agent on x402 MISSING payment_authorization_hash → rejected (FR-019c, D24)",
   "vector_id": "019b",
   "verify_options": {
     "currentTime": 1777593660,

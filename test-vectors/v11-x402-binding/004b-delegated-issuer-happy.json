@@ -1,0 +1,78 @@
+{
+  "vector_id": "004b",
+  "name": "delegated-issuer-happy",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-008a Rama B — delegated issuer happy path with verifiable Ed25519 chain.\n\nThe merchant publishes TWO keys in `keys[]` (root + delegate) plus ONE entry\nin `authorized_delegates[]`. The delegate entry carries an Ed25519 signature\nover the JCS-canonicalized payload\n`{kid, merchant_root_kid, role, valid_from, valid_until}` computed with the\nmerchant root private key. The `receipt_issued_at` falls strictly inside\n[valid_from, valid_until] (inclusive).\n\nThe portable verifier (`validateDelegation`) MUST:\n  1. Fail Branch A (no `kid_uses:[\"receipt-issuance\"]` marker on the delegate).\n  2. Locate the delegate in `authorized_delegates[]`.\n  3. Locate the merchant root in `keys[]` via `merchant_root_kid`.\n  4. Verify the Ed25519 `authorization_signature` over the JCS payload.\n  5. Confirm `receipt_issued_at ∈ [valid_from, valid_until]` (inclusive).\n  6. Confirm the delegate's own kid is also in `keys[]` with `use:\"sig\"`.\n  7. Return `outcome=accepted_delegated`, `branch=delegated`, plus the\n     delegate JWK as `public_key_jwk` for downstream receipt verification.\n\nThe Ed25519 keys and `authorization_signature` below are REAL and verifiable\noffline by running the vector through `validateDelegation()`.",
+  "test_kind": "delegation_resolution_delegated",
+  "inputs": {
+    "jwks": {
+      "keys": [
+        {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "kid": "merchant-root-acme-004b",
+          "use": "sig",
+          "x": "Tc6plybIuCBW3xOah93kmMBqqefrS5ltoD9vjYbEM7I"
+        },
+        {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "kid": "issuer-delegate-acme-004b",
+          "use": "sig",
+          "x": "Oyz-7gsNUMeXqjQqE0vKWfFVL4EdUkpgWwPnGq5kyow"
+        }
+      ],
+      "authorized_delegates": [
+        {
+          "kid": "issuer-delegate-acme-004b",
+          "role": "issuer-primary",
+          "valid_from": "2026-04-01T00:00:00.000Z",
+          "valid_until": "2026-07-01T00:00:00.000Z",
+          "merchant_root_kid": "merchant-root-acme-004b",
+          "authorization_signature": "v3xGwvzwe5jSBUPb4GCOYcxhWsfcpX8KnvD0hKV7gB9yB-k30sGBDelCq7EIM04sma5Tuqhnmjj75O6OEgSLDQ"
+        }
+      ]
+    },
+    "receipt_kid": "issuer-delegate-acme-004b",
+    "receipt_issued_at": "2026-05-15T12:00:00.000Z"
+  },
+  "expected": {
+    "outcome": "accepted_delegated",
+    "branch": "delegated",
+    "public_key_jwk": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "kid": "issuer-delegate-acme-004b",
+      "use": "sig",
+      "x": "Oyz-7gsNUMeXqjQqE0vKWfFVL4EdUkpgWwPnGq5kyow"
+    },
+    "merchant_root_kid": "merchant-root-acme-004b",
+    "delegate_role": "issuer-primary"
+  },
+  "acceptance_criteria": {
+    "must_verify_ed25519_signature_over_jcs_payload": true,
+    "must_use_jcs_rfc_8785_canonicalization": true,
+    "must_include_merchant_root_kid_in_signing_input": true,
+    "must_check_window_inclusive_lower_bound": true,
+    "must_check_window_inclusive_upper_bound": true,
+    "must_locate_delegate_pubkey_in_keys_array": true,
+    "must_return_branch_delegated": true,
+    "canonical_payload_field_order_jcs_sorted": [
+      "kid",
+      "merchant_root_kid",
+      "role",
+      "valid_from",
+      "valid_until"
+    ]
+  },
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/merchant-jwks.schema.json"
+  ],
+  "notes": [
+    "The `authorization_signature` is a REAL Ed25519 signature generated with the merchant root private key (held offline) over the JCS canonicalization of `{kid, merchant_root_kid, role, valid_from, valid_until}`. It WILL verify against the public key `Tc6plybIuCBW3xOah93kmMBqqefrS5ltoD9vjYbEM7I` when running the vector through `validateDelegation()`.",
+    "Cross-merchant replay defense: the `merchant_root_kid` field is INSIDE the signed payload, so a hostile JWKS that copies this delegate entry under a different root kid will fail signature verification.",
+    "The merchant root key in this vector intentionally LACKS the `kid_uses:[\"receipt-issuance\"]` marker so it cannot be used as a direct issuer — only its delegation authority is exercised here."
+  ]
+}

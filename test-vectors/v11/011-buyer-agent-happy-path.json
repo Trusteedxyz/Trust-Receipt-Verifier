@@ -39,6 +39,9 @@
   "verify_options": {
     "currentTime": 1777593660,
     "expectedSubject": "buyer_agent",
+    "tsa_root_pins": [
+      "c89c29193975eccc4f57d6e2ae716825fcd0934c41c675e6ab9c1791e356c358"
+    ],
     "jwks": {
       "keys": [
         {

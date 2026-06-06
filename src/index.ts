@@ -1,5 +1,5 @@
 /**
- * trust-receipt-verifier
+ * @agenticmcpstores/trust-receipt-verifier
  *
  * TrustReceipt open standard — cross-protocol agentic commerce evidence receipts.
  * Standalone package: no Prisma/DB dependency.
@@ -30,7 +30,7 @@ export {
 // Issuer
 export { issueTrustReceipt, type IssueOptions } from "./issuer.js";
 
-// v1.0 verifier — schema-version-routed entry for the auto dispatcher.
+// v1.0 verifier (spec-049 T050) — schema-version-routed entry for the T052 dispatcher.
 // Pre-existing `verifyTrustReceipt` above remains the canonical v1.0 alias for
 // backward compatibility.
 export {
@@ -40,7 +40,7 @@ export {
   type TrustReceiptV10,
 } from "./verify-1.0.js";
 
-// v1.1 envelope verifier.
+// v1.1 envelope verifier (spec-049 T051).
 // Re-exported with a v1.1-namespaced `VerifyOptions` alias to avoid colliding
 // with the v1.0 `VerifyOptions` already exported above from `./verifier.js`.
 export {
@@ -57,7 +57,7 @@ export {
   type VerifyTimestampEvidenceResult,
 } from "./verify-timestamp-evidence.js";
 
-// Extension artifacts (erasure receipts + signed manifests).
+// Spec-052 extension artifacts (erasure receipts + signed manifests).
 export {
   verifyExtensionArtifact,
   type ExtensionArtifactKind,
@@ -81,7 +81,17 @@ export type {
   JwksHistoryEntry,
 } from "./types-1.1.js";
 
-// Embedded issuer trust anchors (T422 well-known endpoint consumes this).
+// F2+F3 fix (Codex audit 2026-05-18): expose the canonical Zod schema so api
+// callers can validate v1.1 bodies BEFORE handing them to KMS for signing.
+// Without runtime validation, hand-rolled bodies with stub evidence or
+// missing buyer_agent fields would silently land in signed receipts and
+// later fail downstream verification.
+export {
+  TrustReceiptV11BodySchema,
+  X402BindingExtensionSchema,
+  MppBindingExtensionSchema,
+} from "./zod-1.1.js";
+export type { MppBindingExtension } from "./zod-1.1.js";
 export {
   EMBEDDED_ISSUER_ROOTS,
   findIssuerRootBySha256,
@@ -92,21 +102,24 @@ export {
   type ValidateChainResult,
 } from "./embedded-issuer-root.js";
 
-// ─── Schema-version dispatcher ────────────────────────────────────────────────
+// ─── T052 dispatcher ──────────────────────────────────────────────────────────
 //
 // Routes a verification request to the v1.0 or v1.1 verifier.
 //
-// Cutover semantics:
+// Cutover semantics (spec-049 FR-018, research.md R8):
 //   - v1.0 receipts MUST continue to verify ≥ 7 years post-cutover.
 //   - v1.1 envelopes are the new default emission format.
 //   - The dispatcher tags v1.0 results with `legacy_pre_eidas_hardening` so
 //     callers can surface a soft-deprecation signal without breaking interop.
 //
-// Wire-format discrimination:
+// Wire-format discrimination (post-Codex round 1 D11 + round 2 D29):
 //   - v1.0 = bare JWS Compact (3 dot-separated base64url segments).
 //   - v1.1 = JSON envelope object with required keys `receipt` (string JWS) and
 //     `envelope_metadata` (object). The envelope is the media-typed wrapper;
 //     the inner JWS is the signed body.
+//
+// @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
+// @see specs/049-trust-receipt-eidas-hardening/research.md R8
 
 import { verifyReceiptV10 as _verifyV10 } from "./verify-1.0.js";
 import type { V10VerifyResult } from "./verify-1.0.js";
@@ -139,9 +152,11 @@ export type DispatcherResult =
 /**
  * Verify a TrustReceipt by explicit `kind` discrimination.
  *
- * - `kind: "v10_jws"` → calls {@link verifyReceiptV10} and appends the
- * `legacy_pre_eidas_hardening` warning for v1.0 cutover semantics.
- * - `kind: "v11_envelope"` → calls {@link verifyReceiptEnvelope}.
+ * - `kind: "v10_jws"` → calls {@link verifyReceiptV10} (T050) and appends the
+ *   `legacy_pre_eidas_hardening` warning per FR-018 cutover semantics.
+ * - `kind: "v11_envelope"` → calls {@link verifyReceiptEnvelope} (T051).
+ *
+ * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
  */
 export async function verifyReceiptAuto(
   input: VerifyInput
@@ -161,9 +176,9 @@ export async function verifyReceiptAuto(
 /**
  * Auto-detect the receipt format from a string blob.
  *
- * Detection rules:
+ * Detection rules (post-Codex round 2 D29):
  *  - JSON-parseable object with both `receipt` (string) and `envelope_metadata`
- *  (object) → `"v1.1"`.
+ *    (object) → `"v1.1"`.
  *  - JWS Compact (3 dot-separated base64url segments) → `"v1.0"`.
  *  - Otherwise → `"unknown"`.
  */
@@ -196,7 +211,7 @@ export function detectReceiptFormat(blob: string): "v1.0" | "v1.1" | "unknown" {
   return "unknown";
 }
 
-// ─── AdES claims gate ─────────────────────────────────────────────────────────
+// ─── T557 — AdES claims gate (post-Codex round 2 D27) ─────────────────────────
 //
 // AdES-conformance claims are only legitimate when the receipt:
 //   1. Has `legal_posture === "ades_candidate_timestamped"` AND
@@ -205,10 +220,13 @@ export function detectReceiptFormat(blob: string): "v1.0" | "v1.1" | "unknown" {
 // Any warning (e.g. `agent_identity_absent`, `tsa_unavailable_fail_open`,
 // `consent_evidence_redacted_partial`) downgrades the receipt out of AdES
 // candidacy regardless of base posture.
+//
+// @see specs/049-trust-receipt-eidas-hardening/spec.md FR-019 (legal_posture)
+// @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md D27
 
 /**
  * Returns true iff the receipt body+envelope qualifies for AdES candidacy
- * claims. Callers MUST gate any "AdES-aligned"
+ * claims under post-Codex round 2 D27. Callers MUST gate any "AdES-aligned"
  * marketing/legal claim on this helper — never on `legal_posture` alone.
  *
  * Accepts either a `TrustReceiptV11Body` directly or a `ReceiptEnvelope`. The
@@ -227,7 +245,7 @@ export function isAdesClaimEligible(input: {
   );
 }
 
-// ─── Media types ──────────────────────────────────────────────────────────────
+// ─── T559 — Media types (post-Codex round 2 D29) ──────────────────────────────
 //
 // v1.1 envelope responses MUST advertise their media type explicitly so
 // clients (dashboards, agents, export bundles) can discriminate from v1.0
@@ -248,3 +266,41 @@ export const MEDIA_TYPE_RECEIPT_ENVELOPE_V11 =
  * select the correct verifier path. Per RFC 7515.
  */
 export const MEDIA_TYPE_RECEIPT_JWS_V10 = "application/jose";
+
+// ─── Spec 054 — x402_binding portable verifier (Wave 3-A + 3-B) ──────────────
+export {
+  recomputeBindingHash,
+  BindingHashRecomputeError,
+  type BindingHashRecomputeInput,
+  type BindingHashRecomputeResult,
+  type BindingHashRecomputeErrorCode,
+  type RecomputeAuthorizationScheme,
+  type SettlementEvidenceInput,
+} from "./x402-binding/binding-hash-recompute.js";
+
+export {
+  validateDelegation,
+  type DelegationValidationOutcome,
+  type DelegationValidationResult,
+  type ValidateDelegationArgs,
+  type MerchantJwksDocument,
+  type JwksKey,
+  type AuthorizedDelegate,
+} from "./x402-binding/delegation-validator.js";
+
+export {
+  VerifierX402Extension,
+  type VerifierX402ExtensionArgs,
+  type VerifierX402ExtensionDeps,
+  type VerifierExtensionResult,
+  type VerifierExtensionRejectReason,
+  type MismatchedComponent,
+  type ReceiptEnvelopeInput,
+} from "./x402-binding/verifier-x402-extension.js";
+
+export {
+  verifyPiiAttestation,
+  type AttestationVerificationResult,
+  type AttestationVerificationReason,
+  type VerifyPiiAttestationArgs,
+} from "./x402-binding/attestation-verifier.js";

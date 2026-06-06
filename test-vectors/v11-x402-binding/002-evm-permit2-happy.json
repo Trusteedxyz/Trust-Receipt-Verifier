@@ -1,0 +1,143 @@
+{
+  "vector_id": "002",
+  "name": "evm-permit2-happy",
+  "version": "1.0.0",
+  "binding_profile_version": "1.0.0",
+  "description": "Spec-054 FR-004/005 — Happy path EVM Permit2 (Base USDC) async issuance.\n\nMerchant emits 402 with capability. Agent submits paymentPayload with Permit2\nauthorization. Facilitator settles on-chain and reports SettlementEvidence.\nMerchant issues a ReceiptEnvelope v1.1 with the x402_binding extension; the\nbinding_hash binds 5 components (paymentRequirements, paymentPayload-subset,\nresource_uri, settlement_evidence-subset, output_commitment).\n\nVerifier (verifier portable spec-049 + spec-054 extension) MUST validate:\n - JWS signature over the v1.1 body.\n - timestamp_evidence TSA presence.\n - x402_binding.binding_hash matches the recomputed 5-component hash.\n - posture === 'confirmed' (terminal, signed).\n - output_commitment kind === 'static_sha256' with tagged digest.",
+  "test_kind": "issuance_async_happy",
+  "inputs": {
+    "merchant_id": "merchant_acme_evm_001",
+    "payment_requirements": {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "1000000",
+      "resource": "https://merchant.example.com/api/paid-resource",
+      "description": "Premium API access (1 USDC)",
+      "mimeType": "application/json",
+      "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+      "maxTimeoutSeconds": 300,
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    },
+    "payment_payload": {
+      "permit2_authorization": {
+        "permitted": {
+          "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "amount": "1000000"
+        },
+        "nonce": "1",
+        "deadline": "1900000000"
+      },
+      "owner": "0xabcdef1234567890abcdef1234567890abcdef12",
+      "spender": "0x1234567890abcdef1234567890abcdef12345678",
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "1000000",
+      "nonce": "1",
+      "deadline": "1900000000",
+      "signature": "0xdeadbeef0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001b"
+    },
+    "authorization_scheme": "evm_permit2",
+    "resource_uri": "https://merchant.example.com/api/paid-resource",
+    "settlement_evidence": {
+      "txHash": "0xfeedface00000000000000000000000000000000000000000000000000000001",
+      "network": "base",
+      "amount": "1000000",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+      "payer": "0xabcdef1234567890abcdef1234567890abcdef12",
+      "blockHeight": 12345678,
+      "confirmations": 12,
+      "observedAt": "2026-05-18T10:15:30Z"
+    },
+    "output_commitment": {
+      "kind": "static_sha256",
+      "algorithm": "sha256",
+      "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "content_type": "application/json",
+      "content_length": 256
+    },
+    "intent": {
+      "intent_hash": "hmac-sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAg",
+      "allows_multi_settlement": false,
+      "pii_hmac_key_version": 1
+    },
+    "capability": {
+      "capable": true,
+      "issuer_jwks_url": "https://merchant.example.com/.well-known/jwks.json",
+      "kid_hint": "issuer-active-2026q2",
+      "binding_profile_version": "1.0.0",
+      "delivery_modes": ["async"],
+      "inline_supported": false,
+      "output_commitment_modes": ["static_sha256", "merkle_manifest"],
+      "verification_mode": "unverified",
+      "pii_hashing_method": "hmac-sha256-kms",
+      "pii_hmac_key_version": 1
+    }
+  },
+  "expected": {
+    "issuance": {
+      "http_status_initial": 202,
+      "response_body_initial": {
+        "trust_receipt_pending_url": "https://api.trusteed.xyz/api/v1/x402-binding/receipts/<binding_id>",
+        "binding_id": "<ULID 26 chars Crockford>"
+      },
+      "http_status_tracking_after_settlement": 200,
+      "response_body_tracking": {
+        "trust_receipt_envelope": {
+          "receipt": "<JWS Compact>",
+          "timestamp_evidence": "<TSA RFC 3161 evidence>",
+          "envelope_metadata": "<unsigned metadata>",
+          "protocol_artifact_sidecars": "[optional]"
+        },
+        "posture": "confirmed"
+      }
+    },
+    "envelope_payload_x402_binding": {
+      "binding_profile_version": "1.0.0",
+      "authorization_scheme": "evm_permit2",
+      "posture": "confirmed",
+      "verification_posture": "unverified",
+      "agent_authorization_chain": null,
+      "intent_allows_multi_settlement": false,
+      "output_commitment_kind_expected": "static_sha256",
+      "binding_hash_regex": "^sha256:[0-9a-f]{64}$",
+      "binding_id_regex": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "intent_hash_regex": "^hmac-sha256:[0-9a-f]{64}$",
+      "pii_hmac_key_version_equals": 1
+    },
+    "verifier_result": {
+      "valid": true,
+      "posture": "confirmed",
+      "verification_posture": "unverified",
+      "delegation_branch_expected_one_of": ["direct", "delegated"],
+      "binding_hash_match": true,
+      "warnings": []
+    }
+  },
+  "acceptance_criteria": {
+    "must_pass_offline": true,
+    "must_have_timestamp_evidence": true,
+    "must_have_envelope_metadata": true,
+    "must_recompute_binding_hash": [
+      "sha256(jcs(payment_requirements))",
+      "sha256(jcs(payment_payload_subset_evm_permit2))",
+      "sha256(canonical_uri(resource_uri))",
+      "sha256(jcs(settlement_evidence_subset))",
+      "sha256(jcs(output_commitment))"
+    ],
+    "domain_separator_must_appear": "trtx402:v1:",
+    "component_separator_must_appear": "0x00 byte between each of 5 components"
+  },
+  "schema_refs": [
+    "contracts/x402-binding-receipt-payload.schema.json",
+    "contracts/output-commitment.schema.json",
+    "contracts/settlement-evidence.schema.json",
+    "contracts/binding-components-manifest.schema.json"
+  ],
+  "notes": [
+    "Slice 1 v1.0 ASYNC-ONLY: inline mode is reserved for a future profile bump (ADR-054-001).",
+    "binding_hash is the canonicalized hash of 5 components; component (e) is the canonical hash of the OutputCommitment object — NOT the body bytes (the system does not observe delivery).",
+    "Agent must independently re-hash the delivered body (sha256) and compare to output_commitment.value to verify delivery integrity.",
+    "ReceiptEnvelope is delivered terminally — pending state lives only in HTTP 202 of the tracking endpoint, never inside a signed JWS."
+  ]
+}
