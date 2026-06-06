@@ -206,7 +206,7 @@ if (result.outcome === "accepted") {
 }
 ```
 
-> **`allowStagingRoot`**: defaults to `false`. When `false` (production default) any `jwksHistory.signed_by_root_sha256` not present in the embedded trust anchor list causes immediate rejection (`jwks_history_signature_invalid`). Set to `true` only in staging or CI environments that use unsigned/stub JWKS history bundles.
+> **`allowStagingRoots`**: defaults to `false`. When `false` (production default) any `jwksHistory.signed_by_root_sha256` not present in the embedded trust anchor list causes immediate rejection (`jwks_history_signature_invalid`). Set to `true` only in staging or CI environments that use unsigned/stub JWKS history bundles.
 
 ---
 
