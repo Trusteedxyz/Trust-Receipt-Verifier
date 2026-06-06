@@ -188,7 +188,8 @@ const opts: VerifyOptions = {
   trustAnchorPemSha256: "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
   policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
   // toleranceSeconds: 30,  // default clock-skew tolerance (seconds)
-  // allowStagingRoot: true, // staging/CI only — never set in production
+  // mode: "strict",        // default "compat" — see "Strict vs compat" below
+  // allowStagingRoots: true, // staging/CI only — never set in production
 };
 
 const result = await verifyReceiptEnvelope(envelope, opts);
