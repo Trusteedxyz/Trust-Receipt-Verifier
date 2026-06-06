@@ -432,6 +432,143 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 ---
 
+## 11. TrustReceipt v1.1 Reference (eIDAS + ESIGN Hardening)
+
+**Spec origin**: `specs/049-trust-receipt-eidas-hardening/`
+**Architecture**: `docs/architecture/trust-receipt-eidas-hardening-architecture.md`
+**Migration guide**: `docs/integrations/trust-receipt-v11-migration.md`
+
+### 11.1 Legal disclaimer (FR-003)
+
+> **Disclaimer**: TrustReceipt v1.1 is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
+
+The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. See `docs/legal/trust-receipt-claims-policy.md` for the canonical permitted/prohibited wording list.
+
+### 11.2 Wire format
+
+A v1.1 receipt is a **JSON envelope** (NOT a single JWS). Media type: `application/vnd.trusteed.receipt-envelope+json`.
+
+```jsonc
+{
+  "receipt": "<JWS Compact, signed body only>",
+  "timestamp_evidence": {
+    /* RFC 3161, see §11.4 */
+  },
+  "envelope_metadata": {
+    "receipt_id": "<uuid>",
+    "created_at": 1777593601,
+    "legal_posture": "ades_candidate_timestamped",
+    "legal_posture_warnings": [],
+  },
+  "protocol_artifact_sidecars": [],
+}
+```
+
+### 11.3 New v1.1 fields (signed body)
+
+| Field                                                 | Type                                                    | Required when               | Purpose                                                                                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema_version`                                      | `"1.1"`                                                 | always                      | Wire dispatch.                                                                                                                                              |
+| `receipt_subject`                                     | `"buyer_agent" \| "merchant_admin"`                     | always                      | Discriminator (FR-013).                                                                                                                                     |
+| `privacy_classification`                              | `"pii_redacted" \| "pii_hashed_salted" \| "pii_absent"` | always                      | PII handling posture.                                                                                                                                       |
+| `legal_posture` (signed hint)                         | enum                                                    | always                      | Verifier MUST recompute (FR-019f).                                                                                                                          |
+| `buyer_agent_consent_context`                         | object                                                  | subject = buyer_agent       | `consent_type`, `consent_timestamp`, `consent_hash`, `consent_disclosure_version`, `agent_authorization_chain` (≥2 entries), `consent_withdrawal_uri_hash`. |
+| `merchant_admin_authorization_context`                | object                                                  | subject = merchant_admin    | `admin_user_id_hash`, `admin_action_type`, `admin_authentication_method`, `mfa_evidence_hash`, `rbac_role_at_action_time`.                                  |
+| `payment_authorization_hash` + `authorization_scheme` | string + enum                                           | subject = buyer_agent       | Rail-aware authorization (FR-019c). Replaces legacy `mandate_hash`, `permit2_authorization_hash`, `mcp_tool_invocation_hash`.                               |
+| `esign_disclosure_version` + `esign_disclosure_hash`  | semver + sha256                                         | subject = buyer_agent       | 15 U.S.C. §7001(c).                                                                                                                                         |
+| `consent_evidence_ref`                                | string                                                  | when consent recorded       | Pointer to signed evidence record.                                                                                                                          |
+| `intent_hmac_key_version`                             | string                                                  | always                      | KMS HMAC key ARN (FR-016).                                                                                                                                  |
+| `agent_authorization_chain`                           | array of `{actor, method, content_hash, ts}`            | embedded in consent_context | spec-045 RFC 9421 + user authorization (FR-012).                                                                                                            |
+
+All hash-bearing fields use algorithm-tagged digest format `<algo>:<hex>` where `<algo> ∈ {sha256, sha512, hmac-sha256}` (FR-015).
+
+### 11.4 timestamp_evidence (RFC 3161)
+
+Lives at envelope level (NOT inside the signed body). Required fields per FR-020:
+
+```jsonc
+{
+  "type": "RFC3161",
+  "tsa_endpoint": "https://freetsa.org/tsr",
+  "tsr": "<base64 of full TimeStampResp>",
+  "tst": "<base64 of extracted TimeStampToken>",
+  "issued_at_attested": 1777593605,
+  "imprint_algo": "sha-256",
+  "imprint_target": "jws_compact_bytes",
+  "nonce": "<16-byte hex>",
+  "policy_oid": "1.2.3.4.1",
+  "tsa_cert_chain": ["-----BEGIN CERTIFICATE-----..."],
+  "tsa_root_cert_sha256": "...",
+  "revocation_evidence": { "kind": "ocsp", "data_b64": "..." },
+}
+```
+
+Absence permitted ONLY via fail-open path of FR-024 → posture downgrades to `ades_candidate_no_tsa`.
+
+### 11.5 New verifier error codes
+
+In addition to the v1.0 codes:
+
+| Code                               | Trigger                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------- | ------------------- | ----------------------------------- |
+| `kid_outside_validity_window`      | Receipt `issued_at` outside `[valid_from, valid_to]` of resolved kid.            |
+| `legal_posture_mismatch`           | Verifier-recomputed posture disagrees with `envelope_metadata.legal_posture`.    |
+| `envelope_receipt_id_mismatch`     | `envelope_metadata.receipt_id` ≠ signed body `receipt_id`.                       |
+| `sidecar_hash_mismatch`            | Sidecar payload hash ≠ corresponding `protocol_artifacts[].hash` in signed body. |
+| `tsa_status_not_granted`           | RFC 3161 `PKIStatus` ≠ `granted`.                                                |
+| `tsa_nonce_mismatch`               | TST nonce ≠ issuer-recorded nonce.                                               |
+| `tsa_policy_oid_unauthorized`      | Policy OID outside issuer allowlist.                                             |
+| `tsa_eku_missing`                  | TSA cert lacks `id-kp-timeStamping` (1.3.6.1.5.5.7.3.8).                         |
+| `tsa_chain_invalid`                | TSA cert chain does not validate to pinned root.                                 |
+| `tsa_cert_revoked`                 | OCSP/CRL evidence shows TSA cert revoked at `genTime`.                           |
+| `tsa_gen_time_out_of_tolerance`    | `                                                                                | genTime - issued_at | > 60s`after applying TSA`accuracy`. |
+| `tsa_imprint_mismatch`             | TST imprint ≠ SHA-256(JWS Compact bytes).                                        |
+| `missing_required_consent_context` | buyer_agent receipt without `buyer_agent_consent_context`.                       |
+| `receipt_subject_mismatch`         | Subject does not match the verification context.                                 |
+| `agent_identity_required_strict`   | buyer_agent receipt lacks verified spec-045 agent identity (default policy).     |
+| `esign_disclosure_unverified`      | buyer*agent receipt missing `esign_disclosure*\*`.                               |
+| `receipt_payload_too_large`        | Canonical body > 2900 bytes OR jws_signing_input > 4096 bytes.                   |
+
+### 11.6 Conformance vectors (v1.1)
+
+11 v1.1 vectors live under `test-vectors/v11/` and are catalogued alongside the legacy 10 v1.0 vectors:
+
+| ID   | File                                             | Outcome          | Failure code                       | Notes                                                                         |
+| ---- | ------------------------------------------------ | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
+| 011  | `v11/011-buyer-agent-happy-path.json`            | valid            | —                                  | Full v1.1 envelope, AP2, agent identity verified, TST present.                |
+| 012  | `v11/012-missing-consent-context.json`           | invalid          | `missing_required_consent_context` | buyer_agent without consent.                                                  |
+| 013  | `v11/013-receipt-subject-mismatch.json`          | invalid          | `receipt_subject_mismatch`         | Subject vs verification context conflict.                                     |
+| 014  | `v11/014-valid-timestamp-evidence.json`          | valid            | —                                  | Full RFC 3161 chain validates offline.                                        |
+| 015  | `v11/015-timestamp-unavailable.json`             | valid (degraded) | —                                  | Posture `ades_candidate_no_tsa`, warning entry.                               |
+| 016  | `v11/016-rotated-key-export-bundle.json`         | valid            | —                                  | kid rotated post-issuance, history slice resolves.                            |
+| 017  | `v11/017-legacy-v10-receipt.json`                | valid (legacy)   | —                                  | v1.0 receipt accepted by v1.1 verifier, flagged `legacy_pre_eidas_hardening`. |
+| 018  | `v11/018-pii-absent.json`                        | valid            | —                                  | privacy_classification=pii_absent.                                            |
+| 019  | `v11/019-v11-x402-permit2-required.json`         | valid            | —                                  | x402 EVM Permit2 authorization.                                               |
+| 019b | `v11/019b-v11-x402-missing-permit2.json`         | invalid          | `schema_invalid`                   | x402 buyer_agent without authorization.                                       |
+| 020  | `v11/020-v11-mcp-tool-invocation-required.json`  | valid            | —                                  | MCP tool invocation authorization.                                            |
+| 021  | `v11/021-v11-uk-jurisdiction-export-bundle.json` | valid            | —                                  | UK retention metadata + uk-diatf assertion.                                   |
+
+Combined v1.0 + v1.1 conformance suite: 58/58 passing as of 2026-05-06.
+
+### 11.7 Legacy v1.0 → v1.1 field migration
+
+| v1.0 field                                  | v1.1 replacement                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------- |
+| `mandate_hash`                              | `payment_authorization_hash` + `authorization_scheme = "ap2_mandate_jws"`     |
+| `permit2_authorization_hash`                | `payment_authorization_hash` + `authorization_scheme = "evm_permit2"`         |
+| `mcp_tool_invocation_hash`                  | `payment_authorization_hash` + `authorization_scheme = "mcp_tool_invocation"` |
+| `consent_context.consent_hash`              | `buyer_agent_consent_context.consent_hash` (algorithm-tagged)                 |
+| Salt-based `user_intent_hash`               | KMS-keyed HMAC-SHA-256 (`hmac-sha256:` prefix)                                |
+| Embedded `timestamp_evidence` (signed body) | Envelope-level `timestamp_evidence` (NOT signed)                              |
+
+See `docs/integrations/trust-receipt-v11-migration.md` for the full consumer-facing diff including breaking changes and migration steps.
+
+### 11.8 Backward compatibility
+
+A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover (FR-018). v1.0 verifiers cannot consume v1.1 envelopes — content-type negotiation is the dispatch mechanism (see §11.2 media type).
+
+---
+
 ## Appendix A: Example Receipt Payload (TC-001, JSON)
 
 The following is the TC-001 MCAP receipt payload in human-readable form. This is the JWS **payload** before signing — not the full compact token.
