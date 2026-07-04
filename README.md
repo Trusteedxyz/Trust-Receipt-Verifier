@@ -1,5 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 
+**English** | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
+
 # TrustReceipt
 
 **Merchant-side evidence layer for agentic commerce — signed, portable, offline-verifiable**
