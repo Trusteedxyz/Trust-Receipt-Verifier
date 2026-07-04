@@ -36,6 +36,9 @@ This package is the **reference verifier and issuer** implementation. It is part
 | RFC 3161 trusted timestamp evidence                      | 🟡 Optional / integration-dependent | Hook present via `trust-receipt-tsa-client`; depends on TSA provider                  |
 | AWS KMS issuer-side signing                              | 🟡 Optional / issuer-side           | Provided by sibling package `trust-receipt-kms-signer`; not required for verification |
 | Reference ports (TS) / language ports (Python, Go, Java) | 🟡 TS only today                    | Ports welcome — see `CONTRIBUTING.md`                                                 |
+| AIVS proof-bundle export/verify (`aivs-export.ts`)       | 🟡 Code-complete                    | Projects a signed v1.0 receipt into an AIVS-compatible `{ manifest_hash, session_sig, audit_log }` bundle — offline-verifiable with no Trusteed code (spec-062 US1, alignment not escrow) |
+| Extension artifact verification (`verify-extension-artifact.ts`) | 🟡 Code-complete             | Verifies developer-signed erasure receipts and extension manifests from the Trusteed Extension Marketplace ecosystem |
+| v1.0-legacy compact receipt shape (`verifier.ts`)        | ✅ Implemented                      | `verifyTrustReceipt` also accepts the JWT-style compact payload emitted by the platform issuer since spec-040; surfaced as `result.variant` / `result.legacyReceipt` |
 
 > ✅ = production-grade implementation. 🟡 = present and tested but subject to change before v1.2 GA, or dependent on operator-side integration.
 
@@ -320,21 +323,34 @@ Add the badge to your project once all 10 pass:
 ## Repo structure
 
 ```
-packages/trust-receipt-verifier/
-├── SPEC.md                          — formal specification (authoritative)
-├── CONTRIBUTING.md                  — how to contribute vectors, ports, and provider schemas
-├── LICENSE                          — MIT
+trust-receipt-verifier/
+├── SPEC.md                            — formal specification (authoritative)
+├── CONTRIBUTING.md                    — how to contribute vectors, ports, and provider schemas
+├── LICENSE                            — MIT
 ├── src/
-│   ├── index.ts                     — package exports
-│   ├── verifier.ts                  — verifyTrustReceipt() + parseTrustReceiptUnsafe()
-│   ├── issuer.ts                    — issueTrustReceipt()
+│   ├── index.ts                       — package exports
+│   ├── verifier.ts                    — verifyTrustReceipt() + parseTrustReceiptUnsafe() (v1.0, incl. legacy-compact shape)
+│   ├── verify-1.0.ts                  — v1.0 verifier internals
+│   ├── verify-1.1.ts                  — verifyReceiptEnvelope() (v1.1 eIDAS envelope) + typed trust-provider predicates
+│   ├── zod-1.1.ts                     — v1.1 Zod schema (strict root — rejects unknown top-level keys)
+│   ├── types-1.1.ts                   — typed trust-provider assertion shapes
+│   ├── issuer.ts                      — issueTrustReceipt()
+│   ├── embedded-issuer-root.ts        — compile-time trust anchor + validateChain()
+│   ├── verify-jwks-history.ts         — JWKS history chain verification
+│   ├── verify-timestamp-evidence.ts   — RFC 3161 timestamp verification
+│   ├── verify-export-bundle.ts        — offline export-bundle verification
+│   ├── verify-extension-artifact.ts   — erasure receipt / extension manifest verification (Extension Marketplace)
+│   ├── aivs-export.ts                 — AIVS proof-bundle export/verify (spec-062 US1)
+│   ├── __tests__/                     — unit + conformance tests
 │   └── schema/
-│       └── trust-receipt.schema.ts  — Zod schema (source of truth for TypeScript)
+│       ├── trust-receipt.schema.ts        — Zod schema (source of truth for v1.0 TypeScript types)
+│       └── trust-receipt-legacy.schema.ts — v1.0-legacy compact shape (issued by platform since spec-040)
 ├── test-vectors/
 │   ├── README.md                    — how to use the vectors
 │   ├── vectors.json                 — vector manifest with expected outcomes
 │   ├── valid/                       — TC-001 through TC-005
-│   └── invalid/                     — TC-006 through TC-010
+│   ├── invalid/                     — TC-006 through TC-010
+│   └── v11/, v11-strict/            — v1.1 + strict-mode conformance vectors
 ├── bin/
 │   └── trust-receipt.ts (source) → dist/bin/trust-receipt.js (compiled) — CLI: verify, inspect, generate-key, conformance
 └── demo/                            — runnable demo scripts
@@ -368,6 +384,29 @@ const jws = await issueTrustReceipt({
 ```
 
 > **Canonicalización**: el payload se serializa con RFC 8785 (claves ordenadas, sin whitespace) antes de firmar, garantizando que `SHA-256(payload)` sea idéntico en cualquier implementación conforme.
+
+## Related artifact verifiers
+
+**AIVS proof-bundle export** — project a signed v1.0 receipt into an AIVS-compatible bundle (`draft-stone-aivs-00`), verifiable offline with only the JWS and issuer JWKS:
+
+```typescript
+import { exportAivsProofBundle, verifyAivsProofBundle } from "trust-receipt-verifier";
+
+const bundle = exportAivsProofBundle(receiptJws); // { manifest_hash, session_sig, kid, alg, audit_log }
+const result = await verifyAivsProofBundle(bundle, { jwks: issuerJwks });
+```
+
+**Extension Marketplace artifacts** — verify developer-signed erasure receipts (post-uninstall data-destruction proof) or extension manifests:
+
+```typescript
+import { verifyExtensionArtifact } from "trust-receipt-verifier";
+
+const result = await verifyExtensionArtifact(jws, {
+  kind: "erasure", // or "manifest" — caller states which artifact this is
+  jwksUrl: "https://trusteed.xyz/.well-known/jwks.json",
+});
+// result.valid: boolean; result.reason on failure ("malformed_jws" | "unsupported_alg" | "missing_kid" | "jwks_unreachable" | "kid_not_found" | "signature_invalid" | "payload_not_json" | "shape_invalid")
+```
 
 ## CLI
 
@@ -405,7 +444,7 @@ trust-receipt inspect receipt.jws
 trust-receipt conformance
 ```
 
-> **`--type` autodetection**: when `--type` is omitted, the CLI inspects the input shape. A JSON object with both `receipt` and `envelope_metadata` keys is treated as `receipt-v11` automatically; a compact `header.payload.sig` string is treated as `receipt` (v1.0).
+> **`--type` autodetection**: when `--type` is omitted, the CLI inspects the input shape. A JSON object with both `receipt` and `envelope_metadata` keys is treated as `receipt-v11` automatically; a compact `header.payload.sig` string is treated as `receipt` (v1.0). `--type` also accepts `erasure`, `manifest`, and `jwks-history` for the artifact verifiers described above — pass explicitly when auto-detection is ambiguous (both erasure and manifest payloads are compact JWS with no `receipt`/`envelope_metadata` keys).
 
 ---
 
