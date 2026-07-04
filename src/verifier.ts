@@ -15,6 +15,8 @@ import {
 } from "jose";
 import { TrustReceiptSchema } from "./schema/trust-receipt.schema.js";
 import type { TrustReceipt } from "./schema/trust-receipt.schema.js";
+import { TrustReceiptLegacyCompactSchema } from "./schema/trust-receipt-legacy.schema.js";
+import type { TrustReceiptLegacyCompact } from "./schema/trust-receipt-legacy.schema.js";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -43,6 +45,20 @@ export interface VerifyResult {
   receipt?: TrustReceipt;
   reason?: VerifyFailureReason;
   errors?: string[];
+  /**
+   * Which v1.0 shape matched. `"canonical"` = the standard `TrustReceiptSchema`
+   * shape (populated in `receipt`). `"legacy_compact"` = the JWT-style compact
+   * payload actually emitted by the platform issuer since spec-040 (populated in
+   * `legacyReceipt`). Absent when verification failed before schema matching.
+   * See `schema/trust-receipt-legacy.schema.ts` (C3 closure).
+   */
+  variant?: "canonical" | "legacy_compact";
+  /**
+   * Parsed legacy-compact payload — populated ONLY when
+   * `variant === "legacy_compact"`. The cryptographic JWS check is identical to
+   * the canonical path; only the post-verify schema shape differs.
+   */
+  legacyReceipt?: TrustReceiptLegacyCompact;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -195,6 +211,24 @@ export async function verifyTrustReceipt(
 
   const schemaResult = TrustReceiptSchema.safeParse(parsed);
   if (!schemaResult.success) {
+    // C3 closure: the canonical schema did not match. Before rejecting, try the
+    // v1.0-legacy compact shape actually emitted by the platform issuer
+    // (spec-040 US2). This branch is entered ONLY when the payload does NOT
+    // declare a `schema_version` (so a genuine v1.1 body or a forward-version
+    // receipt is never silently down-graded here) AND the crypto signature has
+    // ALREADY been verified above. It does not relax the canonical schema.
+    const hasSchemaVersion =
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "schema_version" in (parsed as Record<string, unknown>);
+    if (!hasSchemaVersion) {
+      const legacyResult = TrustReceiptLegacyCompactSchema.safeParse(parsed);
+      if (legacyResult.success) {
+        return verifyLegacyCompact(legacyResult.data, verifiedKid, {
+          clockTolerance,
+        });
+      }
+    }
     return {
       valid: false,
       reason: "schema_invalid",
@@ -229,7 +263,52 @@ export async function verifyTrustReceipt(
     return { valid: false, receipt, reason: "expired" };
   }
 
-  return { valid: true, receipt };
+  return { valid: true, receipt, variant: "canonical" };
+}
+
+/**
+ * Finalize verification for a v1.0-legacy compact payload (C3 closure).
+ *
+ * Assumes the JWS signature has ALREADY been cryptographically verified by the
+ * caller. Applies the two remaining post-verify checks that are meaningful for
+ * the legacy shape:
+ *   1. `kid` MUST match between the JWS protected header and the payload
+ *      (SPEC §5.2 parity with the canonical path).
+ *   2. `iat` not-yet-valid guard (with clock tolerance).
+ *
+ * Legacy receipts carry NO `expires_at`, so no expiry check is applied — this
+ * is intentional and required by FR-018 (v1.0 MUST verify ≥ 7 years).
+ */
+function verifyLegacyCompact(
+  legacy: TrustReceiptLegacyCompact,
+  verifiedKid: string | undefined,
+  opts: { clockTolerance: number }
+): VerifyResult {
+  if (legacy.kid !== verifiedKid) {
+    return {
+      valid: false,
+      reason: "schema_invalid",
+      errors: [
+        `kid mismatch: header=${String(verifiedKid)}, payload=${legacy.kid}`,
+      ],
+    };
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (legacy.iat > nowSeconds + opts.clockTolerance) {
+    return {
+      valid: false,
+      reason: "not_yet_valid",
+      variant: "legacy_compact",
+      legacyReceipt: legacy,
+    };
+  }
+
+  return {
+    valid: true,
+    variant: "legacy_compact",
+    legacyReceipt: legacy,
+  };
 }
 
 // ─── Unsafe inspector ─────────────────────────────────────────────────────────

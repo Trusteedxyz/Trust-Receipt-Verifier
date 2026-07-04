@@ -122,6 +122,17 @@ export interface BundleVerifyOptions {
    * `tsa_root_not_trusted`. (T-CR-002)
    */
   tsaRootCertSha256Allowlist?: readonly string[];
+  /**
+   * P2b — verification strictness forwarded to {@link verifyReceiptEnvelope}.
+   *
+   * Export bundles are a GA / long-term-archive consumer, so this defaults to
+   * `"strict"`: opaque-stub or non-matching `trust_anchor_sha256` / `jwks_sha256`
+   * pins become REAL rejections instead of warnings. The portable
+   * `verifyReceiptEnvelope` GLOBAL default stays `"compat"` (unchanged) for
+   * other callers; only this GA-facing bundle path defaults to strict. Callers
+   * may explicitly pass `"compat"` to opt out.
+   */
+  mode?: "strict" | "compat";
 }
 
 export interface BundleRetentionMetadata {
@@ -392,6 +403,8 @@ export async function verifyExportBundle(
     tsaRootCertSha256Allowlist: options.tsaRootCertSha256Allowlist,
     expectedSubject: options.expectedSubject,
     allowStagingRoots: options.allowStagingRoots ?? false,
+    // P2b — GA bundle path defaults to strict anchor/jwks pin verification.
+    mode: options.mode ?? "strict",
   };
   let envelopeResult: V11VerifyResult;
   try {

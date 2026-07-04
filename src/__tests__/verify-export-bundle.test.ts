@@ -135,6 +135,44 @@ describe("verifyExportBundle", () => {
     expect(result.filesPresent).toContain("trust-anchor.pem");
   });
 
+  it("P2b: forwards mode='strict' to the inner verifier by DEFAULT (GA path)", async () => {
+    verifyReceiptEnvelope.mockResolvedValue({
+      outcome: "accepted",
+      schema_version: "1.1",
+      warnings: [],
+      envelope: RECEIPT_ENVELOPE,
+    });
+
+    const zip = buildFixtureZip();
+    await verifyExportBundle(zip, {
+      trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
+    });
+
+    expect(verifyReceiptEnvelope).toHaveBeenCalledTimes(1);
+    const opts = verifyReceiptEnvelope.mock.calls[0]![1] as { mode?: string };
+    expect(opts.mode).toBe("strict");
+  });
+
+  it("P2b: honors an explicit mode='compat' opt-out", async () => {
+    verifyReceiptEnvelope.mockResolvedValue({
+      outcome: "accepted",
+      schema_version: "1.1",
+      warnings: [],
+      envelope: RECEIPT_ENVELOPE,
+    });
+
+    const zip = buildFixtureZip();
+    await verifyExportBundle(zip, {
+      trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
+      mode: "compat",
+    });
+
+    const opts = verifyReceiptEnvelope.mock.calls[0]![1] as { mode?: string };
+    expect(opts.mode).toBe("compat");
+  });
+
   it("[T-CR-001] default (no allowStagingRoots) rejects bundle under staging-stub root", async () => {
     verifyReceiptEnvelope.mockResolvedValue({
       outcome: "accepted",

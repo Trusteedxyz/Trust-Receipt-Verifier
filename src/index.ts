@@ -17,6 +17,14 @@ export {
   type Attachment,
 } from "./schema/trust-receipt.schema.js";
 
+// v1.0-legacy compact recognizer (C3 closure) — the JWT-style payload the
+// platform issuer actually emits. Exported so downstream consumers can type the
+// `legacyReceipt` field surfaced by `verifyTrustReceipt`.
+export {
+  TrustReceiptLegacyCompactSchema,
+  type TrustReceiptLegacyCompact,
+} from "./schema/trust-receipt-legacy.schema.js";
+
 // Verifier
 export {
   verifyTrustReceipt,
@@ -29,6 +37,20 @@ export {
 
 // Issuer
 export { issueTrustReceipt, type IssueOptions } from "./issuer.js";
+
+// AIVS proof-bundle export (spec-062 US1) — projects a signed TrustReceipt
+// into an AIVS-compatible { manifest_hash, session_sig, audit_log } bundle,
+// offline-verifiable with no Trusteed code. See ADR-078 (alignment-not-escrow).
+export {
+  exportAivsProofBundle,
+  verifyAivsProofBundle,
+  type AivsProofBundle,
+  type AivsAuditLogEntry,
+  type AivsPublicJwk,
+  type VerifyAivsBundleOptions,
+  type VerifyAivsBundleResult,
+  type AivsVerifyFailureReason,
+} from "./aivs-export.js";
 
 // v1.0 verifier (spec-049 T050) — schema-version-routed entry for the T052 dispatcher.
 // Pre-existing `verifyTrustReceipt` above remains the canonical v1.0 alias for
@@ -90,6 +112,7 @@ export {
   TrustReceiptV11BodySchema,
   X402BindingExtensionSchema,
   MppBindingExtensionSchema,
+  TaggedDigest,
 } from "./zod-1.1.js";
 export type { MppBindingExtension } from "./zod-1.1.js";
 export {

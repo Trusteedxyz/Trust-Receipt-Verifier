@@ -77,7 +77,9 @@ function help(): void {
       "  --strict            (v1.1 receipts) Reject opaque-stub trust_anchor_sha256 /",
       "                      jwks_sha256 pins, anchors that do not match",
       "                      --trust-anchor-sha256, and receipts with no agent",
-      "                      identity. Default (compat) downgrades these to warnings.",
+      "                      identity. THIS IS THE DEFAULT (P2b, GA).",
+      "  --compat            Opt out of strict: downgrade the above to warnings",
+      "                      (legacy lenient behaviour).",
       "",
       "Notes:",
       "  - `receipt` validates Trusteed trust receipts (v1.0 JWS or v1.1 envelope).",
@@ -125,7 +127,10 @@ function parseArgs(argv: string[]): ParsedArgs {
     trustAnchorSha256: null,
     policyOids: [],
     allowStagingRoots: false,
-    strict: false,
+    // P2b — GA CLI defaults to STRICT: opaque-stub / non-matching anchor + jwks
+    // pins are rejected, not warned. Use `--compat` to opt out (legacy lenient
+    // behaviour). The portable library default in `verify-1.1.ts` is unchanged.
+    strict: true,
     verifyType: "auto",
     showHelp: false,
     showVersion: false,
@@ -142,6 +147,9 @@ function parseArgs(argv: string[]): ParsedArgs {
       result.allowStagingRoots = true;
     } else if (arg === "--strict") {
       result.strict = true;
+    } else if (arg === "--compat") {
+      // P2b — explicit opt-out of the strict GA default.
+      result.strict = false;
     } else if (arg === "--jwks-url" && args[i + 1]) {
       result.jwksUrl = args[i + 1] ?? null;
       i++;

@@ -50,6 +50,9 @@ import {
   type ParsedJwksHistoryPayload as VerifiedJwksHistoryPayload,
 } from "./verify-jwks-history.js";
 import { findIssuerRootBySha256 } from "./embedded-issuer-root.js";
+import type { IssuerRootEntry } from "./embedded-issuer-root.js";
+import { createHash } from "node:crypto";
+import canonicalize from "canonicalize";
 
 // ---------------------------------------------------------------------------
 // Public surface
@@ -87,6 +90,13 @@ export type V11VerifyErrorCode =
   | "agent_identity_required_strict"
   | "schema_unsupported"
   | "jwks_history_signature_invalid"
+  // M8 — the committed `history_chain_sha256` does not match the recomputed
+  // hash chain over the presented entries (tamper-evident integrity check).
+  | "jwks_history_chain_mismatch"
+  // A6 — the resolved (cryptographically verified) issuer root's
+  // [validFrom, validTo] window does not contain the receipt `issued_at`; a
+  // retired/compromised root must not keep signing histories indefinitely.
+  | "root_outside_validity_window"
   | "receipt_expired"
   | "receipt_not_yet_valid"
   // T-AUD-012 (GAP H4) — strict-mode semantic anchor/jwks verification.
@@ -321,6 +331,36 @@ function isWithinValidityWindow(
   return true;
 }
 
+/** Synchronous SHA-256 hex of a UTF-8 string. */
+function sha256HexStr(input: string): string {
+  return createHash("sha256").update(input, "utf8").digest("hex");
+}
+
+/**
+ * M8 — recompute the append-only JWKS-history hash chain over `entries`.
+ *
+ * MUST stay byte-identical to the issuer
+ * (`apps/api/.../jwks-history.service.ts` → `computeHistoryChainSha256`):
+ *
+ *   chain_0 = sha256( canonicalize_RFC8785([]) )
+ *   chain_i = sha256( chain_{i-1} || canonicalize_RFC8785(entry_i) )
+ *
+ * The returned value is the final rolling chain after folding every entry.
+ * Entries are folded in the order presented (the issuer orders by
+ * `valid_from asc`).
+ */
+function recomputeHistoryChainSha256(
+  entries: ReadonlyArray<JwksHistoryEntry>
+): string {
+  let chain = sha256HexStr(canonicalize([] as unknown[]) ?? "[]");
+  for (const entry of entries) {
+    const entryCanonical =
+      canonicalize(entry as unknown as Record<string, unknown>) ?? "{}";
+    chain = sha256HexStr(chain + entryCanonical);
+  }
+  return chain;
+}
+
 /**
  * Compute SHA-256 of arbitrary bytes and return `<64-hex>` (no algo prefix).
  */
@@ -517,6 +557,10 @@ export async function verifyReceiptEnvelope(
   // via structural-only parsing.
   const allowStagingRoots = options.allowStagingRoots ?? false;
   let historyPayload: VerifiedJwksHistoryPayload | null;
+  // A6 — the root whose SIGNATURE we cryptographically verified. Remains null on
+  // the staging-fallback path (structural-only parse), where a root validity
+  // window carries no trust and must NOT gate legitimate staging receipts.
+  let verifiedRootEntry: IssuerRootEntry | null = null;
   const rootEntry = findIssuerRootBySha256(
     options.jwksHistory.signed_by_root_sha256
   );
@@ -557,6 +601,7 @@ export async function verifyReceiptEnvelope(
       }
     } else {
       historyPayload = sigResult.payload ?? null;
+      verifiedRootEntry = rootEntry;
     }
   }
 
@@ -567,6 +612,31 @@ export async function verifyReceiptEnvelope(
       warnings
     );
   }
+  // M8 — honor `history_chain_sha256`. Previously the verifier IGNORED this
+  // field, so tampering with the presented `entries` (e.g. inserting a forged
+  // kid on the structural-fallback path) went undetected. We recompute the
+  // append-only hash chain and reject on mismatch. Opaque-stub values
+  // (all-zeros / single repeated nibble) are skipped — they are the documented
+  // placeholder that pre-chain issuers/fixtures emit and carry no commitment.
+  // NOTE: true rollback-to-an-earlier-valid-history is out of scope here (both
+  // histories are internally self-consistent); detecting that requires an
+  // external anchor (S3 Object-Lock — ops, pending).
+  const committedChain = historyPayload.history_chain_sha256;
+  if (
+    typeof committedChain === "string" &&
+    /^[0-9a-f]{64}$/i.test(committedChain) &&
+    !isOpaqueStubSha256(committedChain.toLowerCase())
+  ) {
+    const recomputedChain = recomputeHistoryChainSha256(historyPayload.entries);
+    if (recomputedChain !== committedChain.toLowerCase()) {
+      return reject(
+        "jwks_history_chain_mismatch",
+        `history_chain_sha256 mismatch: committed=${committedChain.toLowerCase()} recomputed=${recomputedChain}`,
+        warnings
+      );
+    }
+  }
+
   const entry = resolveKid(historyPayload, kid);
   if (!entry) {
     return reject(
@@ -657,6 +727,29 @@ export async function verifyReceiptEnvelope(
       `expires_at=${body.expires_at} expired ${nowSeconds - body.expires_at}s ago (tolerance=${tolerance}s)`,
       warnings
     );
+  }
+
+  // 5b'. A6 — issuer-root validity-window check. `findIssuerRootBySha256`
+  // intentionally still RETURNS retired roots (so receipts legitimately signed
+  // while a root was active keep verifying for the FR-018 ≥ 7-year window), but
+  // the receipt's `issued_at` MUST fall inside that root's [validFrom, validTo].
+  // A root retired/compromised at time T must not validate histories for
+  // receipts issued after T. Only enforced when the history signature was
+  // cryptographically verified against a real root (verifiedRootEntry set);
+  // the opt-in staging-fallback path is already warned + gated.
+  if (verifiedRootEntry !== null) {
+    const rootFrom = verifiedRootEntry.validFrom;
+    const rootTo = verifiedRootEntry.validTo;
+    if (
+      body.issued_at < rootFrom ||
+      (rootTo !== null && body.issued_at > rootTo)
+    ) {
+      return reject(
+        "root_outside_validity_window",
+        `issuer root window=[${rootFrom}, ${rootTo ?? "active"}] does not contain receipt issued_at=${body.issued_at}`,
+        warnings
+      );
+    }
   }
 
   // 5c. T-AUD-012 (GAP H4) — semantic trust-anchor / jwks-pin verification ---

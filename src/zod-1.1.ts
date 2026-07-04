@@ -664,7 +664,22 @@ export const TrustReceiptV11BodySchema = z
      * challenge-bound).
      */
     mpp_binding: MppBindingExtensionSchema.optional(),
+    /**
+     * Platform bridge carry-over (Shopify/Woo/PS/... order linkage). Emitted
+     * by the issuer into the SIGNED body when the receipt is bound to a
+     * platform order. Declared here as KNOWN optional fields so the `.strict()`
+     * root (A1) accepts them while still rejecting any other unknown key.
+     */
+    platformOrderId: z.string().optional(),
+    platform: z.string().optional(),
   })
+  // A1 (security audit 2026-07-03): reject unknown keys at the ROOT body, not
+  // just inside the x402_binding/mpp_binding extensions (M-1). Without this a
+  // caller could smuggle arbitrary semantic keys (e.g. `shadow_signature`,
+  // `bypass_flag`) into the SIGNED bytes; portable verifiers parse-and-discard
+  // them, so an auditor's view diverges from what was actually signed. `.strict()`
+  // must precede `.superRefine` (which returns a ZodEffects, not a ZodObject).
+  .strict()
   .superRefine((receipt, ctx) => {
     const hasBuyer = receipt.buyer_agent_consent_context !== undefined;
     const hasAdmin = receipt.merchant_admin_authorization_context !== undefined;
