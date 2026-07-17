@@ -1,9 +1,10 @@
 /**
  * TrustReceipt verifier unit tests.
  *
- * 10 tests covering: valid receipt, tampered payload, expired receipt,
- * unknown kid, invalid schema, parseTrustReceiptUnsafe, JWKS fetch failure,
- * wrong alg, malformed segments, and kid header/payload mismatch.
+ * Covers: valid receipt, tampered payload, expired receipt, unknown kid,
+ * invalid schema, parseTrustReceiptUnsafe, JWKS fetch failure, wrong alg,
+ * malformed segments, kid header/payload mismatch, and the windowed
+ * jwksHistory/jwksUrl rotation-gap closure (kid_outside_validity_window).
  *
  * Uses real Ed25519 keypair generated in beforeAll — no mocks except fetch.
  */
@@ -12,7 +13,7 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import { issueTrustReceipt } from "../issuer.js";
 import { verifyTrustReceipt, parseTrustReceiptUnsafe } from "../verifier.js";
-import type { PublicJwk } from "../verifier.js";
+import type { PublicJwk, JwksHistoryEntry } from "../verifier.js";
 import type { IssueOptions } from "../issuer.js";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -233,5 +234,101 @@ describe("verifyTrustReceipt — P0 guards", () => {
     expect(result.valid).toBe(false);
     expect(result.reason).toBe("schema_invalid");
     expect(result.errors?.[0]).toMatch(/kid mismatch/);
+  });
+});
+
+describe("verifyTrustReceipt — windowed key history (rotation-gap closure)", () => {
+  it("test 11: jwksHistory verifies OK when issued_at falls inside the key's window", async () => {
+    const history: JwksHistoryEntry[] = [
+      { kid: KID, jwk_pub: publicJwk, valid_from: 0, valid_to: null },
+    ];
+
+    const result = await verifyTrustReceipt(validJws, { jwksHistory: history });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it("test 12: jwksHistory rejects with kid_outside_validity_window when the key was retired before issued_at", async () => {
+    const history: JwksHistoryEntry[] = [
+      {
+        kid: KID,
+        jwk_pub: publicJwk,
+        valid_from: 0,
+        // Key retired well before this receipt's issued_at — a holder of
+        // the retired private key must not be able to keep forging fresh
+        // receipts after rotation.
+        valid_to: Math.floor(Date.now() / 1000) - 100,
+      },
+    ];
+
+    const result = await verifyTrustReceipt(validJws, { jwksHistory: history });
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe("kid_outside_validity_window");
+  });
+
+  it("test 13: jwksHistory returns unknown_kid when the kid isn't in the history", async () => {
+    const history: JwksHistoryEntry[] = [
+      {
+        kid: "some-other-kid",
+        jwk_pub: { ...publicJwk, kid: "some-other-kid" },
+        valid_from: 0,
+        valid_to: null,
+      },
+    ];
+
+    const result = await verifyTrustReceipt(validJws, { jwksHistory: history });
+
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe("unknown_kid");
+  });
+
+  it("test 14: jwksUrl honors per-key valid_from/valid_to windows on the fetched JWKS document", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          keys: [
+            {
+              ...publicJwk,
+              // Retired before this receipt's issued_at — same rotation
+              // gap as jwksHistory, but sourced from a remote document.
+              valid_from: 0,
+              valid_to: Math.floor(Date.now() / 1000) - 100,
+            },
+          ],
+        }),
+      })
+    );
+
+    try {
+      const result = await verifyTrustReceipt(validJws, {
+        jwksUrl: "https://example.invalid/.well-known/jwks.json",
+      });
+      expect(result.valid).toBe(false);
+      expect(result.reason).toBe("kid_outside_validity_window");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("test 15: jwksUrl keys without valid_from/valid_to remain unbounded (back-compat)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ keys: [publicJwk] }),
+      })
+    );
+
+    try {
+      const result = await verifyTrustReceipt(validJws, {
+        jwksUrl: "https://example.invalid/.well-known/jwks.json",
+      });
+      expect(result.valid).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
