@@ -76,6 +76,17 @@ export type VerifierExtensionResult =
       readonly kid: string;
       readonly delegation_branch: "direct" | "delegated";
       readonly binding_hash_match: boolean;
+      /**
+       * True when the receipt's `expires_at` is in the past. The sync
+       * `verify()` path intentionally accepts expired-but-signature-valid
+       * receipts (offline/CLI auditors need this), surfacing only a warning —
+       * so ONLINE callers MUST gate on `valid && !expired && binding_hash_match`
+       * rather than on `valid` alone. Explicit boolean avoids the string-warning
+       * footgun where a caller ignores `warnings` and treats `valid` as final.
+       * Always set by `verifyInternal`; optional only so unrelated fixtures that
+       * build a success result by hand need not change.
+       */
+      readonly expired?: boolean;
       readonly warnings: readonly string[];
     }
   | {
@@ -595,6 +606,10 @@ export class VerifierX402Extension {
       kid: header.kid,
       delegation_branch: delegation.branch,
       binding_hash_match: bindingHashMatch,
+      // Signature-valid but past expiry is accepted here (warning at step 7);
+      // surface it explicitly so online callers can reject without parsing
+      // the warnings array.
+      expired: body.expires_at < nowSec,
       warnings,
     };
   }

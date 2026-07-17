@@ -515,6 +515,14 @@ export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
  *    NO fuerzan warnings — pueden ir vacíos/ausentes.
  *  - Schema lock v1: NO `intent` field aquí (siempre "charge" — `session` rechazado
  *    por parser con UnsupportedIntentError, diferido a spec-057).
+ *  - `method` restringido a `1*LOWERALPHA` (draft MPP §Method Identifier Format) —
+ *    idéntico al ABNF del protocolo real, no solo min/max length.
+ *  - `realm` (protection space del `WWW-Authenticate: Payment` real, slot 0 del
+ *    binding HMAC del draft) OPCIONAL: presente cuando hubo challenge context
+ *    stored (`confirmed`/`recovered`-con-ctx), ausente en `unverified` honesto
+ *    (sin ctx no hay realm conocido). Gap encontrado 2026-07-04 vía fetch directo
+ *    de `tempoxyz/mpp-specs` — antes de este fix, dos challenges de distinto
+ *    realm con el resto de campos iguales colisionaban en el mismo binding_hash.
  *
  * Status: ✅ SSOT activo (2026-06-02). Exportado del barrel del paquete y
  * consumido por `MppReceiptIssuerService` (emisión) y `MppBindingVerifier`
@@ -540,12 +548,19 @@ export const MppBindingExtensionSchema = z
     binding_profile_version: z.literal("mpp-binding/1.0"),
     /** ULID Crockford base32 — identificador unique del receipt. NO es la replay cache key. */
     binding_id: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/),
-    /** Payment method ("stripe" | "tempo" | "lightning" | "solana" | "visa" | "bnpl" | ...). */
-    method: z.string().min(1).max(64),
+    /** Payment method ("stripe" | "tempo" | "lightning" | "solana" | "visa" | "bnpl" | ...). Draft MPP §Method Identifier Format: lowercase ASCII only. */
+    method: z.string().regex(/^[a-z]{1,64}$/),
     /** Method-specific tx reference (Stripe charge id, lightning preimage, solana sig, ...). */
     reference: z.string().min(1).max(512),
     /** HMAC-SHA256 challenge id del WWW-Authenticate: Payment original. */
     challenge_id: z.string().min(1).max(256),
+    /**
+     * Protection space (`realm` del WWW-Authenticate: Payment original) —
+     * slot 0 del binding formal MPP; sin esto dos challenges de distinto
+     * realm colisionarían en binding_hash. Ausente cuando posture="unverified"
+     * SIN challenge context stored (no hay realm conocido que atar).
+     */
+    realm: z.string().min(1).max(256).optional(),
     /** Resource URI canonicalizado per §Canonicalization Rules. */
     resource_uri_c14n: z.string().url(),
     /** HTTP method del resource (uppercase) — previene cross-verb replay. */
