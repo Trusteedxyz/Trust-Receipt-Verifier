@@ -2,6 +2,25 @@
 
 All notable changes to the verifier package are documented here.
 
+## 0.2.0 — Agentic-protocol binding + key-rotation hardening (2026-07-17)
+
+Additive sync from the reference implementation. Opt-in features; existing callers are unaffected except for the tightened `method` validation noted below.
+
+### v1.0 verifier — windowed key-history validation (rotation-gap closure)
+
+- **`VerifyOptions.jwksHistory?: JwksHistoryEntry[]`** added — windowed key entries using the same rotation model as the v1.1 envelope verifier. Resolution priority is `jwksHistory` > `jwksUrl` > inline `jwks`.
+- **New error code `"kid_outside_validity_window"`** — a key retired before a receipt's `issued_at`/`iat` can no longer verify it, on both the canonical and `legacy_compact` paths. Closes the gap where a retired or compromised private key could keep forging fresh receipts.
+- The `jwksUrl` path now fetches the JWKS and maps it to windowed entries (via `importJWK`) instead of `createRemoteJWKSet`. **Back-compat preserved**: plain RFC 7517 keys without `valid_from`/`valid_to` custom members are treated as always-valid.
+
+### MPP binding extension — realm binding + method format
+
+- **`MppBindingExtensionSchema.realm`** (optional) added — the protection space of the originating `WWW-Authenticate: Payment`, slot 0 of the MPP binding HMAC. Without it, two challenges of different realm with otherwise identical fields collided on the same `binding_hash`.
+- **`method`** tightened from `min(1).max(64)` to `^[a-z]{1,64}$` per the draft MPP Method Identifier Format (lowercase ASCII only). **Breaking**: previously-accepted uppercase/mixed-case method identifiers are now rejected.
+
+### x402 binding verifier — explicit expiry flag
+
+- The success result exposes an explicit **`expired?: boolean`** so online callers can gate on `valid && !expired && binding_hash_match` without parsing the `warnings` array. The sync `verify()` path still accepts expired-but-signature-valid receipts (offline/CLI auditors need this).
+
 ## Unreleased — Codex Hardening (2026-05-18)
 
 Security and correctness hardening from Codex round-2 audit. No wire-format changes; schema version stays `1.1`. Proposed SemVer bump on release: **1.2.0**.
