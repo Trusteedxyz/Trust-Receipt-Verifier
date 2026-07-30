@@ -41,8 +41,34 @@ This package is the **reference verifier and issuer** implementation. It is part
 | AIVS proof-bundle export/verify (`aivs-export.ts`)       | 🟡 Code-complete                    | Projects a signed v1.0 receipt into an AIVS-compatible `{ manifest_hash, session_sig, audit_log }` bundle — offline-verifiable with no Trusteed code (spec-062 US1, alignment not escrow) |
 | Extension artifact verification (`verify-extension-artifact.ts`) | 🟡 Code-complete             | Verifies developer-signed erasure receipts and extension manifests from the Trusteed Extension Marketplace ecosystem |
 | v1.0-legacy compact receipt shape (`verifier.ts`)        | ✅ Implemented                      | `verifyTrustReceipt` also accepts the JWT-style compact payload emitted by the platform issuer since spec-040; surfaced as `result.variant` / `result.legacyReceipt` |
+| Declared trust-anchor degradation (`accepted_degraded`)  | ✅ Implemented                      | Three-valued verdict for v1.1 envelopes — see [Verification verdicts](#verification-verdicts) and SPEC.md §4.1 (NORMATIVE)                                          |
+| Consumer-side revocation (`revocation.ts`)               | ✅ Implemented                      | `checkRevocation()` against a merchant's published status list. Pure and offline: you fetch, it decides. Every failure resolves to `unknown`, never `not_revoked`   |
+| Canonicalization reporting (`result.canonicalization`)   | ✅ Implemented                      | `"jcs"` vs `"json-stringify-legacy"` on the legacy-compact path — independent of `variant`, which describes the payload shape                                       |
 
 > ✅ = production-grade implementation. 🟡 = present and tested but subject to change before v1.2 GA, or dependent on operator-side integration.
+
+### Verification verdicts
+
+`verifyReceiptEnvelope` (v1.1) returns **three** values, not two. Treating the
+verdict as binary is a conformance failure in either direction — it either
+reports a degraded receipt as fully verified, or discards a valid one.
+
+| Verdict             | Meaning                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `accepted`          | Signature, structure, and chain of trust all verified.                                      |
+| `accepted_degraded` | Signature and structure verified; the receipt **declares** its chain of trust unverifiable. |
+| `rejected`          | Any check failed.                                                                           |
+
+`accepted_degraded` is emitted only when the issuer root behind the bundled JWKS
+history could not be cryptographically verified **and** the receipt's *signed
+body* carries a `legal_posture_warnings[]` entry with
+`reason: "trust_anchor_staging"`. A receipt that stays silent about an
+unverifiable anchor is `rejected` — silence is never read as consent, and the
+unsigned `envelope_metadata` mirror alone can never unlock the downgrade.
+
+It attests internal consistency and issuer intent, **never issuer
+authenticity**. Consumers that branch on `outcome === "accepted"` keep refusing
+it; accepting the weaker guarantee has to be a conscious act.
 
 ---
 
