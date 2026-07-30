@@ -42,7 +42,37 @@ Dieses Paket ist die **Referenzimplementierung des Verifizierers und Ausstellers
 | Verifikation von Erweiterungsartefakten (`verify-extension-artifact.ts`) | 🟡 Codevollständig        | Verifiziert vom Entwickler signierte Löschbelege und Erweiterungsmanifeste aus dem Ökosystem des Trusteed Extension Marketplace |
 | Kompakte v1.0-Legacy-Belegform (`verifier.ts`)             | ✅ Implementiert                        | `verifyTrustReceipt` akzeptiert auch die kompakte JWT-artige Nutzlast, die der Plattform-Aussteller seit spec-040 ausgibt; verfügbar als `result.variant` / `result.legacyReceipt` |
 
+| Erklärte Degradierung des Vertrauensankers (`accepted_degraded`) | ✅ Implementiert            | Dreiwertiges Urteil für v1.1-Umschläge — siehe [Verifikationsurteile](#verifikationsurteile) und SPEC.md §4.1 (NORMATIV)                                                            |
+| Verbraucherseitiger Widerruf (`revocation.ts`)             | ✅ Implementiert                        | `checkRevocation()` gegen die vom Händler veröffentlichte Statusliste. Rein und offline: Sie holen ab, es entscheidet. Jeder Fehlerfall endet in `unknown`, nie in `not_revoked`   |
+| Gemeldete Kanonisierung (`result.canonicalization`)        | ✅ Implementiert                        | `"jcs"` gegenüber `"json-stringify-legacy"` auf dem Legacy-Compact-Pfad — unabhängige Achse von `variant`, das die FORM der Nutzlast beschreibt                                     |
+
 > ✅ = produktionsreife Implementierung. 🟡 = vorhanden und getestet, aber vor der GA von v1.2 änderbar, oder von betreiberseitiger Integration abhängig.
+
+### Verifikationsurteile
+
+`verifyReceiptEnvelope` (v1.1) liefert **drei** Werte, nicht zwei. Das Urteil als
+binär zu behandeln ist in beide Richtungen ein Konformitätsfehler: entweder gilt
+ein degradierter Beleg als vollständig verifiziert, oder ein gültiger wird
+verworfen.
+
+| Urteil              | Bedeutung                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `accepted`          | Signatur, Struktur und Vertrauenskette allesamt verifiziert.                                         |
+| `accepted_degraded` | Signatur und Struktur verifiziert; der Beleg **erklärt** seine Vertrauenskette für nicht prüfbar.    |
+| `rejected`          | Eine Prüfung ist fehlgeschlagen.                                                                     |
+
+`accepted_degraded` wird nur ausgegeben, wenn die Aussteller-Wurzel hinter der
+mitgelieferten JWKS-Historie kryptografisch nicht verifiziert werden konnte
+**und** der *signierte* Belegkörper einen `legal_posture_warnings[]`-Eintrag mit
+`reason: "trust_anchor_staging"` trägt. Ein Beleg, der zu einem nicht prüfbaren
+Anker schweigt, wird `rejected`: Schweigen gilt nie als Zustimmung, und das
+unsignierte `envelope_metadata`-Spiegelbild allein kann die Degradierung niemals
+freischalten.
+
+Es bezeugt interne Konsistenz und die Absicht des Ausstellers, **nie dessen
+Authentizität**. Wer gegen `outcome === "accepted"` vergleicht, lehnt es
+weiterhin ab; die schwächere Garantie zu akzeptieren muss eine bewusste
+Entscheidung sein.
 
 ---
 
