@@ -369,16 +369,25 @@ trust-receipt-verifier/
 │   ├── verify-export-bundle.ts        — offline export-bundle verification
 │   ├── verify-extension-artifact.ts   — erasure receipt / extension manifest verification (Extension Marketplace)
 │   ├── aivs-export.ts                 — AIVS proof-bundle export/verify (spec-062 US1)
+│   ├── revocation.ts                  — consumer-side revocation check against a merchant status list
 │   ├── __tests__/                     — unit + conformance tests
 │   └── schema/
 │       ├── trust-receipt.schema.ts        — Zod schema (source of truth for v1.0 TypeScript types)
-│       └── trust-receipt-legacy.schema.ts — v1.0-legacy compact shape (issued by platform since spec-040)
+│       ├── trust-receipt-legacy.schema.ts — v1.0-legacy compact shape (issued by platform since spec-040)
+│       └── policy-evidence.ts             — policy-evidence fields, shared by all three receipt shapes
+├── schema/
+│   ├── trust-receipt-v1.0-final.schema.json — NORMATIVE v1.0 JSON Schema (+ .sha256)
+│   └── trust-receipt-v1.schema.json         — superseded draft, retained for link stability — do NOT implement against it
 ├── test-vectors/
 │   ├── README.md                    — how to use the vectors
 │   ├── vectors.json                 — vector manifest with expected outcomes
 │   ├── valid/                       — TC-001 through TC-005
 │   ├── invalid/                     — TC-006 through TC-010
 │   └── v11/, v11-strict/            — v1.1 + strict-mode conformance vectors
+├── conformance/
+│   └── legacy-compact-vectors/      — L001–L005: both canonicalization regimes, expiry, tamper, unknown kid
+├── reference-verifier/
+│   └── verify-aivs-bundle.mjs       — verifies an exported AIVS bundle with no dependency on this package
 ├── bin/
 │   └── trust-receipt.ts (source) → dist/bin/trust-receipt.js (compiled) — CLI: verify, inspect, generate-key, conformance
 └── demo/                            — runnable demo scripts
