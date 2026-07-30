@@ -42,7 +42,36 @@ Ce paquet est l'implémentation de **référence du vérificateur et de l'émett
 | Vérification d'artefact d'extension (`verify-extension-artifact.ts`) | 🟡 Code complet              | Vérifie les reçus d'effacement signés par le développeur et les manifestes d'extension de l'écosystème Trusteed Extension Marketplace |
 | Forme compacte v1.0-legacy du reçu (`verifier.ts`)         | ✅ Implémenté                          | `verifyTrustReceipt` accepte également la charge utile compacte de style JWT émise par l'émetteur de la plateforme depuis spec-040 ; exposée via `result.variant` / `result.legacyReceipt` |
 
+| Dégradation déclarée de l'ancre de confiance (`accepted_degraded`) | ✅ Implémenté          | Verdict à trois valeurs pour les enveloppes v1.1 — voir [Verdicts de vérification](#verdicts-de-vérification) et SPEC.md §4.1 (NORMATIF)                                            |
+| Révocation côté consommateur (`revocation.ts`)             | ✅ Implémenté                          | `checkRevocation()` face à la liste d'état publiée par le marchand. Pur et hors ligne : vous récupérez, il décide. Tout échec se résout en `unknown`, jamais en `not_revoked`      |
+| Canonicalisation rapportée (`result.canonicalization`)     | ✅ Implémenté                          | `"jcs"` contre `"json-stringify-legacy"` sur le chemin legacy-compact — axe indépendant de `variant`, qui décrit la FORME de la charge utile                                        |
+
 > ✅ = implémentation de qualité production. 🟡 = présent et testé mais sujet à changement avant la GA de la v1.2, ou dépendant de l'intégration côté opérateur.
+
+### Verdicts de vérification
+
+`verifyReceiptEnvelope` (v1.1) renvoie **trois** valeurs, pas deux. Traiter le
+verdict comme binaire est un défaut de conformité dans les deux sens : soit un
+reçu dégradé est présenté comme pleinement vérifié, soit un reçu valide est
+écarté.
+
+| Verdict             | Signification                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `accepted`          | Signature, structure et chaîne de confiance toutes vérifiées.                                       |
+| `accepted_degraded` | Signature et structure vérifiées ; le reçu **déclare** sa chaîne de confiance non vérifiable.       |
+| `rejected`          | Une vérification a échoué.                                                                          |
+
+`accepted_degraded` n'est émis que lorsque la racine émettrice derrière
+l'historique JWKS n'a pas pu être vérifiée cryptographiquement **et** que le
+corps *signé* du reçu porte une entrée `legal_posture_warnings[]` avec
+`reason: "trust_anchor_staging"`. Un reçu qui se tait face à une ancre non
+vérifiable est `rejected` : le silence ne vaut jamais consentement, et le miroir
+non signé `envelope_metadata` ne peut à lui seul débloquer la dégradation.
+
+Il atteste de la cohérence interne et de l'intention de l'émetteur, **jamais de
+l'authenticité de l'émetteur**. Les consommateurs qui comparent à
+`outcome === "accepted"` continuent de le refuser ; accepter la garantie plus
+faible doit être un acte délibéré.
 
 ---
 
