@@ -46,6 +46,7 @@ export {
   verifyAivsProofBundle,
   type AivsProofBundle,
   type AivsAuditLogEntry,
+  type AivsChainStatus,
   type AivsPublicJwk,
   type VerifyAivsBundleOptions,
   type VerifyAivsBundleResult,
@@ -327,3 +328,17 @@ export {
   type AttestationVerificationReason,
   type VerifyPiiAttestationArgs,
 } from "./x402-binding/attestation-verifier.js";
+
+// Trust-receipts audit §R1 Wave C — consumer-side revocation check against a
+// merchant's `/.well-known/trust-receipt-status/{merchantId}` list. Pure and
+// offline: the caller fetches, this decides. Every failure mode resolves to
+// `unknown`, never to `not_revoked`.
+export {
+  checkRevocation,
+  hashReceiptId,
+  type CheckRevocationInput,
+  type RevocationResult,
+  type RevocationStatus,
+  type StatusListEntry,
+  type TrustReceiptStatusList,
+} from "./revocation.js";

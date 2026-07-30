@@ -213,3 +213,52 @@ describe("exportAivsProofBundle — audit_log (hash_chain_prev projection)", () 
     });
   });
 });
+
+// ─── Honest chain declaration (audit F2 remediation) ──────────────────────────
+//
+// No issuer in this repository writes `hash_chain_prev` (verified by exhaustive
+// grep: zero write sites). The projected audit_log is therefore an unlinked
+// single entry, and the bundle MUST say so in DATA — not only in prose — so a
+// third-party consumer never mistakes it for a real append-only chain.
+
+describe("exportAivsProofBundle — chain_status honesty", () => {
+  it("declares chain_status 'unlinked_single_entry' when the receipt carries no hash_chain_prev", () => {
+    const bundle = exportAivsProofBundle(validJws);
+
+    expect(bundle.chain_status).toBe("unlinked_single_entry");
+    expect(bundle.audit_log[0].prev_hash).toBeNull();
+  });
+
+  it("declares chain_status 'linked_single_entry' only when the receipt itself carries hash_chain_prev", async () => {
+    const chainedJws = await issueTrustReceipt({
+      payload: {
+        ...MINIMAL_PAYLOAD,
+        hash_chain_prev:
+          "9f8e7d6c5b4a3928170615243342516079889796a5b4c3d2e1f001122334455",
+      },
+      privateKeyJwk: privateJwk,
+      kid: KID,
+      validitySeconds: 3600,
+    });
+
+    const bundle = exportAivsProofBundle(chainedJws);
+
+    expect(bundle.chain_status).toBe("linked_single_entry");
+  });
+
+  it("never claims a multi-entry chain: audit_log is always length 1 for a single-receipt bundle", () => {
+    const bundle = exportAivsProofBundle(validJws);
+
+    expect(bundle.audit_log).toHaveLength(1);
+    expect(bundle.audit_log[0].seq).toBe(0);
+  });
+
+  it("round-trips chain_status through offline verification without affecting the verdict", async () => {
+    const bundle = exportAivsProofBundle(validJws);
+
+    const result = await verifyAivsProofBundle(bundle, { jwks: [publicJwk] });
+
+    expect(result.valid).toBe(true);
+    expect(bundle.chain_status).toBe("unlinked_single_entry");
+  });
+});

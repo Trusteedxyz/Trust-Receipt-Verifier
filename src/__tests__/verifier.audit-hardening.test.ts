@@ -16,12 +16,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import canonicalize from "canonicalize";
-import {
-  CompactSign,
-  exportJWK,
-  generateKeyPair,
-  type JWK,
-} from "jose";
+import { CompactSign, exportJWK, generateKeyPair, type JWK } from "jose";
 
 import { verifyReceiptEnvelope } from "../verify-1.1.js";
 import type { VerifyOptions } from "../verify-1.1.js";
@@ -55,7 +50,10 @@ describe("A1 — TrustReceiptV11BodySchema strict root", () => {
   });
 
   it("rejects an injected unknown top-level key (signed-bytes drift)", () => {
-    const body = { ...loadHappyBody(), shadow_signature: "attacker-controlled" };
+    const body = {
+      ...loadHappyBody(),
+      shadow_signature: "attacker-controlled",
+    };
     const parsed = TrustReceiptV11BodySchema.safeParse(body);
     expect(parsed.success).toBe(false);
     if (!parsed.success) {
@@ -131,7 +129,10 @@ function buildHistory(
   };
 }
 
-function baseOptions(vector: VectorFile, committedChain: string): VerifyOptions {
+function baseOptions(
+  vector: VectorFile,
+  committedChain: string
+): VerifyOptions {
   const { signedHistory } = buildHistory(
     vector.verify_options.jwks,
     vector.verify_options.currentTime,

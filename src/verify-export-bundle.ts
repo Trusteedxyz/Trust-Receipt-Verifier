@@ -143,7 +143,17 @@ export interface BundleRetentionMetadata {
 }
 
 export interface BundleVerifyResult {
-  outcome: "accepted" | "rejected";
+  /**
+   * `accepted_degraded` mirrors the inner v1.1 verifier: the bundle is
+   * structurally sound and its receipt signature verified, but the receipt
+   * DECLARES that its trust anchor is unverifiable (`trust_anchor_staging`).
+   *
+   * It is propagated, never flattened into `accepted`. This is the
+   * dispute-evidence artifact — presenting a receipt with no chain of trust as
+   * fully verified is precisely the failure mode the third outcome exists to
+   * prevent. Consumers that branch on `=== "accepted"` keep refusing it.
+   */
+  outcome: "accepted" | "accepted_degraded" | "rejected";
   errorCode?: BundleVerifyErrorCode;
   errorDetail?: string;
   warnings: string[];
@@ -435,8 +445,14 @@ export async function verifyExportBundle(
   }
 
   // 8. Accepted -----------------------------------------------------------
+  // Carry the inner verifier's degradation through verbatim. Branching on
+  // `!== "rejected"` above would otherwise collapse `accepted_degraded` into
+  // `accepted` and hide an unverifiable trust anchor inside the bundle.
   return {
-    outcome: "accepted",
+    outcome:
+      envelopeResult.outcome === "accepted_degraded"
+        ? "accepted_degraded"
+        : "accepted",
     warnings,
     envelope: envelopeResult.envelope,
     retentionMetadata,

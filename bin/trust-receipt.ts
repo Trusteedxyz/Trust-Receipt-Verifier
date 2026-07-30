@@ -383,6 +383,10 @@ async function cmdVerifyReceiptV11(
     options
   );
   print({ kind: "receipt-v11", ...result });
+  // `accepted_degraded` exits NON-ZERO on purpose: a receipt declaring an
+  // unverifiable trust anchor must not pass a `$? -eq 0` check. The full result
+  // — including `outcome` and `warnings` — is printed above, so a caller that
+  // wants to accept the weaker guarantee reads the verdict, not the exit code.
   return result.outcome === "accepted" ? 0 : 1;
 }
 

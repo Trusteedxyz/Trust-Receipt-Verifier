@@ -1,0 +1,20 @@
+{
+  "name": "L002-json-stringify-legacy-regime",
+  "description": "Pre-enrichment payload with NO `canon` marker. Absence is meaningful — it is the historic JSON.stringify regime, not an error — and both ports must classify it that way rather than rejecting it.",
+  "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImxlZ2FjeS1jb21wYWN0LXZlY3Rvci1rZXkiLCJ0eXAiOiJ0cnVzdC1yZWNlaXB0K2p3dCJ9.eyJpc3MiOiJtZXJjaGFudDpzdG9yZV92ZWN0b3JfMSIsInN1YiI6ImNhbGxfdmVjdG9yXzEiLCJpYXQiOjE3NjAwMDAwMDAsImNhbGxJZCI6ImNhbGxfdmVjdG9yXzEiLCJtZXJjaGFudElkIjoic3RvcmVfdmVjdG9yXzEiLCJhZ2VudElkIjoiZGlkOmFnZW50OnZlY3RvciIsImJ1Y2tldCI6ImNoZWNrb3V0IiwidG9vbCI6ImNvbXBsZXRlX2NoZWNrb3V0IiwiaW5wdXRIYXNoIjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm91dHB1dEhhc2giOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwib3V0cHV0SGFzaFN0YXR1cyI6ImNhcHR1cmVkIiwidHJ1c3RfcHJvdmlkZXJfYXNzZXJ0aW9ucyI6W10sImtpZCI6ImxlZ2FjeS1jb21wYWN0LXZlY3Rvci1rZXkifQ.MeA5owb4ChAs6j2mS3-yyK8Q9Ivort7a98N4Yt0fkwx-IrvvX-N4Lt2eV0wBTPSREXJy5iPlJVI_JS7L2f23DA",
+  "jwks": [
+    {
+      "crv": "Ed25519",
+      "x": "IvhzjDxsPW9XrIk5-j0_50E_RmDZRHVWq-4Qa3NQddw",
+      "kty": "OKP",
+      "kid": "legacy-compact-vector-key",
+      "alg": "EdDSA"
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "variant": "legacy_compact",
+    "canonicalization": "json-stringify-legacy",
+    "freshnessExpired": null
+  }
+}

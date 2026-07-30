@@ -33,8 +33,16 @@
  *
  * Exit codes:
  *   0  outcome === "accepted"
- *   1  outcome === "rejected"
+ *   1  outcome === "rejected" OR "accepted_degraded"
  *   2  CLI error (missing zip, malformed flags, file read failure)
+ *
+ * `accepted_degraded` deliberately exits NON-ZERO so existing automation stays
+ * fail-closed: a receipt that declares an unverifiable trust anchor must never
+ * be treated as fully verified just because a script checked `$? -eq 0`. The
+ * printed verdict distinguishes it from a genuine rejection, so callers that
+ * want to accept the weaker guarantee can read the outcome instead of the
+ * exit code. Reusing code 1 (rather than minting a new one) keeps the
+ * documented contract stable for scripts that only test for zero.
  */
 
 import { readFile } from "node:fs/promises";
@@ -280,6 +288,16 @@ function renderHuman(result: BundleVerifyResult, opts: CliOptions): void {
   }
 
   if (r.outcome === "accepted") out("ACCEPTED");
+  else if (r.outcome === "accepted_degraded")
+    // Reporting this as "REJECTED UNKNOWN" would be a false statement about
+    // what happened: the bundle verified, but the receipt declares its trust
+    // anchor is unverifiable. Say exactly that. Exit stays non-zero (below) so
+    // automation remains fail-closed.
+    out(
+      "ACCEPTED (DEGRADED) — signature and structure verified, but the receipt " +
+        "declares an unverifiable trust anchor. Attests internal consistency " +
+        "and issuer intent, NOT issuer authenticity."
+    );
   else
     out(
       `REJECTED ${r.error_code ?? "UNKNOWN"}${r.error_detail ? ` ${r.error_detail}` : ""}`

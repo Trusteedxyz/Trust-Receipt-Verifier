@@ -135,6 +135,55 @@ describe("verifyExportBundle", () => {
     expect(result.filesPresent).toContain("trust-anchor.pem");
   });
 
+  // Audit §B1 follow-up: `accepted_degraded` is a THIRD outcome. The bundle
+  // used to branch on `=== "rejected"`, so a degraded envelope fell straight
+  // through to the plain `accepted` return — silently laundering a receipt with
+  // an unverifiable trust anchor into an evidence bundle that looks fully
+  // verified. That is exactly the confusion the new outcome exists to prevent,
+  // and this is the dispute-evidence artifact, so it must not be papered over.
+  it("propagates accepted_degraded instead of upgrading it to accepted", async () => {
+    verifyReceiptEnvelope.mockResolvedValue({
+      outcome: "accepted_degraded",
+      schema_version: "1.1",
+      warnings: ["trust_anchor_staging"],
+      envelope: RECEIPT_ENVELOPE,
+      recomputedLegalPosture: "simple_electronic_seal",
+    });
+
+    const zip = buildFixtureZip();
+    const result = await verifyExportBundle(zip, {
+      trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
+    });
+
+    expect(result.outcome).toBe("accepted_degraded");
+    expect(result.outcome).not.toBe("accepted");
+    expect(result.warnings).toContain("trust_anchor_staging");
+    // The bundle is still usable — the envelope and metadata are returned so a
+    // consumer can inspect the degraded evidence rather than being stonewalled.
+    expect(result.envelope).toBeDefined();
+    expect(result.retentionMetadata).toBeDefined();
+    expect(result.envelopeVerifyResult?.outcome).toBe("accepted_degraded");
+  });
+
+  it("keeps a fully-verified bundle reporting plain accepted", async () => {
+    verifyReceiptEnvelope.mockResolvedValue({
+      outcome: "accepted",
+      schema_version: "1.1",
+      warnings: [],
+      envelope: RECEIPT_ENVELOPE,
+      recomputedLegalPosture: "ades_candidate_no_tsa",
+    });
+
+    const zip = buildFixtureZip();
+    const result = await verifyExportBundle(zip, {
+      trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
+      allowStagingRoots: true,
+    });
+
+    expect(result.outcome).toBe("accepted");
+  });
+
   it("P2b: forwards mode='strict' to the inner verifier by DEFAULT (GA path)", async () => {
     verifyReceiptEnvelope.mockResolvedValue({
       outcome: "accepted",

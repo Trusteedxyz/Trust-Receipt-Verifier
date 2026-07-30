@@ -16,6 +16,7 @@
  */
 
 import { z } from "zod";
+import { PolicyEvidenceFields } from "./schema/policy-evidence.js";
 
 // ---------------------------------------------------------------------------
 // Tagged digest primitives
@@ -159,6 +160,14 @@ export const LegalPostureWarningSchema = z.object({
     "consent_evidence_absent",
     "esign_disclosure_unverified",
     "pending_counsel_approval",
+    /**
+     * The issuer had no production trust anchor available (the T420 offline key
+     * ceremony has not run) and DECLARES that the chain of trust behind this
+     * receipt is unverifiable. Additive 2026-07-27 per audit §B1: without it an
+     * issuer had no way to say "I am degraded", so the verifier's only options
+     * were reject-everything or an operator flag that weakened ALL receipts.
+     */
+    "trust_anchor_staging",
   ]),
   since: z.number().int().nonnegative(),
   evidence_ref: z.string().optional(),
@@ -687,6 +696,15 @@ export const TrustReceiptV11BodySchema = z
      */
     platformOrderId: z.string().optional(),
     platform: z.string().optional(),
+    /**
+     * Evidencia de política (R-02, 2026-07-29) — SSOT en
+     * `schema/policy-evidence.ts`. Aquí NO son opcionales por comodidad: el
+     * root es `.strict()`, así que sin declararlos un body que los llevara
+     * sería rechazado como clave desconocida. Compartir la declaración con las
+     * dos formas v1.0 es deliberado: tres copias a mano de los mismos cinco
+     * campos es exactamente cómo divergen los puertos.
+     */
+    ...PolicyEvidenceFields,
   })
   // A1 (security audit 2026-07-03): reject unknown keys at the ROOT body, not
   // just inside the x402_binding/mpp_binding extensions (M-1). Without this a

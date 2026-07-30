@@ -268,6 +268,62 @@ Let `now` be the current Unix timestamp in seconds. Allow a clock tolerance of u
 
 Return `{ valid: true, receipt: <parsed payload> }`.
 
+### 4.1 Verification verdicts (NORMATIVE)
+
+The steps above describe the **v1.0 body** algorithm, whose verdict is binary.
+A verifier that also consumes **v1.1 envelopes** (§11) MUST implement a
+**three-valued** verdict. Implementers porting this specification MUST read this
+subsection: treating the verdict as binary silently collapses the third value
+into one of the other two, which is a conformance failure in either direction —
+reporting a degraded receipt as fully verified, or discarding a valid one.
+
+| Verdict             | Meaning                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `accepted`          | Signature, structure, and chain of trust all verified.                                      |
+| `accepted_degraded` | Signature and structure verified; the receipt **declares** its chain of trust unverifiable. |
+| `rejected`          | Any check failed.                                                                           |
+
+**When `accepted_degraded` is emitted.** Only when BOTH hold:
+
+1. the issuer root behind the bundled JWKS history could not be cryptographically
+   verified (no production trust anchor is available to the verifier), AND
+2. the receipt's **signed body** carries a `legal_posture_warnings[]` entry with
+   `reason: "trust_anchor_staging"` (§11.9).
+
+**Normative requirements.**
+
+- A conformant verifier **MUST NOT** report `accepted_degraded` as `accepted`.
+  It MUST be a distinct, machine-readable value, so that a consumer written
+  against an earlier revision of this specification — which compares against
+  `accepted` — continues to refuse it. Accepting the weaker guarantee MUST be an
+  explicit, opt-in decision by the consumer.
+- A verifier **MUST** reject, not degrade, a receipt whose chain of trust is
+  unverifiable and which does **not** declare `trust_anchor_staging` in its
+  signed body. Silence is never consent: an undeclared unverifiable anchor is
+  `rejected`.
+- The declaration **MUST** be read from the **signed body**. An unsigned
+  `envelope_metadata` mirror (§11.2) is advisory only; honouring it alone would
+  let anyone able to edit the sidecar, but not to forge the signature, convert a
+  rejection into an acceptance.
+- A verifier **MUST NOT** derive a stronger `legal_posture` than
+  `simple_electronic_seal` for a receipt declaring `trust_anchor_staging`
+  (§11.9 truth-table override).
+- CLI implementations **SHOULD** exit non-zero for `accepted_degraded`, so that
+  automation checking only for a zero exit status remains fail-closed, while
+  printing a verdict that distinguishes it from a genuine rejection.
+
+**Scope limit — what `accepted_degraded` does NOT assert.**
+
+> With no production trust anchor there is no chain of trust. `accepted_degraded`
+> attests **internal consistency and issuer intent, NEVER issuer authenticity.**
+
+Concretely: anyone able to sign a receipt with a key of their own choosing can
+also declare that receipt degraded and obtain this verdict. The verdict says the
+artifact is internally coherent and that whoever signed it said their anchor is
+unverifiable. It does **not** say who signed it, nor that they were entitled to.
+A consumer MUST NOT rely on `accepted_degraded` for any decision that depends on
+issuer identity.
+
 ---
 
 ## 5. Key Management
@@ -426,9 +482,12 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 ## 10. Changelog
 
-| Version | Date       | Notes                                                                                |
-| ------- | ---------- | ------------------------------------------------------------------------------------ |
-| 1.0     | 2026-04-29 | Initial draft. 24 fields, 10 conformance vectors, 6 protocols, 3 conformance levels. |
+| Version | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026-04-29 | Initial draft. 24 fields, 10 conformance vectors, 6 protocols, 3 conformance levels.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 1.1     | 2026-05-10 | eIDAS + ESIGN hardening (spec-049). Receipt envelope split, RFC 3161 timestamp evidence, KMS-backed signing, mandatory consent + agent-authorization chain. 11 new vectors.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 1.1.1   | 2026-05-10 | Phase 12 Codex Review Remediation (T-CR-001..T-CR-012). Trust anchor: staging-root opt-in (T-CR-001), TSA root operator-controlled (T-CR-002). KMS: CloudTrail single-attribute filter (T-CR-003), manifest-signer KMS-only (T-CR-004), `ED25519_SHA_512` algo fix (T-CR-005), dual-cap 2900/4096B (T-CR-006). TSA: default `fail_open` + `merchantTsaPolicy` (T-CR-007), `revocation_evidence.kind` discriminatedUnion (T-CR-008). DLP: `high_entropy_secret` block default (T-CR-009), `CLAIMS_POLICY_BYPASS_TOKEN` (T-CR-010). Cleanup: `intent_hmac_key_version` rename (T-CR-011), `verifyTimestampEvidenceStub` removed (T-CR-012). New error codes: `root_not_in_trust_anchor`, `tsa_root_not_trusted`, `tsa_revocation_unavailable`. **Breaking** for downstream verifiers (see migration guide §v1.1.1).                                                                                                                                                         |
+| 1.1.2   | 2026-05-10 | Phase 13 Audit Remediation (T-AUD-001..T-AUD-006). Hot path wiring: `issueReceipt()` v1.1 routed in `trust-receipt.worker.ts` via kill-switch + `trustReceiptV11CanaryPct` + enqueue-contract sufficiency, graceful v1.0 fallback (`// TODO(spec-049-enqueue-v1.1)`), new metric `trust_receipt_worker_path_total{schema_version, outcome}` (T-AUD-001). QTSA: queue cleanup race fix (positional `ltrim` after pipeline success) (T-AUD-002); real RFC 3161 verification post-batch with new env var `QTSA_ROOT_CERT_SHA256_ALLOWLIST` (T-AUD-003). Export bundle: 3 stubs replaced by real loaders in `trust-export-artifacts.ts` with pre-T420 staging-stub HS256 + explicit `warnings` (T-AUD-004). EUDI: SD-JWT-VC real verification via `@sd-jwt/sd-jwt-vc` (T-AUD-005); LOTL real parser via `fast-xml-parser` with `EU_LOTL_URL` env var + 24h cache + degraded fallback (T-AUD-006). Operational eIDAS conformance projected 65-75% post-canary deploy. ADR-034. |
 
 ---
 
@@ -567,6 +626,44 @@ See `docs/integrations/trust-receipt-v11-migration.md` for the full consumer-fac
 
 A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover (FR-018). v1.0 verifiers cannot consume v1.1 envelopes — content-type negotiation is the dispatch mechanism (see §11.2 media type).
 
+### 11.9 Declared trust-anchor degradation (`trust_anchor_staging`)
+
+An issuer that has no production trust anchor available — typically because the
+offline root-key ceremony has not been performed — MAY still issue receipts, on
+the condition that it says so **inside the signed body**:
+
+```json
+"legal_posture": "simple_electronic_seal",
+"legal_posture_warnings": [
+  { "reason": "trust_anchor_staging", "since": 1777593600 }
+]
+```
+
+`trust_anchor_staging` is a value of the `legal_posture_warnings[].reason` enum
+(§11.3). The same entry SHOULD be mirrored into `envelope_metadata`, but per
+§4.1 the mirror is advisory: verifiers MUST read the signed body.
+
+**Truth-table override.** `trust_anchor_staging` **dominates** the entire
+`legal_posture` recomputation of FR-019. Whatever timestamp evidence or agent
+identity the receipt carries, and **regardless of `receipt_subject`** — including
+`merchant_admin` — the recomputed posture is `simple_electronic_seal`.
+`merchant_admin_action` names a _subject_, not a strength level, and MUST NOT
+shadow an unverifiable anchor. A verifier that short-circuits on subject before
+applying this override will disagree with a conformant issuer and reject its
+honest self-downgrade as a posture mismatch.
+
+**Verdict.** A receipt satisfying the above verifies as `accepted_degraded`
+(§4.1), never `accepted`. Without the declaration, the same receipt is
+`rejected`.
+
+**Why this exists.** Without it, the absence of a key ceremony invalidates the
+entire v1.1 corpus, and the only remedy is an operator-side flag that weakens
+the check for _every_ receipt indiscriminately. This mechanism moves the
+decision into each receipt, where it is bound to the signature and visible to
+the relying party. It reduces evidentiary weight; it does not manufacture trust.
+The ceremony remains necessary for any posture above
+`simple_electronic_seal`.
+
 ---
 
 ## Appendix A: Example Receipt Payload (TC-001, JSON)
@@ -698,4 +795,14 @@ A machine-readable JSON Schema (Draft 2020-12) for TrustReceipt 1.0 is located a
 packages/trust-receipt-verifier/src/schema/trust-receipt.schema.ts
 ```
 
-A standalone `schema/trust-receipt-v1.schema.json` distribution file is generated as part of the build. Implementations targeting languages other than TypeScript SHOULD use the JSON Schema file as the schema validation source of truth rather than re-implementing the Zod schema directly.
+**Schema source of truth (corrected 2026-07-27, audit §F1).** The normative v1.0
+schema is `specs/054-trust-claims-standard/contracts/trust-receipt-v1.0-final.schema.json`
+(`$id` `https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json`), sealed by the
+sibling `.sha256` file and embedded byte-identically into the publishable
+verifiers (`@trusteed/verifier`, `trusteed-verifier`). Implementations in any
+language MUST validate against that file.
+
+The historic standalone `schema/trust-receipt-v0.9-draft.schema.json` (formerly
+misnamed `trust-receipt-v1.schema.json`) is a **superseded draft** with an
+incompatible shape. It is retained so historic artifacts remain interpretable,
+is no longer distributed, and MUST NOT be implemented against.

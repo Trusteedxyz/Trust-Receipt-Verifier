@@ -1,0 +1,20 @@
+{
+  "name": "L003-expired-still-verifies",
+  "description": "`expires_at` far in the past. FR-018 requires v1.0 receipts to keep verifying for >= 7 years, so expiry is INFORMATIVE: the receipt is valid and its staleness is reported, never fatal.",
+  "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImxlZ2FjeS1jb21wYWN0LXZlY3Rvci1rZXkiLCJ0eXAiOiJ0cnVzdC1yZWNlaXB0K2p3dCJ9.eyJpc3MiOiJtZXJjaGFudDpzdG9yZV92ZWN0b3JfMSIsInN1YiI6ImNhbGxfdmVjdG9yXzEiLCJpYXQiOjE3NjAwMDAwMDAsImNhbGxJZCI6ImNhbGxfdmVjdG9yXzEiLCJtZXJjaGFudElkIjoic3RvcmVfdmVjdG9yXzEiLCJhZ2VudElkIjoiZGlkOmFnZW50OnZlY3RvciIsImJ1Y2tldCI6ImNoZWNrb3V0IiwidG9vbCI6ImNvbXBsZXRlX2NoZWNrb3V0IiwiaW5wdXRIYXNoIjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm91dHB1dEhhc2giOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwib3V0cHV0SGFzaFN0YXR1cyI6ImNhcHR1cmVkIiwidHJ1c3RfcHJvdmlkZXJfYXNzZXJ0aW9ucyI6W10sImtpZCI6ImxlZ2FjeS1jb21wYWN0LXZlY3Rvci1rZXkiLCJzY2hlbWFfdmVyc2lvbiI6IjEuMCIsImNhbm9uIjoiamNzIiwiZXhwaXJlc19hdCI6MTc2MDA4NjQwMH0.3T5lQnBoPXsUx3N89XF1tpx5ThBaCqFz56h-sus51__lKlJsrAtYtWe7aKxNSWKejOSmsvtFr43-ntFzKG6-Dg",
+  "jwks": [
+    {
+      "crv": "Ed25519",
+      "x": "IvhzjDxsPW9XrIk5-j0_50E_RmDZRHVWq-4Qa3NQddw",
+      "kty": "OKP",
+      "kid": "legacy-compact-vector-key",
+      "alg": "EdDSA"
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "variant": "legacy_compact",
+    "canonicalization": "jcs",
+    "freshnessExpired": true
+  }
+}

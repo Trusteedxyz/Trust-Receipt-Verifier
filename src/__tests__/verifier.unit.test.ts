@@ -10,7 +10,13 @@
  */
 
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import { exportJWK, generateKeyPair, type JWK } from "jose";
+import {
+  CompactSign,
+  exportJWK,
+  generateKeyPair,
+  importJWK,
+  type JWK,
+} from "jose";
 import { issueTrustReceipt } from "../issuer.js";
 import { verifyTrustReceipt, parseTrustReceiptUnsafe } from "../verifier.js";
 import type { PublicJwk, JwksHistoryEntry } from "../verifier.js";
@@ -94,8 +100,23 @@ describe("verifyTrustReceipt", () => {
     expect(result.reason).toBe("tampered_signature");
   });
 
-  it("test 3: expired receipt returns expired", async () => {
-    // Issue with -1 validity so expires_at is in the past
+  /**
+   * CHANGED 2026-07-28 (audit §5 R3). `expires_at` no longer invalidates a v1.0
+   * receipt on EITHER branch of this verifier.
+   *
+   * The legacy-compact branch already exempted it, and documented why: FR-018
+   * requires v1.0 receipts to keep verifying for ≥ 7 years, the rows are
+   * immutable, and the issuer stamped a 24 h lifetime — so enforcing it here
+   * marked essentially the whole corpus `expired`. The canonical branch kept
+   * enforcing it, which meant the SAME evidence verified or failed depending on
+   * which shape it happened to be in. That is the inconsistency this closes.
+   *
+   * Freshness is a consumer policy decision, not a signature-validity one, so it
+   * is REPORTED (`freshness`) rather than acted on. v1.1 and the Python port are
+   * deliberately untouched — their rejection is a published spec-054 conformance
+   * requirement (vector `053-temporal-receipt-expired`).
+   */
+  it("test 3: an expired receipt still VERIFIES, and reports its staleness", async () => {
     const expiredJws = await issueTrustReceipt({
       payload: MINIMAL_PAYLOAD,
       privateKeyJwk: privateJwk,
@@ -108,8 +129,58 @@ describe("verifyTrustReceipt", () => {
       clockToleranceSeconds: 0,
     });
 
+    expect(result.valid).toBe(true);
+    expect(result.reason).toBeUndefined();
+    expect(result.freshness?.expired).toBe(true);
+    expect(result.freshness?.secondsPastExpiry).toBeGreaterThan(0);
+  });
+
+  it("test 3b: a receipt inside its window reports expired:false", async () => {
+    const freshJws = await issueTrustReceipt({
+      payload: MINIMAL_PAYLOAD,
+      privateKeyJwk: privateJwk,
+      kid: KID,
+      validitySeconds: 3600,
+    });
+
+    const result = await verifyTrustReceipt(freshJws, {
+      jwks: [publicJwk],
+      clockToleranceSeconds: 0,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.freshness?.expired).toBe(false);
+    expect(result.freshness?.secondsPastExpiry).toBe(0);
+  });
+
+  it("test 3c: a not-yet-valid receipt is STILL fatal — that is forgery-shaped", async () => {
+    // Signed by hand: `issueTrustReceipt` stamps `issued_at` itself (the field
+    // is in its `Omit`), so a future-dated receipt cannot be produced through
+    // the public issuer — which is correct, and why this is built directly.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const body = {
+      ...MINIMAL_PAYLOAD,
+      receipt_id: "11111111-1111-4111-8111-111111111111",
+      schema_version: "1.0",
+      issued_at: nowSec + 86_400,
+      expires_at: nowSec + 172_800,
+      kid: KID,
+    };
+    const futureJws = await new CompactSign(
+      new TextEncoder().encode(JSON.stringify(body))
+    )
+      .setProtectedHeader({ alg: "EdDSA", kid: KID })
+      .sign(await importJWK(privateJwk, "EdDSA"));
+
+    const result = await verifyTrustReceipt(futureJws, {
+      jwks: [publicJwk],
+      clockToleranceSeconds: 0,
+    });
+
+    // Asymmetric on purpose: an old receipt is ordinary, a receipt issued in the
+    // future cannot have been issued by an honest clock.
     expect(result.valid).toBe(false);
-    expect(result.reason).toBe("expired");
+    expect(result.reason).toBe("not_yet_valid");
   });
 
   it("test 4: unknown kid returns unknown_kid", async () => {

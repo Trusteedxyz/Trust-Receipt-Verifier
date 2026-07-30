@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json",
+  "title": "TrustReceipt v1.0-FINAL (signed body)",
+  "description": "Body of the JWS-signed receipt that lives INSIDE `receipt-envelope.schema.json`'s `receipt` field. Cryptographically verifiable evidence record for AI-agent-initiated commerce. eIDAS-aligned and ESIGN-compliant. Not a Qualified Electronic Seal (see spec-050). Post-Codex round 1 revision: timestamp_evidence is at envelope level (NOT here); body MUST canonical-serialize to ≤ 3500 bytes pre-signature to stay under AWS KMS Ed25519 Sign 4 KB cap.",
+  "type": "object",
+  "required": [
+    "receipt_id",
+    "schema_version",
+    "issued_at",
+    "expires_at",
+    "issuer",
+    "merchant_id",
+    "agent_provider",
+    "user_intent_hash",
+    "intent_hmac_key_version",
+    "protocol",
+    "protocol_artifacts",
+    "policy_decision",
+    "receipt_subject",
+    "privacy_classification",
+    "legal_posture",
+    "legal_posture_warnings",
+    "verification_methods",
+    "authorization_evidence"
+  ],
+  "properties": {
+    "receipt_id": { "type": "string", "format": "uuid" },
+    "schema_version": { "type": "string", "const": "v1.0-FINAL" },
+    "issued_at": { "type": "integer", "minimum": 0 },
+    "expires_at": { "type": "integer", "minimum": 0 },
+    "issuer": { "type": "string", "minLength": 1 },
+    "merchant_id": { "type": "string", "minLength": 1 },
+    "agent_id": {
+      "type": ["string", "null"],
+      "description": "Required for buyer_agent receipts; MAY be null for merchant_admin receipts where the operator IS the actor."
+    },
+    "agent_provider": { "type": "string", "minLength": 1 },
+    "receipt_subject": {
+      "type": "string",
+      "enum": ["buyer_agent", "merchant_admin"]
+    },
+    "privacy_classification": {
+      "type": "string",
+      "enum": ["pii_redacted", "pii_hashed_salted", "pii_absent"]
+    },
+    "legal_posture": { "$ref": "legal-posture.schema.json" },
+    "user_intent_hash": {
+      "type": "string",
+      "pattern": "^hmac-sha256:[0-9a-f]{64}$",
+      "description": "HMAC-SHA-256 keyed by per-merchant KMS HMAC key with domain prefix 'trustreceipt:v1.1:user_intent:' applied to SHA-256 of canonical intent bytes (post-Codex round 2 D21 + D32)."
+    },
+    "intent_hmac_key_version": { "type": "integer", "minimum": 0 },
+    "cart_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "order_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "payment_authorization_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Required for buyer_agent. SHA-256 of canonical authorization-rail payload. Replaces mandate_hash/permit2_authorization_hash/mcp_tool_invocation_hash (post-Codex round 2 D24)."
+    },
+    "authorization_scheme": {
+      "type": "string",
+      "enum": [
+        "ap2_mandate_jws",
+        "mcap_cart_binding",
+        "ucp_rule_set_plus_agent_token",
+        "acp_session_token",
+        "evm_permit2",
+        "svm_token_authorization",
+        "mcp_tool_invocation"
+      ],
+      "description": "Names the authorization rail. Required for buyer_agent. Verifier maintains an allowlist; unknown schemes rejected."
+    },
+    "esign_disclosure_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "esign_disclosure_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 of the canonical bytes of the merchant disclosure document at consent_timestamp (post-Codex round 2 D28)."
+    },
+    "legal_posture_warnings": {
+      "type": "array",
+      "description": "Structured degradation reasons (post-Codex round 2 D27). Empty array == no warnings.",
+      "items": {
+        "type": "object",
+        "required": ["reason", "since"],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "tsa_unavailable",
+              "agent_identity_absent",
+              "consent_evidence_absent",
+              "esign_disclosure_unverified"
+            ]
+          },
+          "since": { "type": "integer", "minimum": 0 },
+          "evidence_ref": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "transaction_id": { "type": "string" },
+    "protocol": {
+      "type": "string",
+      "enum": ["x402", "AP2", "ACP", "MCP", "UCP", "MCAP"]
+    },
+    "protocol_artifacts": {
+      "type": "array",
+      "description": "Hash references only — large blobs live as protocol_artifact_sidecars at the envelope level (FR-019e).",
+      "items": {
+        "type": "object",
+        "required": ["type", "hash"],
+        "properties": {
+          "type": { "type": "string" },
+          "hash": {
+            "type": "string",
+            "pattern": "^(sha256|hmac-sha256):[0-9a-f]{64}$"
+          },
+          "ref": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "buyer_agent_consent_context": {
+      "$ref": "buyer-agent-consent-context.schema.json"
+    },
+    "merchant_admin_authorization_context": {
+      "$ref": "merchant-admin-authorization-context.schema.json"
+    },
+    "authorization_evidence": {
+      "type": "object",
+      "required": [
+        "user_intent_hash",
+        "intent_hmac_key_version",
+        "execution_hash"
+      ],
+      "properties": {
+        "user_intent_hash": {
+          "type": "string",
+          "pattern": "^(sha256|hmac-sha256):[0-9a-f]{64}$"
+        },
+        "intent_hmac_key_version": { "type": "integer", "minimum": 0 },
+        "execution_hash": {
+          "type": "string",
+          "pattern": "^(sha256|hmac-sha256):[0-9a-f]{64}$"
+        },
+        "protocol_authorization_ref": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "verification_methods": {
+      "type": "object",
+      "required": ["jwks_sha256", "trust_anchor_sha256"],
+      "properties": {
+        "jwks": {
+          "type": "object",
+          "required": ["uri", "kid"],
+          "properties": {
+            "uri": { "type": "string", "format": "uri" },
+            "kid": { "type": "string", "minLength": 1 }
+          }
+        },
+        "did": {
+          "type": "object",
+          "required": ["method", "identifier", "key_id"],
+          "properties": {
+            "method": { "type": "string" },
+            "identifier": { "type": "string" },
+            "key_id": { "type": "string" }
+          }
+        },
+        "jwks_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "REQUIRED for v1.1 (post-Codex M17). Bound inside this signed payload so the verifier can pin the JWKS document used for kid resolution."
+        },
+        "trust_anchor_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the embedded issuer root cert (R16). Verifier compares against the root cert it shipped with."
+        }
+      },
+      "anyOf": [
+        { "required": ["jwks", "jwks_sha256", "trust_anchor_sha256"] },
+        { "required": ["did", "jwks_sha256", "trust_anchor_sha256"] }
+      ]
+    },
+    "consent_evidence_ref": { "type": "string" },
+    "trust_provider_assertions": { "type": "array" },
+    "policy_decision": {
+      "type": "string",
+      "enum": ["allow", "deny", "review", "challenge"]
+    },
+    "legacy_flag": { "type": "string", "enum": ["legacy_pre_eidas_hardening"] }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "receipt_subject": { "const": "buyer_agent" } },
+        "required": ["receipt_subject"]
+      },
+      "then": {
+        "required": [
+          "agent_id",
+          "buyer_agent_consent_context",
+          "esign_disclosure_version",
+          "esign_disclosure_hash",
+          "consent_evidence_ref"
+        ],
+        "not": { "required": ["merchant_admin_authorization_context"] }
+      }
+    },
+    {
+      "if": {
+        "properties": { "receipt_subject": { "const": "merchant_admin" } },
+        "required": ["receipt_subject"]
+      },
+      "then": {
+        "required": ["merchant_admin_authorization_context"],
+        "not": { "required": ["buyer_agent_consent_context"] }
+      }
+    },
+    {
+      "if": {
+        "properties": { "receipt_subject": { "const": "buyer_agent" } },
+        "required": ["receipt_subject"]
+      },
+      "then": {
+        "required": ["payment_authorization_hash", "authorization_scheme"]
+      }
+    }
+  ]
+}

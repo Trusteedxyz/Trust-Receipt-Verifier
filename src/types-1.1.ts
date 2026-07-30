@@ -98,7 +98,14 @@ export interface LegalPostureWarning {
     | "consent_evidence_absent"
     | "esign_disclosure_unverified"
     /** Emitted by claims-enforcement when external_counsel_approval_at is null. */
-    | "pending_counsel_approval";
+    | "pending_counsel_approval"
+    /**
+     * The issuer had no production trust anchor available (T420 ceremony not
+     * run) and DECLARES the chain of trust behind this receipt unverifiable.
+     * A verifier MAY accept such a receipt as `accepted_degraded`; it MUST NOT
+     * report it as `accepted`. Additive 2026-07-27 per audit §B1.
+     */
+    | "trust_anchor_staging";
   /** Unix seconds — when the degradation began for this receipt. */
   since: number;
   /** Optional pointer to evidence vault entry corroborating the warning. */

@@ -10,6 +10,7 @@
  */
 
 import { z } from "zod";
+import { PolicyEvidenceFields } from "./policy-evidence.js";
 
 // ─── Sub-schemas ─────────────────────────────────────────────────────────────
 
@@ -105,6 +106,12 @@ export const TrustReceiptSchema = z.object({
 
   // Decision
   policy_decision: z.enum(["allow", "deny", "review", "challenge"]),
+
+  // Policy evidence (R-02, 2026-07-29) — el veredicto SIN la política que lo
+  // produjo es lo que hacía este artefacto rebatible. Todos opcionales:
+  // presentes ⇒ autoritativos, ausentes ⇒ el receipt no atestigua política.
+  // Ver `policy-evidence.ts` para el porqué de cada uno.
+  ...PolicyEvidenceFields,
 
   // Compliance/legal
   liability_context: LiabilityContextSchema.nullable().optional(),
