@@ -3,6 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_DIR="$(dirname "$SCRIPT_DIR")"
+REPO_ROOT="$(cd "$PKG_DIR/../.." && pwd)"
 OUT_DIR="$PKG_DIR/dist-spec"
 
 echo "Preparing TrustReceipt public repo → $OUT_DIR"
@@ -19,8 +20,12 @@ cp "$PKG_DIR/TRADEMARKS.md" "$OUT_DIR/"
 # Architecture doc
 cp "$PKG_DIR/docs/architecture.md" "$OUT_DIR/docs/"
 
-# Schema
-cp "$PKG_DIR/schema/trust-receipt-v1.schema.json" "$OUT_DIR/schema/"
+# Schema — v1.0-FINAL is the SSOT (audit §F1). The historic
+# `trust-receipt-v0.9-draft.schema.json` is a SUPERSEDED draft with an
+# incompatible shape and is deliberately NOT published: shipping it is what let
+# three different documents call themselves "v1.0".
+cp "$REPO_ROOT/specs/054-trust-claims-standard/contracts/trust-receipt-v1.0-final.schema.json" "$OUT_DIR/schema/"
+cp "$REPO_ROOT/specs/054-trust-claims-standard/contracts/trust-receipt-v1.0-final.schema.json.sha256" "$OUT_DIR/schema/"
 
 # Conformance test vectors
 cp "$PKG_DIR/test-vectors/vectors.json" "$OUT_DIR/test-vectors/"

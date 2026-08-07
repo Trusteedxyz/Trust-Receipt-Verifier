@@ -15,4 +15,4 @@ Regenerate deliberately (a new key means new vectors):
 pnpm --filter trust-receipt-verifier exec tsx scripts/generate-legacy-compact-vectors.ts
 ```
 
-Generated 6 vectors.
+Generated 7 vectors.

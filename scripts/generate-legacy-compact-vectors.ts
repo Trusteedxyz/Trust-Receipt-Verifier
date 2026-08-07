@@ -157,6 +157,37 @@ const SPECS: readonly VectorSpec[] = [
     },
   },
   {
+    name: "L007-signers-declaration",
+    description:
+      "Compact payload carrying the R-03 `signers` declaration. Both ports MUST " +
+      "verify it. The declaration lives INSIDE the signed body on purpose: it is " +
+      "not a signature but the claim of WHO signed and who held the key, and " +
+      "outside the signature anyone could edit `platform_held` → `party_held` " +
+      "and upgrade their own verification class. This vector pins that the field " +
+      "survives verification in both implementations.",
+    payload: base({
+      schema_version: "1.0",
+      canon: "jcs",
+      expires_at: ISSUED_AT + 7 * 365 * 24 * 60 * 60,
+      protocol: "MCP",
+      policy_decision: "allow",
+      signers: [
+        {
+          party: "issuer",
+          kid: KID,
+          custody: "platform_held",
+          relation_to_subject: "processor",
+        },
+      ],
+    }),
+    expected: {
+      valid: true,
+      variant: "legacy_compact",
+      canonicalization: "jcs",
+      freshnessExpired: false,
+    },
+  },
+  {
     name: "L004-tampered-payload",
     description:
       "Signed bytes altered after signing. Must fail identically in both ports " +

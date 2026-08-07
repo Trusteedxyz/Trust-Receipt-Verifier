@@ -33,7 +33,9 @@
  */
 
 import { z } from "zod";
+import { ChainLinkFields } from "./chain-link.js";
 import { PolicyEvidenceFields } from "./policy-evidence.js";
+import { SignerFields } from "./signers.js";
 
 // ─── Legacy compact schema ───────────────────────────────────────────────────
 //
@@ -99,6 +101,15 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   // Esta es la forma que emite producción hoy, así que es la que tiene que
   // poder transportarlos cuando se cablee el emisor.
   ...PolicyEvidenceFields,
+  // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
+  // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
+  // y subirse la clase de verificación.
+  ...SignerFields,
+  // Enlace de cadena (ola 5, 2026-08-05) — SSOT en `schema/chain-link.ts`.
+  // Declarado aquí porque ÉSTA es la forma que valida el corpus real: sin la
+  // línea, el emisor firmaría el enlace y Zod lo descartaría del objeto
+  // parseado, dejando la cadena firmada e invisible.
+  ...ChainLinkFields,
 });
 
 export type TrustReceiptLegacyCompact = z.infer<

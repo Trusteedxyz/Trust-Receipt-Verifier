@@ -88,6 +88,34 @@ export const EscalationTargetSchema = z.enum([
  */
 export const PolicyEvidenceFields = {
   /**
+   * Identidad de la evaluación que produjo el veredicto — el `id` de la fila
+   * decisiva de `EnforcementEvent`.
+   *
+   * Desde el 2026-08-06 el evaluador y la fila comparten un único UUID: antes
+   * `append()` acuñaba el de la fila y `build*Response` otro para la respuesta,
+   * de modo que casar el veredicto publicado con su fila exigía la heurística
+   * «el último evento de este comerciante hace milisegundos». Con el campo
+   * dentro del cuerpo firmado, un tercero puede pedir el expediente **por
+   * identidad** en vez de por proximidad temporal.
+   *
+   * ⚠️ **Identifica la EVALUACIÓN, no la operación.** En un acierto de caché el
+   * veredicto se reutiliza tal cual, así que varias operaciones distintas
+   * pueden traer el mismo `evaluation_id`, y apunta a la evaluación cuyo
+   * veredicto se aplicó — que es lo que interesa probar, pero **no** es una
+   * relación 1:1 con el recibo. Un consumidor que asuma unicidad por operación
+   * se equivocará. Por eso tampoco sirve como clave de idempotencia: el emisor
+   * de recibos de denegación deriva su `callId` por otra vía a propósito.
+   *
+   * Cadena laxa y no `z.string().uuid()` deliberadamente: el mismo criterio que
+   * {@link evaluated_rules}. Un emisor de otra implementación puede identificar
+   * sus evaluaciones de otra forma, y rechazar el recibo ENTERO por la forma de
+   * un identificador opaco convierte un artefacto válido en inválido. Lo que sí
+   * se rechaza es la cadena vacía —una identidad que no identifica— y una
+   * desmesurada.
+   */
+  evaluation_id: z.string().min(1).max(128).optional(),
+
+  /**
    * SHA-256 hex sobre la forma canónica RFC 8785 del `RuleSnapshot` vigente en
    * el momento de evaluar. Origen: `RuleSnapshot.payloadHashSha256`.
    *
@@ -117,6 +145,37 @@ export const PolicyEvidenceFields = {
    * alfabeto.
    */
   deciding_rule: z.string().optional(),
+
+  /**
+   * Versión del conjunto de reglas bajo el que se evaluó — `RuleSnapshot.
+   * ruleSetVersion`, único por `(merchant_id, rule_set_version)`.
+   *
+   * Va junto a {@link policy_snapshot_hash} y no en su lugar: el hash prueba
+   * QUÉ política era, la versión dice CUÁL pedir. Un hash sin versión obliga a
+   * barrer el historial del comerciante para encontrar la fila; una versión sin
+   * hash es una afirmación no verificable. Ambos salen de la MISMA fila por
+   * construcción — se resuelve el snapshot POR esta versión, no por "el más
+   * reciente", que era una segunda lectura capaz de discrepar de la primera
+   * dentro del mismo recibo firmado.
+   */
+  rule_set_version: z.number().int().nonnegative().optional(),
+
+  /**
+   * Los códigos de las reglas que CORRIERON en esta evaluación, ya filtradas
+   * por la partición `appliesTo` y en orden de precedencia.
+   *
+   * Distinto de {@link rules_triggered}, y la diferencia es la que responde el
+   * caso que motivó el campo: "se evaluaron estas nueve y ninguna casó" es una
+   * afirmación fuerte sobre los controles aplicados; "casó ésta" no dice nada
+   * sobre las otras ocho. Vacío ⇒ el comerciante no tenía reglas activas
+   * aplicables; ausente ⇒ el recibo no lo declara.
+   *
+   * Cadena laxa y no un enum de códigos conocidos a propósito: los valores
+   * vienen de filas de configuración del comerciante, y un verificador que
+   * rechace un recibo por un código que no reconoce convierte una regla
+   * personalizada en evidencia inválida.
+   */
+  evaluated_rules: z.array(z.string().min(1).max(128)).max(128).optional(),
 
   /** Ver {@link EnforcementResultSchema}. */
   enforcement_result: EnforcementResultSchema.optional(),

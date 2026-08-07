@@ -10,7 +10,9 @@
  */
 
 import { z } from "zod";
+import { ChainLinkFields } from "./chain-link.js";
 import { PolicyEvidenceFields } from "./policy-evidence.js";
+import { SignerFields } from "./signers.js";
 
 // ─── Sub-schemas ─────────────────────────────────────────────────────────────
 
@@ -112,6 +114,10 @@ export const TrustReceiptSchema = z.object({
   // presentes ⇒ autoritativos, ausentes ⇒ el receipt no atestigua política.
   // Ver `policy-evidence.ts` para el porqué de cada uno.
   ...PolicyEvidenceFields,
+  // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
+  // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
+  // y subirse la clase de verificación.
+  ...SignerFields,
 
   // Compliance/legal
   liability_context: LiabilityContextSchema.nullable().optional(),
@@ -123,7 +129,10 @@ export const TrustReceiptSchema = z.object({
   kid: z.string(), // Key ID used to sign
 
   // Audit chain
-  hash_chain_prev: z.string().nullable().optional(), // SHA-256 hex of previous receipt
+  // Enlace de cadena — SSOT en `schema/chain-link.ts`. Estaba declarado en
+  // línea SÓLO aquí, y el esquema legacy (el que valida el corpus real) no lo
+  // tenía: firmarlo habría sido invisible en producción.
+  ...ChainLinkFields,
 
   // Attachments
   attachments: z.array(AttachmentSchema).default([]),

@@ -17,6 +17,7 @@
 
 import { z } from "zod";
 import { PolicyEvidenceFields } from "./schema/policy-evidence.js";
+import { SignerFields } from "./schema/signers.js";
 
 // ---------------------------------------------------------------------------
 // Tagged digest primitives
@@ -705,6 +706,10 @@ export const TrustReceiptV11BodySchema = z
      * campos es exactamente cómo divergen los puertos.
      */
     ...PolicyEvidenceFields,
+    // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
+    // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
+    // y subirse la clase de verificación.
+    ...SignerFields,
   })
   // A1 (security audit 2026-07-03): reject unknown keys at the ROOT body, not
   // just inside the x402_binding/mpp_binding extensions (M-1). Without this a

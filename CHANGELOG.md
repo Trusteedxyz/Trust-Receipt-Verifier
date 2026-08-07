@@ -2,6 +2,50 @@
 
 All notable changes to the verifier package are documented here.
 
+## 0.4.0 — Signer declarations, receipt chain links, and evaluation identity (2026-08-07)
+
+Additive sync from the reference implementation (internal version `1.2.0`; this
+repo keeps its own `0.x` line). **No breaking change**: every field added here is
+optional, and a receipt that omits them verifies exactly as before.
+
+### Added — `signers` declaration (`src/schema/signers.ts`)
+
+Who signed the receipt, in what custody model, and how each signer relates to the
+subject. Until now a receipt proved *that* it was signed, not *by whom on whose
+behalf* — a platform-held key and a merchant-held key were indistinguishable to a
+third party, which is precisely the distinction an adjudicator needs.
+
+### Added — chain link (`src/schema/chain-link.ts`)
+
+`hash_chain_prev` declares the previous receipt in the merchant's chain, so a
+verifier can check that a receipt was not extracted from its sequence. Absent on
+the genesis receipt of a chain, and absent on receipts issued before this field
+existed — absence is not evidence of tampering.
+
+### Added — policy evidence: `evaluation_id`, `rule_set_version`, `evaluated_rules`
+
+`evaluation_id` identifies the evaluation that produced the verdict, so the
+receipt can point at its enforcement record instead of being correlated by
+timestamp proximity.
+
+⚠️ Two properties a consumer must not assume:
+
+- **It identifies the EVALUATION, not the operation.** A cached verdict is reused
+  as-is, so several operations may legitimately carry the same `evaluation_id`.
+  It is not a unique key per receipt, and not usable as an idempotency key.
+- **Its absence is meaningful, not missing data.** The reference issuer emits it
+  only when it resolves to a retrievable record; when a verdict came from cache,
+  or when the audit row was not written, the field is deliberately omitted rather
+  than pointing at a record nobody can fetch.
+
+`rule_set_version` and `evaluated_rules` declare which policy catalogue produced
+the verdict and which rules actually ran — distinct from `rules_triggered`.
+
+### Added — conformance vector `L007-signers-declaration.json`
+
+Legacy-compact receipt carrying a `signers` declaration, so both ports can be
+checked against the same corpus. The L001–L006 vectors are unchanged.
+
 ## 0.3.0 — Declared trust-anchor degradation, revocation, enriched v1.0 payloads (2026-07-30)
 
 Additive sync from the reference implementation (whose internal version is
