@@ -33,6 +33,8 @@ This package is the **reference verifier and issuer** implementation. It is part
 | Schema v1.1 (eIDAS-aligned fields)                       | 🟡 Code-complete / experimental     | 11 additional vectors passing; field set may evolve before v1.2                       |
 | RFC 8785 canonical JSON                                  | ✅ Implemented                      | Used for signing + audit chain hashes                                                 |
 | Audit chain (`hash_chain_prev`)                          | ✅ Implemented                      | Per-merchant tamper-evident linkage                                                   |
+| Signer declarations (`signers`)                          | ✅ Implemented                      | Who signed, under which custody model, and how each signer relates to the subject — a platform-held key and a merchant-held key are no longer indistinguishable |
+| Evaluation identity (`evaluation_id`)                    | ✅ Implemented                      | Points at the enforcement record that produced the verdict, so correlation stops relying on timestamp proximity. Identifies the EVALUATION, not the operation   |
 | eIDAS Advanced Electronic Seal posture                   | 🟡 Candidate                        | Field-level support; **not** a Qualified Electronic Seal (no QTSP)                    |
 | ESIGN / UETA evidence shape                              | 🟡 Partial                          | `esign_disclosure_hash` + consent context; full disclosure workflow in progress       |
 | RFC 3161 trusted timestamp evidence                      | 🟡 Optional / integration-dependent | Hook present via `trust-receipt-tsa-client`; depends on TSA provider                  |
@@ -157,6 +159,8 @@ flowchart LR
 - **Offline-capable** — verification only needs the JWKS URL (publicly cached); no call back to the issuer
 - **Protocol-agnostic** — one receipt format covers x402, AP2, ACP, MCP, UCP, and MCAP via `protocol_artifacts`
 - **Audit-chainable** — `hash_chain_prev` links receipts in a tamper-evident per-merchant chain (RFC 8785)
+- **Signer-declaring** — `signers` states who signed and in whose custody the key lives
+- **Evaluation-linked** — `evaluation_id` points at the enforcement record behind the verdict
 - **Jurisdiction-aware** — `legal_posture` tracks eIDAS / ESIGN / UK-DIATF compliance posture per receipt
 
 ---
@@ -293,6 +297,10 @@ A TrustReceipt payload contains 24 fields across five groups:
 | `verification_methods`   | array       | JWKS URL or DID for key resolution — at least one entry required |
 | `kid`                    | string      | Key ID used to sign this receipt                                 |
 | `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                       |
+| `signers`                | array       | Declared signers: party, `kid`, custody model, relation to subject (optional)  |
+| `evaluation_id`          | string      | Identity of the evaluation that produced the verdict (optional) — see caveats below |
+| `rule_set_version`       | integer     | Version of the policy catalogue the verdict was evaluated under (optional)      |
+| `evaluated_rules`        | array       | Rule codes that RAN, as opposed to `rules_triggered` which fired (optional)     |
 | `attachments`            | array       | Named, hashed file references (optional)                         |
 
 ---
@@ -641,3 +649,28 @@ TrustReceipt is not affiliated with, endorsed by, or officially supported by Mas
 ## License
 
 MIT — see [LICENSE](LICENSE). Copyright MCPWebStore (trusteed.xyz), 2026.
+
+
+## `evaluation_id` — two properties consumers must not assume
+
+`evaluation_id` was added in `0.4.0`. It makes a receipt point at the enforcement
+record that produced its verdict, so an adjudicator can request that record by
+identity instead of guessing from timestamp proximity. Two things it is **not**:
+
+**It identifies the EVALUATION, not the operation.** A cached verdict is served
+as-is, so several distinct operations can legitimately carry the same
+`evaluation_id`. It is not unique per receipt and must never be used as an
+idempotency key.
+
+**Its absence is a statement, not missing data.** The reference issuer emits the
+field only when it resolves to a record that can actually be fetched. Two cases
+where it is deliberately omitted:
+
+- the verdict came from cache, so the identity belongs to an earlier evaluation
+  rather than to this operation;
+- the decision was not written to the audit table — the ALLOW branch is sampled,
+  so most permitted operations have no record to point at.
+
+Emitting the identity anyway would invite a third party to request an audit
+record that nobody wrote. Absent means "this receipt does not claim an
+evaluation", never "the evaluation is hidden".

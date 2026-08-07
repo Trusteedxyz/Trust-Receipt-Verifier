@@ -178,6 +178,10 @@ All fields at the top level of the receipt payload. Fields marked **Required** M
 | Field             | Type   | Required | Description                                                                                                                                                  |
 | ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `hash_chain_prev` | string | Optional | SHA-256 hex of the previous receipt in the merchant's audit stream. Enables ordered, tamper-evident receipt chains. `null` for the first receipt in a chain. |
+| `signers` | array | Optional | Declared signers of this receipt. Each element carries `party` (`issuer`/`merchant`/`agent`/`psp`), `kid`, `custody` (`platform_held`/`party_held`) and `relation_to_subject` (`processor`/`self`/`independent`). Absent means the receipt makes no claim about signer custody — NOT that a single signer is implied. |
+| `evaluation_id` | string | Optional | Identity of the policy evaluation that produced the verdict. Identifies the EVALUATION, not the operation: a cached verdict is reused, so several operations may carry the same value, and it MUST NOT be used as an idempotency key. Absent when the identity would not resolve to a retrievable record (cached verdict, or a decision the issuer did not persist). |
+| `rule_set_version` | integer | Optional | Version of the policy catalogue under which the verdict was evaluated. |
+| `evaluated_rules` | array of string | Optional | Rule codes that RAN. Distinct from `rules_triggered`, which lists those that fired. An empty array means the catalogue was consulted and no rule applied; absent means the receipt makes no claim. |
 
 #### Attachments
 
