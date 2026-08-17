@@ -9,7 +9,7 @@
 [![Version](https://img.shields.io/badge/spec-v1.1-blue)](SPEC.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![npm](https://img.shields.io/npm/v/trust-receipt-verifier)](https://www.npmjs.com/package/trust-receipt-verifier)
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
 
 ---
 
@@ -28,7 +28,7 @@ Ce paquet est l'implémentation de **référence du vérificateur et de l'émett
 | Capacité                                                  | État                                 | Notes                                                                                  |
 | ------------------------------------------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Vérification JWS (Ed25519)                                | ✅ Implémenté                          | CLI + bibliothèque, aucune cryptographie maison (utilise `jose` v6)                        |
-| Résolution de clé publique basée sur JWKS                 | ✅ Implémenté                          | Récupération mise en cache avec TTL ; un ensemble JWK inline est aussi pris en charge     |
+| Résolution de clé publique basée sur JWKS                 | ✅ Implémenté                          | `fetch()` direct à chaque vérification (délai de 5s), sans cache en mémoire ; un ensemble JWK inline est aussi pris en charge |
 | Schéma v1.0                                                | ✅ Stable                              | 10 vecteurs de conformité validés                                                          |
 | Schéma v1.1 (champs alignés eIDAS)                        | 🟡 Code complet / expérimental          | 11 vecteurs supplémentaires validés ; l'ensemble de champs peut évoluer avant la v1.2      |
 | JSON canonique RFC 8785                                    | ✅ Implémenté                          | Utilisé pour la signature + les hachages de la chaîne d'audit                             |
@@ -107,7 +107,7 @@ sequenceDiagram
     participant Schema as 📐 Schéma Zod
 
     Verifier->>Verifier: Analyse l'en-tête JWS<br/>extrait kid + alg
-    Verifier->>JWKS: GET clés publiques<br/>(mis en cache, TTL 1h)
+    Verifier->>JWKS: GET clés publiques<br/>(récupération directe, délai 5s)
     JWKS-->>Verifier: Ensemble JWK public
     Verifier->>Verifier: Fait correspondre kid → clé publique
     Verifier->>Verifier: Vérifie la signature Ed25519<br/>(jose — aucune cryptographie maison)
@@ -157,7 +157,7 @@ flowchart LR
 
 **Propriétés clés :**
 
-- **Capable hors ligne** — la vérification n'a besoin que de l'URL du JWKS (mise en cache publiquement) ; aucun appel de retour vers l'émetteur
+- **Capable hors ligne** — la vérification n'a besoin que de l'URL du JWKS (publiquement accessible, cachable en HTTP côté edge) ; aucun appel de retour vers l'émetteur
 - **Agnostique au protocole** — un seul format de reçu couvre x402, AP2, ACP, MCP, UCP et MCAP via `protocol_artifacts`
 - **Chaînable pour audit** — `hash_chain_prev` relie les reçus dans une chaîne inviolable par marchand (RFC 8785)
 - **Sensible à la juridiction** — `legal_posture` suit la posture de conformité eIDAS / ESIGN / UK-DIATF par reçu
@@ -172,7 +172,7 @@ flowchart LR
 
 > **Avertissement** : TrustReceipt est une preuve technique vérifiable cryptographiquement. Elle ne détermine pas en elle-même la responsabilité juridique. Le fait qu'un reçu donné soit admissible ou persuasif dans une juridiction ou une procédure spécifique dépend du droit local applicable, des accords entre les parties consentantes, et d'autres faits hors du champ de ce format d'enregistrement.
 
-_Voir [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) pour la politique complète de déclarations._
+_L'émetteur maintient une politique de déclarations interne qui fixe la formulation autorisée et interdite pour chaque posture de ce tableau. Elle n'est pas publiée avec ce dépôt ; demandez-la à l'émetteur si vous avez besoin de la liste canonique._
 
 ### État de Compatibilité Réglementaire
 
@@ -219,7 +219,7 @@ const opts: VerifyOptions = {
     jws_compact: "<SignedJwksHistory JWS>",
     signed_by_root_sha256: "<issuer-root-sha256>",
   },
-  trustAnchorPemSha256: "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
+  trustAnchorPemSha256: "<sha256-hex-de-64-caractères-du-PEM-racine-de-l'émetteur>",
   policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
   // toleranceSeconds: 30,  // tolérance de dérive d'horloge par défaut (secondes)
   // mode: "strict",        // par défaut "compat" — voir "Mode strict vs compat" ci-dessous
@@ -241,6 +241,21 @@ if (result.outcome === "accepted") {
 ```
 
 > **`allowStagingRoots`** : la valeur par défaut est `false`. Lorsqu'elle est `false` (par défaut en production), tout `jwksHistory.signed_by_root_sha256` absent de la liste d'ancres de confiance embarquée provoque un rejet immédiat (`jwks_history_signature_invalid`). À définir sur `true` uniquement dans les environnements de staging ou CI utilisant des bundles d'historique JWKS non signés/factices.
+
+> ⚠️ **L'ancre de confiance livrée dans ce paquet est un stub de staging, pas une
+> racine de production.** `EMBEDDED_ISSUER_ROOTS`
+> (`src/embedded-issuer-root.ts`) ne contient aujourd'hui qu'un seul certificat
+> de substitution — structurellement valide mais incapable de vérifier — dont le
+> CN du sujet porte la marque `(STAGING)`. `validateChain()` échoue
+> délibérément en fail-closed dessus avec `root_key_not_provisioned`, afin
+> qu'aucun appelant ne puisse confondre ce substitut avec une confiance
+> autoritative. La véritable racine Ed25519 auto-signée est produite par une
+> cérémonie de clés hors ligne qui n'a pas encore eu lieu ; lorsqu'elle aura
+> lieu, la constante sera remplacée et le paquet vérificateur recevra un
+> incrément SemVer. D'ici là, **épinglez votre propre `trustAnchorPemSha256`** —
+> ne vous fiez pas à la liste embarquée, et traitez chaque valeur
+> `trustAnchorPemSha256` de ce README comme un substitut à remplacer, jamais
+> comme une valeur à copier.
 
 ---
 
@@ -346,7 +361,7 @@ npx tsx scripts/validate-vectors.ts
 Ajoutez le badge à votre projet une fois que les 10 vecteurs sont validés :
 
 ```markdown
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
 ```
 
 ---
@@ -452,14 +467,14 @@ trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwk
 trust-receipt verify envelope.json \
   --type receipt-v11 \
   --jwks-history-file issuer-jwks-history.json \
-  --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
+  --trust-anchor-sha256 <sha256-hex-de-64-caractères-du-PEM-racine-de-l'émetteur> \
   --policy-oid 1.2.3.4.5.6.7.8.9
 
 # Vérifie une enveloppe v1.1 en mode STRICT (application sémantique de l'ancre de confiance)
 trust-receipt verify envelope.json \
   --type receipt-v11 \
   --jwks-history-file issuer-jwks-history.json \
-  --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
+  --trust-anchor-sha256 <sha256-hex-de-64-caractères-du-PEM-racine-de-l'émetteur> \
   --strict
 
 # Staging / CI uniquement — ignore la vérification de l'ancre racine (ne jamais utiliser en production)
@@ -634,4 +649,4 @@ TrustReceipt n'est affilié à, approuvé par, ni officiellement soutenu par Mas
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE). Copyright MCPWebStore (trusteed.xyz), 2026.
+MIT — voir [LICENSE](LICENSE). Copyright Trusteed (trusteed.xyz), 2026.

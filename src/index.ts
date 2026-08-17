@@ -68,6 +68,12 @@ export {
 // with the v1.0 `VerifyOptions` already exported above from `./verifier.js`.
 export {
   verifyReceiptEnvelope,
+  // Trust-provider assertion narrowing predicates. README documents these as
+  // importable from the package root; before this export they only existed on
+  // the module, so the documented import failed.
+  isRfc9421ProviderAssertion,
+  isHumanProviderAssertion,
+  isVisaTapProviderAssertion,
   type V11VerifyResult,
   type V11VerifyErrorCode,
   type VerifyOptions as VerifyV11Options,

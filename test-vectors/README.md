@@ -4,7 +4,7 @@
 
 TrustReceipt is an open standard for cross-protocol agentic commerce evidence receipts. A TrustReceipt is a JWS-signed JSON document that captures cryptographic evidence of an AI agent transaction across payment protocols (x402, AP2, ACP, MCP, UCP, MCAP).
 
-These test vectors **are the standard**. Any verifier that claims TrustReceipt conformance must produce the exact expected outcome for all 10 vectors. There is no separate specification document that takes precedence — the vectors define correct behaviour.
+These test vectors are the **current conformance corpus** for the TrustReceipt v1.0 wire format implemented by this reference verifier (the shape validated by `schema/trust-receipt-v1.schema.json`). Any verifier that claims TrustReceipt v1.0 conformance must produce the exact expected outcome for all 10 vectors. The evolving, normative field-level specification lives in [SPEC.md](../SPEC.md) and [`schema/trust-receipt-v1.0-final.schema.json`](../schema/trust-receipt-v1.0-final.schema.json) — see [`schema/README.md`](../schema/README.md) for how the two relate and why this corpus does not yet validate against the normative schema.
 
 > **Note:** All company names, provider names, merchant IDs, transaction IDs, and reference numbers appearing in these test vectors are entirely fictional and used for illustrative purposes only. No real transaction data is included. Named providers (Mastercard, ClearSale, Skyfire, Stripe, etc.) do not endorse or participate in TrustReceipt.
 
@@ -93,7 +93,7 @@ const jws = await new CompactSign(
   .sign(privKey);
 ```
 
-> **Nota sobre timestamps**: los archivos vectoriales contienen `issued_at` y `expires_at` estáticos (fecha de creación del vector). Para vectores válidos (TC-001 a TC-005), refresca los timestamps a la hora actual antes de firmar, o el verifier devolverá `expired`. Los vectores inválidos (TC-006 a TC-010) deben usarse con sus timestamps originales — TC-007 en particular requiere `expires_at` en el pasado para ejercitar el camino `expired`.
+> **Note on timestamps**: the vector files carry static `issued_at` and `expires_at` values (the date the vector was created). For the valid vectors (TC-001 to TC-005), refresh the timestamps to the current time before signing, or the verifier will return `expired`. The invalid vectors (TC-006 to TC-010) must be used with their original timestamps — TC-007 in particular needs `expires_at` in the past to exercise the `expired` path.
 
 ### Step 4 — Call the verifier
 
@@ -174,7 +174,7 @@ The current schema version is `1.0`. Verifiers must reject receipts with any oth
 
 To propose additional vectors:
 
-1. Open a PR to this repository targeting `packages/trust-receipt-verifier/test-vectors/`.
+1. Open a PR to this repository targeting `test-vectors/`.
 2. Add the payload JSON in the correct subdirectory (`valid/` or `invalid/`).
 3. Add an entry to `vectors.json` with a new sequential TC-0xx id, expected outcome, and failure code if invalid.
 4. At least 3 maintainers must approve before a vector is merged — merged vectors become part of the normative conformance suite.

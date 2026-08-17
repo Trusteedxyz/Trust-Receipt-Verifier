@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+#
+# MONOREPO-INTERNAL BUILD TOOL — not a public artifact.
+#
+# Assembles the publishable subset of this package into dist-spec/. It reads
+# from the surrounding private monorepo (see SCHEMA_SRC below), so it only runs
+# inside that checkout and is meaningless in a standalone clone of the public
+# repository.
+#
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,12 +28,13 @@ cp "$PKG_DIR/TRADEMARKS.md" "$OUT_DIR/"
 # Architecture doc
 cp "$PKG_DIR/docs/architecture.md" "$OUT_DIR/docs/"
 
-# Schema — v1.0-FINAL is the SSOT (audit §F1). The historic
-# `trust-receipt-v0.9-draft.schema.json` is a SUPERSEDED draft with an
-# incompatible shape and is deliberately NOT published: shipping it is what let
-# three different documents call themselves "v1.0".
-cp "$REPO_ROOT/specs/054-trust-claims-standard/contracts/trust-receipt-v1.0-final.schema.json" "$OUT_DIR/schema/"
-cp "$REPO_ROOT/specs/054-trust-claims-standard/contracts/trust-receipt-v1.0-final.schema.json.sha256" "$OUT_DIR/schema/"
+# Schema — v1.0-FINAL is the SSOT (audit §F1). The historic superseded draft is
+# deliberately NOT published: shipping it is what let three different documents
+# call themselves "v1.0". SCHEMA_SRC lives in the private monorepo; only the
+# sealed output lands in the public repo.
+SCHEMA_SRC="$REPO_ROOT/specs/054-trust-claims-standard/contracts"
+cp "$SCHEMA_SRC/trust-receipt-v1.0-final.schema.json" "$OUT_DIR/schema/"
+cp "$SCHEMA_SRC/trust-receipt-v1.0-final.schema.json.sha256" "$OUT_DIR/schema/"
 
 # Conformance test vectors
 cp "$PKG_DIR/test-vectors/vectors.json" "$OUT_DIR/test-vectors/"
@@ -40,13 +49,13 @@ cat > "$OUT_DIR/verifier/README.md" << 'EOF'
 The reference verifier is published as an npm package:
 
 ```bash
-npm install @agenticmcpstores/trust-receipt-verifier
+npm install trust-receipt-verifier
 ```
 
 ## Library usage
 
 ```typescript
-import { verifyTrustReceipt } from "@agenticmcpstores/trust-receipt-verifier";
+import { verifyTrustReceipt } from "trust-receipt-verifier";
 
 const result = await verifyTrustReceipt(jwsToken, {
   jwksUrl: "https://trusteed.xyz/.well-known/jwks.json",
@@ -81,14 +90,15 @@ cd test-vectors
 
 ## Porting to other languages
 
-Follow the verification algorithm in [SPEC.md §4](../SPEC.md). Any implementation passing all 10 conformance vectors is conformant. Open a PR to add your port to the [Known Implementations](#) list.
+Follow the verification algorithm in [SPEC.md §4](../SPEC.md). Any implementation passing all 10 conformance vectors is conformant. Open a PR against
+https://github.com/Trusteedxyz/Trust-Receipt-Verifier to add your port to the Known Implementations list.
 EOF
 
 echo ""
 echo "dist-spec/ assembled:"
 find "$OUT_DIR" -type f | sort
 echo ""
-echo "Ready to push to github.com/trust-receipt/spec"
-echo "  cd dist-spec && git init && git remote add origin git@github.com:trust-receipt/spec.git"
+echo "Ready to push to github.com/Trusteedxyz/Trust-Receipt-Verifier"
+echo "  cd dist-spec && git init && git remote add origin git@github.com:Trusteedxyz/Trust-Receipt-Verifier.git"
 echo "  git add . && git commit -m 'feat: TrustReceipt v1.0 initial draft'"
 echo "  git push -u origin main"

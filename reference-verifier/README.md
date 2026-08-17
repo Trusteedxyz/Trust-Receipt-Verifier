@@ -38,7 +38,7 @@ const result = verifyAivsBundle(bundle, jwks); // { valid, reason? }
 ## What it checks
 
 The verifier reproduces, verdict-for-verdict, the internal
-`verifyAivsProofBundle` (`packages/trust-receipt-verifier/src/aivs-export.ts`):
+`verifyAivsProofBundle` (`src/aivs-export.ts`):
 
 1. **`manifest_hash`** — recomputed as `sha256:<hex>` of the **exact signed
    payload bytes** recovered from the JWS (the base64url-decoded payload

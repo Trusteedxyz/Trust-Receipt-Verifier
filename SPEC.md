@@ -4,8 +4,8 @@
 
 **Status:** Draft
 **Date:** 2026-04-29
-**Authors:** MCPWebStore (trusteed.xyz)
-**Repository:** github.com/trust-receipt/spec
+**Authors:** Trusteed (trusteed.xyz)
+**Repository:** github.com/Trusteedxyz/Trust-Receipt-Verifier
 **License:** MIT
 
 ---
@@ -22,7 +22,7 @@ TrustReceipt is an open standard for cryptographically signed evidence receipts 
 
 > **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-_See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) for the full claims policy._
+_The issuer maintains an internal claims policy that fixes the permitted and prohibited wording for each posture. It is not published with this repository; ask the issuer if you need the canonical list._
 
 ### 1.1 Motivation
 
@@ -445,7 +445,7 @@ All 10 vectors must pass with zero failures to claim conformance.
 Implementations that pass all 10 vectors may include the following badge in their documentation:
 
 ```markdown
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
 ```
 
 ---
@@ -497,15 +497,14 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 ## 11. TrustReceipt v1.1 Reference (eIDAS + ESIGN Hardening)
 
-**Spec origin**: `specs/049-trust-receipt-eidas-hardening/`
-**Architecture**: `docs/architecture/trust-receipt-eidas-hardening-architecture.md`
-**Migration guide**: `docs/integrations/trust-receipt-v11-migration.md`
+**Architecture**: [docs/architecture.md](docs/architecture.md)
+**Migration guide**: [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-receipt-v11-migration.md)
 
 ### 11.1 Legal disclaimer (FR-003)
 
 > **Disclaimer**: TrustReceipt v1.1 is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. See `docs/legal/trust-receipt-claims-policy.md` for the canonical permitted/prohibited wording list.
+The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. The issuer's internal claims policy holds the canonical permitted/prohibited wording list; it is not published with this repository.
 
 ### 11.2 Wire format
 
@@ -624,7 +623,7 @@ Combined v1.0 + v1.1 conformance suite: 58/58 passing as of 2026-05-06.
 | Salt-based `user_intent_hash`               | KMS-keyed HMAC-SHA-256 (`hmac-sha256:` prefix)                                |
 | Embedded `timestamp_evidence` (signed body) | Envelope-level `timestamp_evidence` (NOT signed)                              |
 
-See `docs/integrations/trust-receipt-v11-migration.md` for the full consumer-facing diff including breaking changes and migration steps.
+See [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-receipt-v11-migration.md) for the full consumer-facing diff including breaking changes and migration steps.
 
 ### 11.8 Backward compatibility
 
@@ -787,26 +786,29 @@ if (result.valid) {
 
 The reference implementation is written in TypeScript and uses `jose` for all JWS operations and `zod` for schema validation. It is the authoritative implementation of the verification algorithm in §4 and the normative reference for all Level 1 conformance claims.
 
-Source: `packages/trust-receipt-verifier/src/verifier.ts`
+Source: [`src/verifier.ts`](src/verifier.ts)
 
 ---
 
 ## Appendix C: JSON Schema
 
-A machine-readable JSON Schema (Draft 2020-12) for TrustReceipt 1.0 is located at:
+A machine-readable JSON Schema (Draft 2020-12) for TrustReceipt 1.0 ships in
+this repository at:
 
 ```
-packages/trust-receipt-verifier/src/schema/trust-receipt.schema.ts
+schema/trust-receipt-v1.0-final.schema.json
 ```
 
-**Schema source of truth (corrected 2026-07-27, audit §F1).** The normative v1.0
-schema is `specs/054-trust-claims-standard/contracts/trust-receipt-v1.0-final.schema.json`
-(`$id` `https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json`), sealed by the
+**Schema source of truth (corrected 2026-07-27, audit §F1).** That file is the
+normative v1.0 schema (`$id`
+`https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json`), sealed by the
 sibling `.sha256` file and embedded byte-identically into the publishable
-verifiers (`@trusteed/verifier`, `trusteed-verifier`). Implementations in any
-language MUST validate against that file.
+verifiers. Implementations in any language MUST validate against it. The Zod
+schema in `src/schema/trust-receipt.schema.ts` is the TypeScript projection of
+the same document, not a second source of truth.
 
-The historic standalone `schema/trust-receipt-v0.9-draft.schema.json` (formerly
-misnamed `trust-receipt-v1.schema.json`) is a **superseded draft** with an
-incompatible shape. It is retained so historic artifacts remain interpretable,
-is no longer distributed, and MUST NOT be implemented against.
+The historic `schema/trust-receipt-v1.schema.json` is a **superseded draft**
+with an incompatible shape (draft-07, `additionalProperties: true`, a different
+`required` set). It is retained so existing links keep resolving and historic
+artifacts stay interpretable, and MUST NOT be implemented against. See
+[schema/README.md](schema/README.md).

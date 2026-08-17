@@ -10,7 +10,7 @@
 This document describes the architecture of TrustReceipt: the signing envelope format, the key resolution model, the canonicalization scheme, the verification algorithm, and the conformance system.
 
 For the complete field-level specification, see [SPEC.md](../SPEC.md).
-For JSON Schema validation, see [schema/trust-receipt-v1.schema.json](../schema/trust-receipt-v1.schema.json).
+For JSON Schema validation, see [schema/trust-receipt-v1.0-final.schema.json](../schema/trust-receipt-v1.0-final.schema.json) — the normative schema. See [schema/README.md](../schema/README.md) for why a second, superseded file also lives in that directory.
 For conformance test vectors, see [test-vectors/](../test-vectors/).
 
 ---
@@ -25,13 +25,15 @@ Trust-Receipt-Verifier/
 ├── LICENSE                              — MIT
 ├── TRADEMARKS.md                        — Third-party trademark notices
 ├── schema/
-│   └── trust-receipt-v1.schema.json     — JSON Schema (v1.0)
+│   ├── trust-receipt-v1.0-final.schema.json — JSON Schema (v1.0, NORMATIVE)
+│   ├── trust-receipt-v1.schema.json     — SUPERSEDED draft, kept for link stability (see schema/README.md)
+│   └── README.md                        — Explains which of the two is normative
 ├── test-vectors/
 │   ├── vectors.json                     — Conformance vector manifest
 │   ├── README.md                        — How to run the vectors
 │   ├── valid/                           — TC-001 through TC-005
 │   └── invalid/                         — TC-006 through TC-010
-├── verifier/
+├── reference-verifier/
 │   └── README.md                        — npm package usage + CLI reference
 └── docs/
     └── architecture.md                  — This document
@@ -240,13 +242,15 @@ Default validity window: 3600 seconds (1 hour). Issuers MAY use longer windows f
 
 ## 7. Schema
 
-The machine-readable schema lives at [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v1.schema.json). It is the normative reference for:
+The machine-readable, normative schema lives at [`schema/trust-receipt-v1.0-final.schema.json`](../schema/trust-receipt-v1.0-final.schema.json). It is the normative reference for:
 
 - Required vs optional fields
 - Type constraints (UUID v4, Unix seconds, SHA-256 hex, enum values)
 - Nested object shapes (`trust_provider_assertions`, `protocol_artifacts`, `verification_methods`, …)
 
 Any implementation claiming TrustReceipt conformance MUST validate receipts against this schema (or a byte-equivalent implementation) before accepting them as valid.
+
+A second file, [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v1.schema.json), also lives in that directory under a similar name. It is a **superseded historic draft**, kept only so existing links keep resolving — it MUST NOT be implemented against. See [`schema/README.md`](../schema/README.md) for the full explanation of why two files exist and how they differ.
 
 ---
 
@@ -324,7 +328,7 @@ The reference implementation is published at:
 npm install @agenticmcpstores/trust-receipt-verifier
 ```
 
-See [`verifier/README.md`](../verifier/README.md) for usage, CLI reference, and porting instructions.
+See [`reference-verifier/README.md`](../reference-verifier/README.md) for usage, CLI reference, and porting instructions.
 
 ---
 

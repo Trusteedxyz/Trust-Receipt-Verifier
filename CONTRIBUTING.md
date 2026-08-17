@@ -111,13 +111,13 @@ Non-fatal warnings emitted by `verifyReceiptEnvelope`:
 
 **Spec versioning:**
 
-- `1.x` patch releases (new optional fields, clarifying language, new conformance vectors): maintained by MCPWebStore with single-maintainer approval.
+- `1.x` patch releases (new optional fields, clarifying language, new conformance vectors): maintained by Trusteed with single-maintainer approval.
 - `1.x` minor releases (new required fields, new `assertion_type` values, new protocol support): require at least 2 maintainer approvals and a 14-day comment period on the PR.
 - `2.0` and major version changes: require named co-authors from at least 3 distinct categories — (1) a fraud or risk provider, (2) a payment network or PSP, and (3) an agent platform provider. No major version will be published without this multi-party authorship.
 
 **Maintainers:**
 
-MCPWebStore (trusteed.xyz) is the current sole maintainer of spec v1.x. Additional maintainers from partner organizations may be added following a co-authorship contribution (see §2).
+Trusteed (trusteed.xyz) is the current sole maintainer of spec v1.x. Additional maintainers from partner organizations may be added following a co-authorship contribution (see §2).
 
 **Backwards compatibility:**
 
@@ -129,7 +129,7 @@ Existing conformant verifiers must continue to pass all existing test vectors af
 
 This project follows the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
-In summary: be respectful, assume good faith, focus disagreements on technical substance, and escalate concerns to the maintainers at the email address in `package.json`. Maintainers reserve the right to close issues or PRs that do not meet these standards.
+In summary: be respectful, assume good faith, focus disagreements on technical substance, and escalate concerns to the maintainers by opening a [GitHub issue](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues). Maintainers reserve the right to close issues or PRs that do not meet these standards.
 
 ---
 
