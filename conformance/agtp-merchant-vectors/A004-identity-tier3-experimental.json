@@ -1,0 +1,21 @@
+{
+  "name": "A004-identity-tier3-experimental",
+  "description": "§3.3 — Tier 3 NO puede aparecer en PURCHASE de producción",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "role": "merchant",
+    "status": "Active",
+    "trust_tier": 3,
+    "verification_path": "dns-anchored",
+    "legal_entity_name": "Ejemplo Comercio SL",
+    "merchant_category_code": "5812",
+    "registered_jurisdiction": "ES"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "trust_tier_experimental",
+    "retryable": false
+  }
+}

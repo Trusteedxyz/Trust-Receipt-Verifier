@@ -17,7 +17,13 @@
 
 import { z } from "zod";
 import { PolicyEvidenceFields } from "./schema/policy-evidence.js";
+import {
+  ApprovalEvidenceFields,
+  MandateEvidenceFields,
+} from "./schema/mandate-evidence.js";
+import { OperationLinkFields } from "./schema/operation-link.js";
 import { SignerFields } from "./schema/signers.js";
+import { StateWitnessEvidenceFields } from "./schema/state-witness-evidence.js";
 
 // ---------------------------------------------------------------------------
 // Tagged digest primitives
@@ -706,6 +712,16 @@ export const TrustReceiptV11BodySchema = z
      * campos es exactamente cómo divergen los puertos.
      */
     ...PolicyEvidenceFields,
+    ...OperationLinkFields,
+    // Evidencia de State Witness — SSOT en `schema/state-witness-evidence.ts`.
+    // El root es `.strict()`: sin declararlos, un body que los llevara sería
+    // rechazado entero como clave desconocida.
+    ...StateWitnessEvidenceFields,
+    // Evidencia de mandato y aprobación — SSOT en `schema/mandate-evidence.ts`.
+    // El root es `.strict()`: sin declararlos, un body que los llevara sería
+    // rechazado entero como clave desconocida.
+    ...MandateEvidenceFields,
+    ...ApprovalEvidenceFields,
     // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
     // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
     // y subirse la clase de verificación.

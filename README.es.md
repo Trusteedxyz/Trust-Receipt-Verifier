@@ -23,28 +23,48 @@ Este paquete es la implementación **de referencia del verificador y emisor**. F
 
 ---
 
+## Actualizaciones recientes (2026-09-16)
+
+Esta sincronización pone el repo público al día con la implementación de referencia (sincronización anterior: 2026-08-17) e incluye una pasada de exactitud sobre la documentación existente. Novedades:
+
+- **Dos verificadores de identidad de terceros nuevos**, cada uno independiente de hablar el transporte del protocolo subyacente: **Merchant Identity Assertions (MIA)** — emisión propia y de terceros autorizada por DNS (`draft-anders-merchant-identity-assertions-01`, 30 vectores) — e **identidad de comerciante AGTP** — comprobaciones de Agent Identity Document, Intent Assertion y Cart-Digest (`draft-hood-agtp-merchant-identity-02`, 50 vectores).
+- **Evidencia de mandato y aprobación**, **evidencia de State Witness** y **enlace de operación** — tres grupos de campos opcionales nuevos (ver [Anatomía del recibo](#anatomía-del-recibo) y SPEC.md §3.2), inyectados igual en las tres formas de recibo sin subir `schema_version`.
+- **Verificador de referencia del pasaporte ATEP** (`reference-verifier/verify-atep-passport.mjs`) — script de dependencia cero, sólo built-ins de Node, que prueba que la atestación de confianza portátil de un comerciante se puede verificar sin conexión y sin ningún código de Trusteed.
+- Un 7º vector de conformidad `legacy-compact` (declaración de firmantes).
+- **Dos correcciones de exactitud a la documentación existente**, halladas al verificar en vez de asumir: la línea "11 vectores v1.1" subcontaba una tabla que ya tenía 12 filas (SPEC.md §11.6), y `CONTRIBUTING.md` / `docs/architecture.md` / la sección Conformidad de este README ahora revelan que `scripts/validate-vectors.ts` reporta actualmente **9/10**, no 10/10 (TC-007 / `expired`, [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6) — una discrepancia real y fechada entre código y spec, no una errata).
+- **Un hueco de empaquetado preexistente ahora con seguimiento**: la fila de RFC 3161 decía "opcional"; en realidad no es usable por ningún instalador externo hoy ([issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5)).
+
+Ver [CHANGELOG.md](CHANGELOG.md) para el historial completo de versiones.
+
+---
+
 ## Estado de capacidades
 
-| Capacidad                                               | Estado                              | Notas                                                                                 |
-| -------------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| Verificación JWS (Ed25519)                               | ✅ Implementado                      | CLI + librería, sin criptografía propia (usa `jose` v6)                              |
-| Resolución de clave pública basada en JWKS                | ✅ Implementado                      | `fetch()` directo en cada verificación (timeout de 5s), sin caché en proceso; también soporta un conjunto JWK inline |
-| Esquema v1.0                                              | ✅ Estable                           | 10 vectores de conformidad pasando                                                    |
-| Esquema v1.1 (campos alineados con eIDAS)                | 🟡 Código completo / experimental    | 11 vectores adicionales pasando; el conjunto de campos puede evolucionar antes de v1.2 |
-| JSON canónico RFC 8785                                   | ✅ Implementado                      | Usado para firmar + hashes de la cadena de auditoría                                  |
-| Cadena de auditoría (`hash_chain_prev`)                  | ✅ Implementado                      | Enlace a prueba de manipulación por comerciante                                       |
-| Postura de sello electrónico avanzado eIDAS               | 🟡 Candidato                         | Soporte a nivel de campo; **no** es un Sello Electrónico Cualificado (sin QTSP)       |
-| Forma de evidencia ESIGN / UETA                          | 🟡 Parcial                           | `esign_disclosure_hash` + contexto de consentimiento; flujo completo de divulgación en progreso |
-| Evidencia de sello de tiempo confiable RFC 3161          | 🟡 Opcional / dependiente de integración | Hook presente vía `trust-receipt-tsa-client`; depende del proveedor de TSA            |
-| Firma del lado del emisor con AWS KMS                    | 🟡 Opcional / del lado del emisor    | Provisto por el paquete hermano `trust-receipt-kms-signer`; no requerido para verificar |
-| Ports de referencia (TS) / ports a otros lenguajes (Python, Go, Java) | 🟡 Solo TS por ahora      | Se aceptan ports — ver `CONTRIBUTING.md`                                              |
-| Exportación/verificación de proof-bundle AIVS (`aivs-export.ts`) | 🟡 Código completo            | Proyecta un recibo v1.0 firmado en un bundle compatible con AIVS `{ manifest_hash, session_sig, audit_log }` — verificable sin conexión sin código de Trusteed (spec-062 US1, alineación, no custodia/escrow) |
-| Verificación de artefactos de extensión (`verify-extension-artifact.ts`) | 🟡 Código completo    | Verifica recibos de borrado firmados por el desarrollador y manifiestos de extensión del ecosistema del Trusteed Extension Marketplace |
-| Forma compacta v1.0-legacy del recibo (`verifier.ts`)     | ✅ Implementado                      | `verifyTrustReceipt` también acepta el payload compacto estilo JWT emitido por el emisor de la plataforma desde spec-040; expuesto como `result.variant` / `result.legacyReceipt` |
+| Capacidad                                                                | Estado                                   | Notas                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Verificación JWS (Ed25519)                                               | ✅ Implementado                          | CLI + librería, sin criptografía propia (usa `jose` v6)                                                                                                                                                       |
+| Resolución de clave pública basada en JWKS                               | ✅ Implementado                          | `fetch()` directo en cada verificación (timeout de 5s), sin caché en proceso; también soporta un conjunto JWK inline                                                                                          |
+| Esquema v1.0                                                             | ✅ Estable                               | 10 vectores de conformidad pasando                                                                                                                                                                            |
+| Esquema v1.1 (campos alineados con eIDAS)                                | 🟡 Código completo / experimental        | 11 vectores adicionales pasando; el conjunto de campos puede evolucionar antes de v1.2                                                                                                                        |
+| JSON canónico RFC 8785                                                   | ✅ Implementado                          | Usado para firmar + hashes de la cadena de auditoría                                                                                                                                                          |
+| Cadena de auditoría (`hash_chain_prev`)                                  | ✅ Implementado                          | Enlace a prueba de manipulación por comerciante                                                                                                                                                               |
+| Postura de sello electrónico avanzado eIDAS                              | 🟡 Candidato                             | Soporte a nivel de campo; **no** es un Sello Electrónico Cualificado (sin QTSP)                                                                                                                               |
+| Forma de evidencia ESIGN / UETA                                          | 🟡 Parcial                               | `esign_disclosure_hash` + contexto de consentimiento; flujo completo de divulgación en progreso                                                                                                               |
+| Evidencia de sello de tiempo confiable RFC 3161                          | 🔴 Hook presente, no usable externamente | `verify-timestamp-evidence.ts` importa la implementación real desde `@agenticmcpstores/trust-receipt-tsa-client`, un paquete interno de Trusteed **no publicado en npm ni incluido en este repo** — `npm install` resuelve el resto del paquete pero esa dependencia no tiene entrada en el registro; seguimiento en el [issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5) |
+| Merchant Identity Assertions (MIA) — verificador de terceros             | ✅ Implementado                          | Verifica documentos `draft-anders-merchant-identity-assertions-01` — emisión propia y de terceros autorizada por DNS, detección de replay/manipulación/redirección; 30 vectores de conformidad en `conformance/mia-vectors/` |
+| Identidad de comerciante AGTP — Intent Assertion / Cart-Digest           | ✅ Implementado                          | Verifica exactamente lo que `draft-hood-agtp-merchant-identity-02` declara comprobable **sin hablar AGTP** — este paquete no incluye ningún cliente de transporte AGTP, sólo el Agent Identity Document, la Intent Assertion y el Cart-Digest; 50 vectores de conformidad en `conformance/agtp-merchant-vectors/` |
+| Evidencia de mandato y aprobación (`mandate-evidence.ts`)                | 🟡 Sólo estructural                      | Permite a un tercero recomputar `mandate_claims_hash` y confirmar que el importe cobrado cabía dentro de lo autorizado; `mandate_verification` es un enum cerrado y hoy sólo reporta `"structure_only"` — ningún emisor verifica todavía la firma de un mandato |
+| Evidencia de State Witness (`state-witness-evidence.ts`)                 | ✅ Implementado                          | Declara qué resolvió el comparador de estado del emisor antes de mover dinero, y contra qué estado autoritativo — cierra el hueco de un checkout que se ejecutó sin dejar constancia firmada de la comprobación |
+| Enlace de operación (`operation-link.ts`)                                | ✅ Implementado (sólo esquema)           | Enlaza un reintento corregido o una ejecución reconfirmada con el recibo al que sustituye — distinto de `hash_chain_prev`, que sólo ordena por tiempo sin afirmar continuidad; no se reexporta desde `index.ts`, importar desde `trust-receipt-verifier/schema/operation-link.js` |
+| Firma del lado del emisor con AWS KMS                                    | 🟡 Opcional / del lado del emisor        | Provisto por el paquete hermano `trust-receipt-kms-signer`; no requerido para verificar                                                                                                                       |
+| Ports de referencia (TS) / ports a otros lenguajes (Python, Go, Java)    | 🟡 Solo TS por ahora                     | Se aceptan ports — ver `CONTRIBUTING.md`                                                                                                                                                                      |
+| Exportación/verificación de proof-bundle AIVS (`aivs-export.ts`)         | 🟡 Código completo                       | Proyecta un recibo v1.0 firmado en un bundle compatible con AIVS `{ manifest_hash, session_sig, audit_log }` — verificable sin conexión sin código de Trusteed (spec-062 US1, alineación, no custodia/escrow) |
+| Verificación de artefactos de extensión (`verify-extension-artifact.ts`) | 🟡 Código completo                       | Verifica recibos de borrado firmados por el desarrollador y manifiestos de extensión del ecosistema del Trusteed Extension Marketplace                                                                        |
+| Forma compacta v1.0-legacy del recibo (`verifier.ts`)                    | ✅ Implementado                          | `verifyTrustReceipt` también acepta el payload compacto estilo JWT emitido por el emisor de la plataforma desde spec-040; expuesto como `result.variant` / `result.legacyReceipt`                             |
 
-| Degradación declarada del ancla de confianza (`accepted_degraded`) | ✅ Implementado             | Veredicto de tres valores para los sobres v1.1 — ver [Veredictos de verificación](#veredictos-de-verificación) y SPEC.md §4.1 (NORMATIVO)                                          |
-| Revocación del lado del consumidor (`revocation.ts`)      | ✅ Implementado                      | `checkRevocation()` contra la lista de estado publicada por el comerciante. Puro y offline: tú descargas, él decide. Todo fallo resuelve a `unknown`, nunca a `not_revoked`       |
-| Canonicalización reportada (`result.canonicalization`)    | ✅ Implementado                      | `"jcs"` frente a `"json-stringify-legacy"` en el camino legacy-compact — eje independiente de `variant`, que describe la FORMA del payload                                        |
+| Degradación declarada del ancla de confianza (`accepted_degraded`) | ✅ Implementado | Veredicto de tres valores para los sobres v1.1 — ver [Veredictos de verificación](#veredictos-de-verificación) y SPEC.md §4.1 (NORMATIVO) |
+| Revocación del lado del consumidor (`revocation.ts`) | ✅ Implementado | `checkRevocation()` contra la lista de estado publicada por el comerciante. Puro y offline: tú descargas, él decide. Todo fallo resuelve a `unknown`, nunca a `not_revoked` |
+| Canonicalización reportada (`result.canonicalization`) | ✅ Implementado | `"jcs"` frente a `"json-stringify-legacy"` en el camino legacy-compact — eje independiente de `variant`, que describe la FORMA del payload |
 
 > ✅ = implementación de grado producción. 🟡 = presente y testeado pero sujeto a cambios antes de la GA de v1.2, o dependiente de integración del lado del operador.
 
@@ -55,14 +75,14 @@ veredicto como binario es un fallo de conformidad en cualquiera de las dos
 direcciones: o da por plenamente verificado un recibo degradado, o descarta uno
 válido.
 
-| Veredicto           | Significado                                                                                          |
-| ------------------- | ---------------------------------------------------------------------------------------------------- |
-| `accepted`          | Firma, estructura y cadena de confianza verificadas.                                                 |
-| `accepted_degraded` | Firma y estructura verificadas; el recibo **declara** que su cadena de confianza no es verificable.  |
-| `rejected`          | Falló alguna comprobación.                                                                           |
+| Veredicto           | Significado                                                                                         |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| `accepted`          | Firma, estructura y cadena de confianza verificadas.                                                |
+| `accepted_degraded` | Firma y estructura verificadas; el recibo **declara** que su cadena de confianza no es verificable. |
+| `rejected`          | Falló alguna comprobación.                                                                          |
 
 `accepted_degraded` se emite únicamente cuando la raíz emisora que respalda el
-historial JWKS no pudo verificarse criptográficamente **y** el cuerpo *firmado*
+historial JWKS no pudo verificarse criptográficamente **y** el cuerpo _firmado_
 del recibo lleva una entrada `legal_posture_warnings[]` con
 `reason: "trust_anchor_staging"`. Un recibo que calla ante un ancla no
 verificable se `rejected`: el silencio nunca se lee como consentimiento, y el
@@ -176,10 +196,10 @@ _El emisor mantiene una política de declaraciones interna que fija la redacció
 
 ### Estado de Compatibilidad Regulatoria
 
-| Marco normativo                                | Jurisdicción | Estado                                                                                                                                                                                                                        | Campos v1.1                                                                                                  |
-| ----------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **eIDAS** (Reglamento 910/2014)                | UE           | 🟡 Candidato — `legal_posture` progresa `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. El sello cualificado (QeSeal) requiere un QTSP.                                                       | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
-| **ESIGN / UETA**                               | EE. UU.      | 🟡 Parcial — Sello verificable con evidencia de consentimiento, atribución del agente, divulgación versionada y retención auditable, diseñado para respaldar ESIGN/UETA. El flujo completo de divulgación (URI de retirada, fijación de versión) está en progreso. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
+| Marco normativo                                | Jurisdicción | Estado                                                                                                                                                                                                                                                                                                             | Campos v1.1                                                                                                  |
+| ---------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| **eIDAS** (Reglamento 910/2014)                | UE           | 🟡 Candidato — `legal_posture` progresa `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. El sello cualificado (QeSeal) requiere un QTSP.                                                                                                                                             | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
+| **ESIGN / UETA**                               | EE. UU.      | 🟡 Parcial — Sello verificable con evidencia de consentimiento, atribución del agente, divulgación versionada y retención auditable, diseñado para respaldar ESIGN/UETA. El flujo completo de divulgación (URI de retirada, fijación de versión) está en progreso.                                                 | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
 | **Electronic Communications Act 2000 / DIATF** | Reino Unido  | 🟡 Compatible a nivel de esquema — la retención consciente de la jurisdicción (Reino Unido: 7 años por defecto) y el campo `legal_posture` transportan evidencia de servicios de confianza del Reino Unido. La alineación con DIATF está verificada a nivel de esquema; la certificación operativa está pendiente. | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy`                     |
 
 > ⚠️ Nada de lo anterior constituye asesoramiento legal. El estado de calificación regulatoria puede cambiar a medida que evoluciona la implementación. Consulte con asesoría legal cualificada para requisitos específicos de cada jurisdicción.
@@ -263,66 +283,66 @@ Un payload de TrustReceipt contiene 24 campos agrupados en cinco grupos:
 
 **Core**
 
-| Campo             | Tipo         | Descripción                   |
-| ----------------- | ------------ | ------------------------------ |
-| `receipt_id`     | UUID v4      | Identificador único del recibo |
-| `schema_version` | `"1.0"`      | Literal de versión del esquema |
-| `issued_at`      | Segundos Unix | Cuándo se creó el recibo       |
-| `expires_at`     | Segundos Unix | Cuándo expira el recibo        |
-| `issuer`         | string       | Dominio de la plataforma emisora |
+| Campo            | Tipo          | Descripción                      |
+| ---------------- | ------------- | -------------------------------- |
+| `receipt_id`     | UUID v4       | Identificador único del recibo   |
+| `schema_version` | `"1.0"`       | Literal de versión del esquema   |
+| `issued_at`      | Segundos Unix | Cuándo se creó el recibo         |
+| `expires_at`     | Segundos Unix | Cuándo expira el recibo          |
+| `issuer`         | string        | Dominio de la plataforma emisora |
 
 **Participantes**
 
-| Campo             | Tipo   | Descripción                                        |
-| ----------------- | ------ | ---------------------------------------------------- |
-| `merchant_id`    | string | Identificador del comerciante                         |
-| `agent_id`       | string | Identificador de sesión o instancia del agente        |
+| Campo            | Tipo   | Descripción                                          |
+| ---------------- | ------ | ---------------------------------------------------- |
+| `merchant_id`    | string | Identificador del comerciante                        |
+| `agent_id`       | string | Identificador de sesión o instancia del agente       |
 | `agent_provider` | string | Proveedor de IA (`anthropic`, `openai`, `google`, …) |
 
 **Evidencia de Transacción**
 
-| Campo                 | Tipo               | Descripción                                                                              |
-| --------------------- | ------------------ | ------------------------------------------------------------------------------------------ |
-| `user_intent_hash`   | string (no vacío)  | Hash de la intención original del usuario — debe ser no vacío (se recomienda SHA-256 hex) |
-| `cart_hash`          | SHA-256 hex        | Hash del contenido del carrito en el momento de la decisión (opcional)                     |
-| `order_hash`         | SHA-256 hex        | Hash del objeto de pedido liquidado (opcional)                                              |
-| `transaction_id`     | string             | Referencia de transacción de la plataforma (opcional)                                       |
-| `protocol`           | enum               | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`                                                  |
-| `protocol_artifacts` | array              | Hashes de objetos de evidencia específicos del protocolo                                    |
-| `payment_reference`  | object             | Nombre del PSP + referencia, sin datos de pago en crudo (opcional)                          |
+| Campo                | Tipo              | Descripción                                                                               |
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------------- |
+| `user_intent_hash`   | string (no vacío) | Hash de la intención original del usuario — debe ser no vacío (se recomienda SHA-256 hex) |
+| `cart_hash`          | SHA-256 hex       | Hash del contenido del carrito en el momento de la decisión (opcional)                    |
+| `order_hash`         | SHA-256 hex       | Hash del objeto de pedido liquidado (opcional)                                            |
+| `transaction_id`     | string            | Referencia de transacción de la plataforma (opcional)                                     |
+| `protocol`           | enum              | `x402 \| AP2 \| ACP \| MCP \| UCP \| MCAP`                                                |
+| `protocol_artifacts` | array             | Hashes de objetos de evidencia específicos del protocolo                                  |
+| `payment_reference`  | object            | Nombre del PSP + referencia, sin datos de pago en crudo (opcional)                        |
 
 **Aserciones de Confianza**
 
-| Campo                       | Tipo  | Descripción                                                   |
-| ---------------------------- | ----- | ----------------------------------------------------------------- |
-| `risk_signals`              | array | Señales normalizadas del emisor o de proveedores                  |
-| `trust_provider_assertions` | array | Aserciones puntuadas de ClearSale, Trulioo, Mastercard, etc.      |
-| `policy_decision`           | enum  | `allow \| deny \| review \| challenge`                            |
+| Campo                       | Tipo  | Descripción                                                  |
+| --------------------------- | ----- | ------------------------------------------------------------ |
+| `risk_signals`              | array | Señales normalizadas del emisor o de proveedores             |
+| `trust_provider_assertions` | array | Aserciones puntuadas de ClearSale, Trulioo, Mastercard, etc. |
+| `policy_decision`           | enum  | `allow \| deny \| review \| challenge`                       |
 
 **Cumplimiento**
 
-| Campo                     | Tipo        | Descripción                                                        |
-| -------------------------- | ----------- | --------------------------------------------------------------------- |
-| `liability_context`      | object      | Asertor y alcance (opcional)                                          |
-| `consent_context`        | object      | Hash de consentimiento, alcance, timestamp (opcional)                 |
-| `privacy_classification` | object      | Bandera PII, días de retención, jurisdicción (opcional)                |
+| Campo                    | Tipo        | Descripción                                                                |
+| ------------------------ | ----------- | -------------------------------------------------------------------------- |
+| `liability_context`      | object      | Asertor y alcance (opcional)                                               |
+| `consent_context`        | object      | Hash de consentimiento, alcance, timestamp (opcional)                      |
+| `privacy_classification` | object      | Bandera PII, días de retención, jurisdicción (opcional)                    |
 | `verification_methods`   | array       | URL JWKS o DID para resolución de clave — se requiere al menos una entrada |
-| `kid`                    | string      | ID de clave usado para firmar este recibo                             |
-| `hash_chain_prev`        | SHA-256 hex | Recibo anterior en la cadena de auditoría (opcional)                   |
-| `attachments`            | array       | Referencias de archivo nombradas y con hash (opcional)                 |
+| `kid`                    | string      | ID de clave usado para firmar este recibo                                  |
+| `hash_chain_prev`        | SHA-256 hex | Recibo anterior en la cadena de auditoría (opcional)                       |
+| `attachments`            | array       | Referencias de archivo nombradas y con hash (opcional)                     |
 
 ---
 
 ## Soporte de protocolos
 
-| Protocolo                                                                                                  | Mapeo de artefactos | Tipos de artefacto principales                            |
-| ------------------------------------------------------------------------------------------------------------ | -------------------- | ------------------------------------------------------------ |
-| [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Definido             | `mcap_consent_hash`, `mcap_nonce`                             |
-| [x402](https://github.com/x402-foundation/x402)                                                           | Definido             | `permit2_hash`, `settlement_hash`, `upto_envelope_hash`       |
-| [AP2](https://github.com/google-agentic-commerce/AP2)                                                     | Definido             | `mandate_hash`, `ap2_consent_hash`                            |
-| [MCP](https://modelcontextprotocol.io)                                                                    | Definido             | `mcp_call_hash`, `tool_call_hash`                             |
-| [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                             | Definido             | `acp_session_hash`, `acp_policy_hash`                         |
-| [UCP](https://github.com/Universal-Commerce-Protocol/ucp)                                                 | Definido             | `ucp_token_hash`                                              |
+| Protocolo                                                                                                 | Mapeo de artefactos | Tipos de artefacto principales                          |
+| --------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------- |
+| [MCAP](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | Definido            | `mcap_consent_hash`, `mcap_nonce`                       |
+| [x402](https://github.com/x402-foundation/x402)                                                           | Definido            | `permit2_hash`, `settlement_hash`, `upto_envelope_hash` |
+| [AP2](https://github.com/google-agentic-commerce/AP2)                                                     | Definido            | `mandate_hash`, `ap2_consent_hash`                      |
+| [MCP](https://modelcontextprotocol.io)                                                                    | Definido            | `mcp_call_hash`, `tool_call_hash`                       |
+| [ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                             | Definido            | `acp_session_hash`, `acp_policy_hash`                   |
+| [UCP](https://github.com/Universal-Commerce-Protocol/ucp)                                                 | Definido            | `ucp_token_hash`                                        |
 
 ---
 
@@ -330,13 +350,17 @@ Un payload de TrustReceipt contiene 24 campos agrupados en cinco grupos:
 
 Una implementación de verificador debe pasar los 10 vectores de prueba (v1.0) para reclamar conformidad con TrustReceipt. Se definen tres niveles:
 
-> **Estado v1.1 (2026-05-06)** — el endurecimiento eIDAS añade 11 vectores v1.1 en `test-vectors/v11/`. El esquema v1.1 elimina los campos legacy `mandate_hash` / `permit2` / `mcp` de rail e introduce `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings` y `esign_disclosure_hash`. Suite combinada 58/58 pasando.
+> **Estado v1.1 (2026-05-06)** — el endurecimiento eIDAS añade 12 vectores v1.1 en `test-vectors/v11/` (corregido desde "11" — la tabla de SPEC.md §11.6 siempre listó 12 filas, incluida `019b`; sólo esta línea de resumen estaba desactualizada). El esquema v1.1 elimina los campos legacy `mandate_hash` / `permit2` / `mcp` de rail e introduce `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings` y `esign_disclosure_hash`.
 
-| Nivel | Nombre    | Requisito                                                                  |
-| ----- | --------- | ------------------------------------------------------------------------------ |
-| 1     | Verifier  | Pasa los 10 vectores de prueba                                                  |
-| 2     | Issuer    | Nivel 1 + emite correctamente recibos válidos                                   |
-| 3     | Provider  | Nivel 2 + coautoría de ≥1 tipo de `trust_provider_assertions` con datos reales |
+> ⚠️ **Discrepancia de conformidad, a 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): ejecutar `npx tsx scripts/validate-vectors.ts` hoy reporta **9/10**, no 10/10. La comprobación de expiración de `verifyTrustReceipt` pasó a ser sólo informativa (`result.freshness.expired`, no fatal) el 2026-07-28 para satisfacer el requisito de retención plurianual de spec-049 FR-018, y la entrada `expected: "invalid"` de TC-007 nunca se reconcilió con ese cambio. No implementes un port contra esta línea sin leer antes ese issue — `test-vectors/vectors.json` es la ABI del verificador entre lenguajes (ver `PUBLISH.md`).
+
+> **Añadidos 2026-09-16** — dos verificadores de identidad de terceros nuevos, cada uno con su propia suite de conformidad: **50 vectores** en `conformance/agtp-merchant-vectors/` (`draft-hood-agtp-merchant-identity-02`) y **30 vectores** en `conformance/mia-vectors/` (`draft-anders-merchant-identity-assertions-01`), más un 7º vector `legacy-compact` (`L007-signers-declaration.json`). Contando cada fichero de vector en `test-vectors/` y `conformance/` (v1.0 núcleo 10, v1.1 12, v1.1-strict 4, legacy-compact 7, x402-binding 11, agtp-merchant 50, mia 30) da **124 vectores de conformidad** en disco. La suite de tests automatizados en conjunto (`pnpm test`) son **475 tests pasando en 36 ficheros** — más que el conteo bruto de vectores porque varias suites comprueban comportamiento por campo y de frontera más allá del conjunto fijo de vectores. Ambas cifras se midieron directamente (`pnpm vitest run` / `npx tsc --noEmit`, ambos limpios) contra este árbol exacto.
+
+| Nivel | Nombre   | Requisito                                                                      |
+| ----- | -------- | ------------------------------------------------------------------------------ |
+| 1     | Verifier | Pasa los 10 vectores de prueba                                                 |
+| 2     | Issuer   | Nivel 1 + emite correctamente recibos válidos                                  |
+| 3     | Provider | Nivel 2 + coautoría de ≥1 tipo de `trust_provider_assertions` con datos reales |
 
 Esta implementación de referencia es conformante de Nivel 2. Hay dos formas de ejecutar la suite de conformidad:
 
@@ -434,7 +458,10 @@ const jws = await issueTrustReceipt({
 **Exportación de proof-bundle AIVS** — proyecta un recibo v1.0 firmado en un bundle compatible con AIVS (`draft-stone-aivs-00`), verificable sin conexión con solo el JWS y el JWKS del emisor:
 
 ```typescript
-import { exportAivsProofBundle, verifyAivsProofBundle } from "trust-receipt-verifier";
+import {
+  exportAivsProofBundle,
+  verifyAivsProofBundle,
+} from "trust-receipt-verifier";
 
 const bundle = exportAivsProofBundle(receiptJws); // { manifest_hash, session_sig, kid, alg, audit_log }
 const result = await verifyAivsProofBundle(bundle, { jwks: issuerJwks });
@@ -502,13 +529,13 @@ pero no lleva ninguna vinculación real a la cadena de confianza (los emisores e
 tales stubs antes de una ceremonia de ancla de producción). La opción `mode` (librería) /
 el flag `--strict` (CLI) añade la capa **semántica**:
 
-| Condición                                                           | `compat` (por defecto — canary)      | `strict`                                    |
-| ------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------|
-| `trust_anchor_sha256` es un stub opaco (todo ceros / un solo nibble) | advierte `trust_anchor_sha256_stub`   | rechaza `trust_anchor_stub_rejected`         |
-| `jwks_sha256` es un stub opaco                                      | advierte `jwks_sha256_stub`           | rechaza `jwks_sha256_stub_rejected`          |
-| `trust_anchor_sha256` ≠ `trustAnchorPemSha256` fijado por el operador | advierte `trust_anchor_sha256_mismatch` | rechaza `trust_anchor_mismatch`              |
-| recibo buyer_agent sin vinculación de identidad de agente            | advierte `agent_identity_absent`      | rechaza `agent_identity_required_strict`     |
-| sello de tiempo RFC 3161 / LOTL degradado (p. ej. TSA no disponible) | advierte (`tsa_unavailable`)          | advierte (`tsa_unavailable`) — aceptado en AMBOS |
+| Condición                                                             | `compat` (por defecto — canary)         | `strict`                                         |
+| --------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------ |
+| `trust_anchor_sha256` es un stub opaco (todo ceros / un solo nibble)  | advierte `trust_anchor_sha256_stub`     | rechaza `trust_anchor_stub_rejected`             |
+| `jwks_sha256` es un stub opaco                                        | advierte `jwks_sha256_stub`             | rechaza `jwks_sha256_stub_rejected`              |
+| `trust_anchor_sha256` ≠ `trustAnchorPemSha256` fijado por el operador | advierte `trust_anchor_sha256_mismatch` | rechaza `trust_anchor_mismatch`                  |
+| recibo buyer_agent sin vinculación de identidad de agente             | advierte `agent_identity_absent`        | rechaza `agent_identity_required_strict`         |
+| sello de tiempo RFC 3161 / LOTL degradado (p. ej. TSA no disponible)  | advierte (`tsa_unavailable`)            | advierte (`tsa_unavailable`) — aceptado en AMBOS |
 
 `compat` es el valor por defecto para que el despliegue no sea disruptivo mientras se
 acumula observabilidad; cambia a `strict` una vez que los emisores hayan completado la
@@ -532,12 +559,12 @@ const result = await verifyReceiptEnvelope(envelope, {
 
 ## Documentación
 
-| Documento                                     | Descripción                                                                                            |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)                            | Especificación formal — formato wire, referencia de campos, reglas de conformidad                          |
-| [docs/architecture.md](docs/architecture.md)  | Arquitectura interna — envoltorio de firma, resolución de clave, pipeline de verificación, propiedades de seguridad |
-| [CONTRIBUTING.md](CONTRIBUTING.md)            | Cómo añadir vectores de conformidad, ports a otros lenguajes, o esquemas de proveedor de confianza          |
-| [CHANGELOG.md](CHANGELOG.md)                  | Historial de versiones y cambios disruptivos                                                                |
+| Documento                                    | Descripción                                                                                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                           | Especificación formal — formato wire, referencia de campos, reglas de conformidad                                   |
+| [docs/architecture.md](docs/architecture.md) | Arquitectura interna — envoltorio de firma, resolución de clave, pipeline de verificación, propiedades de seguridad |
+| [CONTRIBUTING.md](CONTRIBUTING.md)           | Cómo añadir vectores de conformidad, ports a otros lenguajes, o esquemas de proveedor de confianza                  |
+| [CHANGELOG.md](CHANGELOG.md)                 | Historial de versiones y cambios disruptivos                                                                        |
 
 ---
 
@@ -566,20 +593,20 @@ Si tu caso de uso necesita alguna de las garantías anteriores, el recibo es un 
 
 El verificador está diseñado para detectar las siguientes clases de manipulación. Para cada una, el verificador devuelve un `{ valid: false, reason }` estructurado en lugar de lanzar una excepción.
 
-| Amenaza                                | Defensa                                                                                                                    | Comportamiento del verificador (v1.0 / v1.1)                                                  |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Falsificación de firma / manipulación de payload | Ed25519 sobre bytes canónicos RFC 8785; `kid` fijado en el header y en el payload                                            | `"signature_invalid"` / `"signature_invalid"`                                                       |
-| Clave incorrecta usada para firmar     | Discrepancia de `kid` entre el header JWS y la entrada JWKS                                                                     | `"kid_not_found"` / `"unknown_kid"`                                                                 |
-| Recibo expirado                        | `expires_at` comprobado contra el reloj del verificador con tolerancia configurable (por defecto ±30 s)                       | `"expired"` / `"receipt_expired"`                                                                    |
-| Recibo emitido en el futuro             | `issued_at` comprobado contra el reloj del verificador con la misma tolerancia                                                  | `"not_yet_valid"` / `"receipt_not_yet_valid"`                                                       |
-| Downgrade de esquema / campos desconocidos | Validación de esquema Zod estricta sobre campos conocidos; claves desconocidas de nivel superior rechazadas                     | `"schema_invalid"` / `"schema_invalid"`                                                             |
-| Historial JWKS falsificado / sin firmar | `jwksHistory.signed_by_root_sha256` debe coincidir con un ancla de confianza embebida; fallo estricto si es desconocido salvo `allowStagingRoot` | n/a (v1.0) / `"jwks_history_signature_invalid"`                                                     |
-| Aserción de proveedor de confianza desconocido | El verificador advierte pero no rechaza, preservando la compatibilidad hacia adelante                                          | n/a (v1.0) / advertencia `"unknown_trust_provider_present"`                                          |
-| Repetición (replay) de un recibo antiguo | **Fuera del alcance del verificador por sí solo.** Los consumidores deben forzar la unicidad vía `receipt_id` + `issued_at` + reglas de negocio | n/a — el verificador devuelve `valid: true` / `outcome: "accepted"` para réplicas aún no expiradas |
-| Rotación de JWKS mientras un recibo está vivo | El fetch de JWKS se refresca cuando hay un miss de `kid`; las claves antiguas pueden conservarse en el conjunto JWKS durante la ventana de gracia de rotación | Verifica mientras el `kid` siga publicado                                                            |
-| Clave del emisor comprometida           | La revocación de claves es responsabilidad del operador: quitar el `kid` del conjunto JWKS; los verificadores fallarán en modo cerrado | `"kid_not_found"` / `"unknown_kid"` una vez eliminada                                               |
-| Deriva de reloj entre emisor/verificador | Opción `toleranceSeconds` (por defecto 30 s)                                                                                    | Dentro de la tolerancia: pasa. Fuera: `"expired"` / `"receipt_expired"` o `"receipt_not_yet_valid"` |
-| MITM en el endpoint JWKS                | El TLS hacia el host JWKS es responsabilidad del operador; fijar la URL del JWKS fuera de banda defiende contra sustitución maliciosa | n/a — el verificador confía en la URL configurada                                                   |
+| Amenaza                                          | Defensa                                                                                                                                                       | Comportamiento del verificador (v1.0 / v1.1)                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Falsificación de firma / manipulación de payload | Ed25519 sobre bytes canónicos RFC 8785; `kid` fijado en el header y en el payload                                                                             | `"signature_invalid"` / `"signature_invalid"`                                                       |
+| Clave incorrecta usada para firmar               | Discrepancia de `kid` entre el header JWS y la entrada JWKS                                                                                                   | `"kid_not_found"` / `"unknown_kid"`                                                                 |
+| Recibo expirado                                  | `expires_at` comprobado contra el reloj del verificador con tolerancia configurable (por defecto ±30 s)                                                       | `"expired"` / `"receipt_expired"`                                                                   |
+| Recibo emitido en el futuro                      | `issued_at` comprobado contra el reloj del verificador con la misma tolerancia                                                                                | `"not_yet_valid"` / `"receipt_not_yet_valid"`                                                       |
+| Downgrade de esquema / campos desconocidos       | Validación de esquema Zod estricta sobre campos conocidos; claves desconocidas de nivel superior rechazadas                                                   | `"schema_invalid"` / `"schema_invalid"`                                                             |
+| Historial JWKS falsificado / sin firmar          | `jwksHistory.signed_by_root_sha256` debe coincidir con un ancla de confianza embebida; fallo estricto si es desconocido salvo `allowStagingRoot`              | n/a (v1.0) / `"jwks_history_signature_invalid"`                                                     |
+| Aserción de proveedor de confianza desconocido   | El verificador advierte pero no rechaza, preservando la compatibilidad hacia adelante                                                                         | n/a (v1.0) / advertencia `"unknown_trust_provider_present"`                                         |
+| Repetición (replay) de un recibo antiguo         | **Fuera del alcance del verificador por sí solo.** Los consumidores deben forzar la unicidad vía `receipt_id` + `issued_at` + reglas de negocio               | n/a — el verificador devuelve `valid: true` / `outcome: "accepted"` para réplicas aún no expiradas  |
+| Rotación de JWKS mientras un recibo está vivo    | El fetch de JWKS se refresca cuando hay un miss de `kid`; las claves antiguas pueden conservarse en el conjunto JWKS durante la ventana de gracia de rotación | Verifica mientras el `kid` siga publicado                                                           |
+| Clave del emisor comprometida                    | La revocación de claves es responsabilidad del operador: quitar el `kid` del conjunto JWKS; los verificadores fallarán en modo cerrado                        | `"kid_not_found"` / `"unknown_kid"` una vez eliminada                                               |
+| Deriva de reloj entre emisor/verificador         | Opción `toleranceSeconds` (por defecto 30 s)                                                                                                                  | Dentro de la tolerancia: pasa. Fuera: `"expired"` / `"receipt_expired"` o `"receipt_not_yet_valid"` |
+| MITM en el endpoint JWKS                         | El TLS hacia el host JWKS es responsabilidad del operador; fijar la URL del JWKS fuera de banda defiende contra sustitución maliciosa                         | n/a — el verificador confía en la URL configurada                                                   |
 
 **No-objetivos.** El verificador **no** valida: (a) si el pago subyacente se liquidó, (b) si la política del comerciante estaba correctamente configurada, (c) la admisibilidad jurisdiccional, (d) listas de revocación externas al endpoint JWKS, o (e) evidencia específica del protocolo dentro de `protocol_artifacts` (esas son validadas por quien llama contra la especificación del protocolo correspondiente).
 
@@ -589,15 +616,15 @@ El verificador está diseñado para detectar las siguientes clases de manipulaci
 
 Este paquete sigue **Versionado Semántico** respecto a la API pública _y_ al formato wire del recibo.
 
-| Tipo de cambio                                      | Bump   | Compatibilidad                                                                                            |
-| ------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------- |
-| Añadir campo opcional al payload                       | minor  | Los verificadores antiguos ignoran campos desconocidos **solo si** el campo está espaciado de nombres o explícitamente marcado como opcional |
-| Añadir campo obligatorio al payload                     | major  | Los verificadores antiguos rechazarán — se requiere un corte coordinado                                     |
-| Eliminar o renombrar campo del payload                  | major  | Disruptivo — los emisores deben seguir emitiendo recibos v1.x hasta que la población de verificadores se ponga al día |
-| Añadir nuevo valor al enum `protocol`                   | minor  | Los verificadores antiguos rechazarán valores de enum desconocidos; emitir solo después de que el ecosistema de verificadores lo soporte |
-| Endurecer una restricción Zod (p. ej. formato, longitud) | minor  | Compatible hacia atrás en tiempo de parseo; la nueva restricción es solo hacia adelante                     |
-| Cambio de API de la librería del verificador (firma de función) | major  | El código llamador debe actualizarse                                                                        |
-| Cambio de API de la librería del verificador (nuevo argumento opcional) | minor  | Los llamadores existentes no se ven afectados                                                               |
+| Tipo de cambio                                                          | Bump  | Compatibilidad                                                                                                                               |
+| ----------------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Añadir campo opcional al payload                                        | minor | Los verificadores antiguos ignoran campos desconocidos **solo si** el campo está espaciado de nombres o explícitamente marcado como opcional |
+| Añadir campo obligatorio al payload                                     | major | Los verificadores antiguos rechazarán — se requiere un corte coordinado                                                                      |
+| Eliminar o renombrar campo del payload                                  | major | Disruptivo — los emisores deben seguir emitiendo recibos v1.x hasta que la población de verificadores se ponga al día                        |
+| Añadir nuevo valor al enum `protocol`                                   | minor | Los verificadores antiguos rechazarán valores de enum desconocidos; emitir solo después de que el ecosistema de verificadores lo soporte     |
+| Endurecer una restricción Zod (p. ej. formato, longitud)                | minor | Compatible hacia atrás en tiempo de parseo; la nueva restricción es solo hacia adelante                                                      |
+| Cambio de API de la librería del verificador (firma de función)         | major | El código llamador debe actualizarse                                                                                                         |
+| Cambio de API de la librería del verificador (nuevo argumento opcional) | minor | Los llamadores existentes no se ven afectados                                                                                                |
 
 **Verificación entre versiones.** El verificador v1.1.x verifica recibos emitidos bajo el esquema v1.0 _y_ el esquema v1.1. Los recibos v1.0 simplemente carecerán de campos v1.1 (`legal_posture`, `consent_context`, etc.) y el verificador los trata como opcionales. No hay plan de eliminar la verificación de v1.0 en ninguna versión v1.x — eliminarla requiere un bump mayor a v2.0 y una ventana de deprecación de al menos 12 meses.
 
@@ -611,30 +638,30 @@ TrustReceipt es un formato de evidencia entre protocolos. Las siguientes partes 
 
 ### Autores de protocolo (definen campos del esquema)
 
-| Protocolo | Autor | Campo de esquema de TrustReceipt |
-| ---------- | ------ | ----------------------------------- |
-| [ACP (Agentic Commerce Protocol)](https://github.com/agentcommerceprotocol/acp) | [OpenAI](https://openai.com) + [Stripe](https://stripe.com) | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"` |
-| [AP2 (Agent Payment Protocol v2)](https://developers.google.com/wallet) | [Google](https://google.com) | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash` |
-| [x402 (pago en stablecoin)](https://github.com/x402-foundation/x402) | [Coinbase](https://coinbase.com) + [Cloudflare](https://cloudflare.com) | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
-| [MCAP (Mastercard Agent Pay)](https://developer.mastercard.com/product/agent-pay/) | [Mastercard](https://mastercard.com) | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash` |
-| [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/specification) | [Anthropic](https://anthropic.com) | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"` |
-| [UCP (Universal Commerce Protocol)](https://github.com/Universal-Commerce-Protocol/ucp) | [Google](https://google.com) | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
+| Protocolo                                                                               | Autor                                                                   | Campo de esquema de TrustReceipt                                                                      |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [ACP (Agentic Commerce Protocol)](https://github.com/agentcommerceprotocol/acp)         | [OpenAI](https://openai.com) + [Stripe](https://stripe.com)             | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"`                                        |
+| [AP2 (Agent Payment Protocol v2)](https://developers.google.com/wallet)                 | [Google](https://google.com)                                            | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash`                      |
+| [x402 (pago en stablecoin)](https://github.com/x402-foundation/x402)                    | [Coinbase](https://coinbase.com) + [Cloudflare](https://cloudflare.com) | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
+| [MCAP (Mastercard Agent Pay)](https://developer.mastercard.com/product/agent-pay/)      | [Mastercard](https://mastercard.com)                                    | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash`                  |
+| [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/specification)   | [Anthropic](https://anthropic.com)                                      | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"`                                      |
+| [UCP (Universal Commerce Protocol)](https://github.com/Universal-Commerce-Protocol/ucp) | [Google](https://google.com)                                            | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"`                            |
 
 ### Proveedores activos en runtime (cableados en `trust_provider_assertions[]`)
 
 Estos proveedores producen aserciones estructuradas que la lógica `recomputeLegalPosture` en `verify-1.1.ts` lee al determinar el `LegalPosture` autoritativo del verificador. Usa los predicados de tipo exportados (`isRfc9421ProviderAssertion`, `isHumanProviderAssertion`, `isVisaTapProviderAssertion`) para estrechar hacia las formas tipadas definidas en `types-1.1.ts`.
 
-| Proveedor | Campo `provider` de la aserción | Integración |
-| ---------- | -------------------------------- | ------------- |
-| [IETF RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) (HTTP Message Signatures) | `"rfc9421-native"` | Verifica firmas de mensajes HTTP de cualquier agente con un endpoint JWKS público; el emisor lo cablea de forma opcional |
-| [HUMAN Security — AgenticTrust](https://www.humansecurity.com/agentictrust) | `"human"` | Integración opcional de identidad de agente; ningún SDK de HUMAN se importa en este paquete verificador |
-| [Visa TAP](https://developer.visa.com/) (Trusted Agent Protocol) | `"visa"` | Validado cuando el dominio del firmante es `*.visa.com` o `*.visa.net` con tag `"agent-browser-auth"` o `"agent-payer-auth"` |
+| Proveedor                                                                         | Campo `provider` de la aserción | Integración                                                                                                                  |
+| --------------------------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [IETF RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) (HTTP Message Signatures) | `"rfc9421-native"`              | Verifica firmas de mensajes HTTP de cualquier agente con un endpoint JWKS público; el emisor lo cablea de forma opcional     |
+| [HUMAN Security — AgenticTrust](https://www.humansecurity.com/agentictrust)       | `"human"`                       | Integración opcional de identidad de agente; ningún SDK de HUMAN se importa en este paquete verificador                      |
+| [Visa TAP](https://developer.visa.com/) (Trusted Agent Protocol)                  | `"visa"`                        | Validado cuando el dominio del firmante es `*.visa.com` o `*.visa.net` con tag `"agent-browser-auth"` o `"agent-payer-auth"` |
 
 ### Infraestructura del lado del emisor (no usada por este paquete verificador)
 
-| Herramienta | Rol |
-| ------------ | ---- |
-| [freeTSA](https://freetsa.org/) | Autoridad de sello de tiempo RFC 3161 por defecto de la Fase 1; la URL es por recibo (campo `tsa_endpoint`) — no está fijada aquí |
+| Herramienta                            | Rol                                                                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [freeTSA](https://freetsa.org/)        | Autoridad de sello de tiempo RFC 3161 por defecto de la Fase 1; la URL es por recibo (campo `tsa_endpoint`) — no está fijada aquí         |
 | [AWS KMS](https://aws.amazon.com/kms/) | Claves de firma Ed25519 del emisor y CMKs HMAC para hashes derivados de PII; gestionado por el paquete hermano `trust-receipt-kms-signer` |
 
 ---

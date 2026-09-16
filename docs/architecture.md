@@ -45,13 +45,13 @@ Trust-Receipt-Verifier/
 
 Two formats were considered during design: **JWS Compact** (RFC 7515) and **COSE Sign1** (RFC 8152 / CBOR).
 
-| Dimension            | JWS Compact                           | COSE Sign1                       |
-| -------------------- | ------------------------------------- | -------------------------------- |
-| Human-readable       | Yes (Base64url, inspectable in tools) | No (binary CBOR)                 |
-| Existing tooling     | Wide JWT/JWS ecosystem                | Growing (SD-JWT / mdoc focus)    |
-| Typical receipt size | ~350–600 bytes                        | ~280–450 bytes (smaller)         |
-| Language support     | Every major language                  | More limited                     |
-| Wallet ecosystem     | Universal JWT support                 | Emerging                         |
+| Dimension            | JWS Compact                           | COSE Sign1                    |
+| -------------------- | ------------------------------------- | ----------------------------- |
+| Human-readable       | Yes (Base64url, inspectable in tools) | No (binary CBOR)              |
+| Existing tooling     | Wide JWT/JWS ecosystem                | Growing (SD-JWT / mdoc focus) |
+| Typical receipt size | ~350–600 bytes                        | ~280–450 bytes (smaller)      |
+| Language support     | Every major language                  | More limited                  |
+| Wallet ecosystem     | Universal JWT support                 | Emerging                      |
 
 **Decision**: JWS Compact. COSE deferred until a partner wallet or SDK requires it, or payload-size benchmarks justify the added dependency.
 
@@ -125,6 +125,7 @@ When a `jwksUrl` is provided, the verifier fetches the key set from `/.well-know
 ### 4.3 Inline JWK set
 
 When an inline array of public JWKs is provided, no network request is made. This is the recommended approach for:
+
 - Offline or air-gapped verification environments
 - CI/CD pipelines running the conformance suite
 - Audit tools that pin a specific key snapshot
@@ -167,8 +168,16 @@ Step 5 — Schema validation
 
 Step 6 — Expiry check
   now = current Unix time (seconds).
-  Fail → "expired"       if now > expires_at + clockTolerance.
   Fail → "not_yet_valid" if now < issued_at − clockTolerance.
+  Report (NOT fatal, since 2026-07-28) → result.freshness.expired = true
+    if now > expires_at + clockTolerance. A v1.0 receipt must keep verifying
+    for the multi-year retention window FR-018 (spec-049) requires, so
+    `verifyTrustReceipt` no longer fails on expiry alone — see the comment
+    above `verifyLegacyCompact` in src/verifier.ts. NOT YET reconciled with
+    test-vectors/vectors.json TC-007 (still `expected: "invalid"`, `expired`)
+    — see the note on the failure-code table in CONTRIBUTING.md.
+    `verifyReceiptEnvelope` (v1.1) is unaffected: `receipt_expired` stays fatal
+    there.
 
 Step 7 — Return
   { valid: true, receipt: <decoded payload> }
@@ -195,23 +204,23 @@ Step 0 — Validate JWKS history signature
 
 Additional v1.1 error codes returned by `verifyReceiptEnvelope`:
 
-| Error code                         | Condition                                                                      |
-| ---------------------------------- | ------------------------------------------------------------------------------ |
-| `jwks_history_signature_invalid`   | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust list  |
-| `unknown_kid`                      | Receipt `kid` not found in the resolved JWKS history entries                   |
-| `receipt_expired`                  | `expires_at < now - toleranceSeconds`                                          |
-| `receipt_not_yet_valid`            | `issued_at > now + toleranceSeconds`                                           |
-| `missing_required_consent_context` | `receipt_subject = "buyer_agent"` but `consent_context` absent                 |
-| `receipt_subject_mismatch`         | `expectedSubject` option set but `receipt_subject` differs                     |
-| `schema_invalid`                   | Zod schema parse failed (missing required field, wrong type, etc.)             |
+| Error code                         | Condition                                                                     |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| `jwks_history_signature_invalid`   | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust list |
+| `unknown_kid`                      | Receipt `kid` not found in the resolved JWKS history entries                  |
+| `receipt_expired`                  | `expires_at < now - toleranceSeconds`                                         |
+| `receipt_not_yet_valid`            | `issued_at > now + toleranceSeconds`                                          |
+| `missing_required_consent_context` | `receipt_subject = "buyer_agent"` but `consent_context` absent                |
+| `receipt_subject_mismatch`         | `expectedSubject` option set but `receipt_subject` differs                    |
+| `schema_invalid`                   | Zod schema parse failed (missing required field, wrong type, etc.)            |
 
 v1.1 warnings (non-fatal, appended to `result.warnings`):
 
-| Warning                                               | Meaning                                                                           |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `jwks_history_signature_unverifiable_staging_root`    | Root SHA not in embedded list, but `allowStagingRoot: true` was set               |
-| `unknown_trust_provider_present`                      | `trust_provider_assertions[]` contains a `provider` not in the known set          |
-| `tsa_unavailable`                                     | RFC 3161 timestamp evidence absent or fetch failed; posture falls to `ades_candidate_no_tsa` |
+| Warning                                            | Meaning                                                                                      |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `jwks_history_signature_unverifiable_staging_root` | Root SHA not in embedded list, but `allowStagingRoot: true` was set                          |
+| `unknown_trust_provider_present`                   | `trust_provider_assertions[]` contains a `provider` not in the known set                     |
+| `tsa_unavailable`                                  | RFC 3161 timestamp evidence absent or fetch failed; posture falls to `ades_candidate_no_tsa` |
 
 ---
 
@@ -258,20 +267,22 @@ A second file, [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v
 
 The conformance suite defines correct verifier behavior through 10 test vectors in [`test-vectors/`](../test-vectors/):
 
-| Vector | Expected | Scenario |
-| --- | --- | --- |
-| TC-001 | valid   | MCAP receipt, two trust providers (ClearSale + Mastercard AP), EU GDPR classification |
-| TC-002 | valid   | x402 receipt, Stripe payment reference, single Stripe Radar assertion |
-| TC-003 | valid   | AP2 receipt, three trust providers, `hash_chain_prev` linking |
-| TC-004 | valid   | MCP receipt, `policy_decision=review`, PII flag, EU jurisdiction |
-| TC-005 | valid   | ACP receipt, Skyfire KYAPay assertion, PDF attachment |
-| TC-006 | invalid | `schema_invalid` — payload field tampered after signing |
-| TC-007 | invalid | `expired` — `expires_at` is in the past |
-| TC-008 | invalid | `unknown_kid` — `kid` in header does not match any key in JWKS |
-| TC-009 | invalid | `schema_invalid` — `user_intent_hash` missing (required field) |
-| TC-010 | invalid | `schema_invalid` — `schema_version` is an unknown value |
+| Vector | Expected | Scenario                                                                              |
+| ------ | -------- | ------------------------------------------------------------------------------------- |
+| TC-001 | valid    | MCAP receipt, two trust providers (ClearSale + Mastercard AP), EU GDPR classification |
+| TC-002 | valid    | x402 receipt, Stripe payment reference, single Stripe Radar assertion                 |
+| TC-003 | valid    | AP2 receipt, three trust providers, `hash_chain_prev` linking                         |
+| TC-004 | valid    | MCP receipt, `policy_decision=review`, PII flag, EU jurisdiction                      |
+| TC-005 | valid    | ACP receipt, Skyfire KYAPay assertion, PDF attachment                                 |
+| TC-006 | invalid  | `schema_invalid` — payload field tampered after signing                               |
+| TC-007 | invalid  | `expired` — `expires_at` is in the past                                               |
+| TC-008 | invalid  | `unknown_kid` — `kid` in header does not match any key in JWKS                        |
+| TC-009 | invalid  | `schema_invalid` — `user_intent_hash` missing (required field)                        |
+| TC-010 | invalid  | `schema_invalid` — `schema_version` is an unknown value                               |
 
 A verifier claims **TrustReceipt v1.0 Conformant** if and only if it produces the exact expected outcome for all 10 vectors. See [`test-vectors/README.md`](../test-vectors/README.md) for how to run them.
+
+> ⚠️ **Known gap, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` against the current reference verifier reports **9/10**, not 10/10 — TC-007 now verifies `valid` (with `freshness.expired: true` reported, not fatal) because `verifyTrustReceipt`'s expiry check became informative-only on 2026-07-28 (§6 above), a change this vector's `expected: "invalid"` entry has not yet been reconciled with. See the note on the failure-code table in `CONTRIBUTING.md`.
 
 ---
 
@@ -289,16 +300,16 @@ Because canonicalization (§3) is deterministic, any party can independently com
 
 ## 10. Security properties
 
-| Property | Mechanism |
-| --- | --- |
-| **Signature integrity** | Ed25519 — 64-byte signature, no custom crypto |
-| **Payload integrity** | RFC 8785 canonicalization — deterministic across all languages |
-| **Key rotation** | `kid` pinning — old receipts remain verifiable after key rotation |
-| **Expiry** | `expires_at` enforced by every conformant verifier |
-| **No raw PII** | `user_intent_hash`, `cart_hash`, `order_hash` are SHA-256 hashes only |
-| **Offline verifiable** | JWKS URL is public and cacheable; no call back to issuer required |
-| **Audit chain** | `hash_chain_prev` — tamper-evident linkage, RFC 8785 deterministic |
-| **Protocol neutral** | `protocol_artifacts` array — extensible without schema changes |
+| Property                | Mechanism                                                             |
+| ----------------------- | --------------------------------------------------------------------- |
+| **Signature integrity** | Ed25519 — 64-byte signature, no custom crypto                         |
+| **Payload integrity**   | RFC 8785 canonicalization — deterministic across all languages        |
+| **Key rotation**        | `kid` pinning — old receipts remain verifiable after key rotation     |
+| **Expiry**              | Fatal for `verifyReceiptEnvelope` (v1.1); reported but non-fatal for `verifyTrustReceipt` (v1.0) since 2026-07-28 — see §6 and §8 above |
+| **No raw PII**          | `user_intent_hash`, `cart_hash`, `order_hash` are SHA-256 hashes only |
+| **Offline verifiable**  | JWKS URL is public and cacheable; no call back to issuer required     |
+| **Audit chain**         | `hash_chain_prev` — tamper-evident linkage, RFC 8785 deterministic    |
+| **Protocol neutral**    | `protocol_artifacts` array — extensible without schema changes        |
 
 ---
 
@@ -306,15 +317,15 @@ Because canonicalization (§3) is deterministic, any party can independently com
 
 v1.1 introduces eIDAS and ESIGN hardening without breaking v1.0 receipts:
 
-| Area | v1.0 | v1.1 |
-| --- | --- | --- |
-| Receipt envelope | Single compact JWS | JSON envelope: `receipt` (JWS) + `timestamp_evidence` sidecar |
-| Timestamp | None | RFC 3161 TST — independent timestamp authority |
-| Legal posture | None | `legal_posture` field tracking eIDAS AdES candidate progression |
-| Consent evidence | Optional `consent_context` | Mandatory for buyer-agent receipts; `esign_disclosure_hash` added |
-| Protocol artifacts | Rail-specific fields | `payment_authorization_hash` + `authorization_scheme` |
-| Trust anchor | JWKS URL only | Embedded issuer root cert (compile-time pinned in verifier) |
-| Media type | `application/jose` | `application/vnd.trusteed.receipt-envelope+json` |
+| Area               | v1.0                       | v1.1                                                              |
+| ------------------ | -------------------------- | ----------------------------------------------------------------- |
+| Receipt envelope   | Single compact JWS         | JSON envelope: `receipt` (JWS) + `timestamp_evidence` sidecar     |
+| Timestamp          | None                       | RFC 3161 TST — independent timestamp authority                    |
+| Legal posture      | None                       | `legal_posture` field tracking eIDAS AdES candidate progression   |
+| Consent evidence   | Optional `consent_context` | Mandatory for buyer-agent receipts; `esign_disclosure_hash` added |
+| Protocol artifacts | Rail-specific fields       | `payment_authorization_hash` + `authorization_scheme`             |
+| Trust anchor       | JWKS URL only              | Embedded issuer root cert (compile-time pinned in verifier)       |
+| Media type         | `application/jose`         | `application/vnd.trusteed.receipt-envelope+json`                  |
 
 v1.0 receipts remain verifiable; conformant implementations dispatch on `schema_version`.
 

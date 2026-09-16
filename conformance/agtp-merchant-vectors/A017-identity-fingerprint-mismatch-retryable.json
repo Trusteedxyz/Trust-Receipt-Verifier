@@ -1,0 +1,22 @@
+{
+  "name": "A017-identity-fingerprint-mismatch-retryable",
+  "description": "§8.2 — desajuste de huella: reintentable tras recargar",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "role": "merchant",
+    "status": "Active",
+    "trust_tier": 1,
+    "verification_path": "dns-anchored",
+    "legal_entity_name": "Ejemplo Comercio SL",
+    "merchant_category_code": "5812",
+    "registered_jurisdiction": "ES"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "fingerprint_mismatch",
+    "retryable": true
+  },
+  "presentedFingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

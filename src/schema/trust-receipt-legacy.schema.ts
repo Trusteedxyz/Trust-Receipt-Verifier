@@ -34,8 +34,14 @@
 
 import { z } from "zod";
 import { ChainLinkFields } from "./chain-link.js";
+import {
+  ApprovalEvidenceFields,
+  MandateEvidenceFields,
+} from "./mandate-evidence.js";
+import { OperationLinkFields } from "./operation-link.js";
 import { PolicyEvidenceFields } from "./policy-evidence.js";
 import { SignerFields } from "./signers.js";
+import { StateWitnessEvidenceFields } from "./state-witness-evidence.js";
 
 // ─── Legacy compact schema ───────────────────────────────────────────────────
 //
@@ -110,6 +116,16 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   // línea, el emisor firmaría el enlace y Zod lo descartaría del objeto
   // parseado, dejando la cadena firmada e invisible.
   ...ChainLinkFields,
+  ...OperationLinkFields,
+  // Evidencia de State Witness — SSOT en `schema/state-witness-evidence.ts`.
+  // Declarado aquí por el mismo motivo: sin la línea, el emisor firmaría la
+  // resolución y Zod la descartaría del objeto parseado.
+  ...StateWitnessEvidenceFields,
+  // Evidencia de mandato y aprobación — SSOT en `schema/mandate-evidence.ts`.
+  // Declarado aquí porque ÉSTA es la forma que valida el corpus real: sin la
+  // línea, el emisor firmaría el mandato y Zod lo descartaría del parseado.
+  ...MandateEvidenceFields,
+  ...ApprovalEvidenceFields,
 });
 
 export type TrustReceiptLegacyCompact = z.infer<

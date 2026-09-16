@@ -1,0 +1,16 @@
+{
+  "name": "A027-intent-tampered-payload",
+  "description": "Techo de gasto alterado tras firmar",
+  "kind": "intent",
+  "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6Imdvdi0yMDI2LWEifQ.eyJpc3MiOiJodHRwczovL2dvdmVybmFuY2UuZXhhbXBsZS9hZ3RwIiwic3ViIjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiMyIsImF1ZCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYTciLCJhZ2VudF9pZCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYjMiLCJpdGVtX2RpZ2VzdCI6InNoYTI1Njo3ZDVkMjU2NzI3MzczMmE5MmMzM2IxMmJiZWM1YWJkOTk1NTBjMjU3OWE3NzNiZmVlNmU5NmIyMmM0OWUxYWQ2IiwiYW1vdW50X2NlaWxpbmciOnsidmFsdWUiOiI5OTk5LjAwIiwiY3VycmVuY3kiOiJFVVIifSwiaWF0IjoxNzg3MzkyODAwLCJuYmYiOjE3ODczOTI4MDAsImV4cCI6MTc4NzM5MjkyMCwianRpIjoiMDFKUTg0MDIzNTNjIn0.1H2hCVSCyIf_xvVT8wXMkJdtX2w8ggbPMD8FZwFPyWxB54Id7BICs6AIUAIPsxANnsVj01_fRjBBZYzwQwrhCQ",
+  "now": "2026-08-22T10:01:00Z",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "expectedAgentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3",
+  "resolvableKids": [
+    "gov-2026-a"
+  ],
+  "expected": {
+    "valid": false,
+    "reason": "signature_invalid"
+  }
+}

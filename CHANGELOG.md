@@ -2,6 +2,55 @@
 
 All notable changes to the verifier package are documented here.
 
+## 0.5.0 — 2026-09-16 — Third-party identity verifiers + evidence field groups
+
+### Added
+
+- **MIA verifier** (`src/mia/`) — verifies third-party Merchant Identity
+  Assertions (`draft-anders-merchant-identity-assertions-01`), self-issued and
+  DNS-authorized issuance. 30 conformance vectors under
+  `conformance/mia-vectors/`.
+- **AGTP merchant identity verifier** (`src/agtp-merchant/`) — verifies the
+  Agent Identity Document, Intent Assertion, and Cart-Digest defined by
+  `draft-hood-agtp-merchant-identity-02`, exactly the surface the draft
+  declares checkable without speaking the AGTP transport itself. No AGTP
+  client ships in this package. 50 conformance vectors under
+  `conformance/agtp-merchant-vectors/`.
+- **Mandate & approval evidence** (`src/schema/mandate-evidence.ts`) — optional
+  receipt fields letting a third party recompute `mandate_claims_hash` and
+  confirm a charged amount fell inside what was authorized, plus separate
+  out-of-band human-approval evidence.
+- **State Witness evidence** (`src/schema/state-witness-evidence.ts`) —
+  optional fields declaring what the issuer's state comparator resolved
+  before money moved, and against which authoritative state.
+- **Operation link** (`src/schema/operation-link.ts`) — optional fields tying
+  a corrected retry or a reconfirmed execution back to the receipt it
+  supersedes. Deliberately distinct from `hash_chain_prev`, which only orders
+  a merchant's receipts by issuance time.
+- **ATEP passport reference verifier**
+  (`reference-verifier/verify-atep-passport.mjs`) — zero-dependency, Node
+  built-ins only, proves a merchant's portable trust attestation is
+  verifiable offline without any Trusteed code.
+- 7th `legacy-compact` conformance vector: `L007-signers-declaration.json`.
+
+All new fields are additive with no `schema_version` bump — the frozen
+v1.0-FINAL JSON Schema does not declare `additionalProperties` at the top
+level.
+
+### Fixed (documentation accuracy)
+
+- SPEC.md §11.6 said "11 v1.1 vectors"; the table beneath it already listed
+  12 (including `019b`). Corrected the summary line to match.
+- Disclosed a real, dated code/spec discrepancy rather than leaving it
+  silent: `scripts/validate-vectors.ts` currently reports 9/10, not 10/10
+  (`verifyTrustReceipt`'s expiry check became informative-only on
+  2026-07-28, and TC-007's expected outcome was never reconciled with that
+  change). See [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6).
+- Documented that the RFC 3161 capability's dependency
+  (`@agenticmcpstores/trust-receipt-tsa-client`) is Trusteed-internal and not
+  published, so that path does not resolve for an external `npm install`
+  today. See [issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5).
+
 ## Unreleased — v1.0 enriched-payload regime + declared trust-anchor degradation
 
 Additive, non-breaking. Folded into the same **1.2.0** release proposed below.

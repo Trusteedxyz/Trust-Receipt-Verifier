@@ -1,0 +1,16 @@
+{
+  "name": "A050-intent-agent-id-not-canonical",
+  "description": "§2 — `agent_id` que casa con la petición pero NO es un Agent-ID canónico",
+  "kind": "intent",
+  "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6Imdvdi0yMDI2LWEifQ.eyJpc3MiOiJodHRwczovL2dvdmVybmFuY2UuZXhhbXBsZS9hZ3RwIiwic3ViIjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiMyIsImF1ZCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYTciLCJhZ2VudF9pZCI6Im5vLWVzLXVuLWFnZW50LWlkIiwiaXRlbV9kaWdlc3QiOiJzaGEyNTY6N2Q1ZDI1NjcyNzM3MzJhOTJjMzNiMTJiYmVjNWFiZDk5NTUwYzI1NzlhNzczYmZlZTZlOTZiMjJjNDllMWFkNiIsImFtb3VudF9jZWlsaW5nIjp7InZhbHVlIjoiMjUuMDAiLCJjdXJyZW5jeSI6IkVVUiJ9LCJpYXQiOjE3ODczOTI4MDAsIm5iZiI6MTc4NzM5MjgwMCwiZXhwIjoxNzg3MzkyOTIwLCJqdGkiOiIwMUpRZWFjNWJjODMifQ.wcGabFptCQOx6glYECFe4B4hS_niHwxukxJfZsw0MaUIEO4eixg_nOVnqu43YTwuB97-IDu0mRx3fK5Ruy5IDg",
+  "now": "2026-08-22T10:01:00Z",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "expectedAgentId": "no-es-un-agent-id",
+  "resolvableKids": [
+    "gov-2026-a"
+  ],
+  "expected": {
+    "valid": false,
+    "reason": "agent_id_mismatch"
+  }
+}

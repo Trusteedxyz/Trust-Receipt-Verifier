@@ -1,0 +1,34 @@
+{
+  "now": "2026-08-22T00:00:00Z",
+  "name": "M018-key-directory-unreachable",
+  "description": "The Key Directory cannot be retrieved. §10.2: relying parties MUST NOT accept the assertion as verified.",
+  "document": {
+    "version": 1,
+    "subject": "supplier.example.com",
+    "legalName": "Example Supply Corporation",
+    "entityType": "corporation",
+    "jurisdiction": "US",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "issuer": {
+      "name": "Example Supply Corporation",
+      "domain": "supplier.example.com",
+      "keyDirectory": "https://supplier.example.com/.well-known/jwks.json"
+    },
+    "registrationId": "12-3456789",
+    "proof": {
+      "type": "MerchantIdentityProof-v1",
+      "alg": "Ed25519",
+      "created": "2026-04-15T00:00:00Z",
+      "verificationMethod": "https://supplier.example.com/.well-known/jwks.json#merchant-key-01",
+      "proofValue": "h_mXxOUQI7r-hlfrMl4pTs_O5eYHUcxXw2m7T6CvDvflxt0CeP-Kp82-eQ2lwkxVXDrtTUva43Vi149rrAd_Aw"
+    }
+  },
+  "unreachableDirectories": [
+    "https://supplier.example.com/.well-known/jwks.json"
+  ],
+  "expected": {
+    "valid": false,
+    "reason": "key_directory_unreachable"
+  }
+}

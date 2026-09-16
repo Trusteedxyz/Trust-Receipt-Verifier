@@ -11,8 +11,14 @@
 
 import { z } from "zod";
 import { ChainLinkFields } from "./chain-link.js";
+import {
+  ApprovalEvidenceFields,
+  MandateEvidenceFields,
+} from "./mandate-evidence.js";
+import { OperationLinkFields } from "./operation-link.js";
 import { PolicyEvidenceFields } from "./policy-evidence.js";
 import { SignerFields } from "./signers.js";
+import { StateWitnessEvidenceFields } from "./state-witness-evidence.js";
 
 // ─── Sub-schemas ─────────────────────────────────────────────────────────────
 
@@ -133,6 +139,16 @@ export const TrustReceiptSchema = z.object({
   // línea SÓLO aquí, y el esquema legacy (el que valida el corpus real) no lo
   // tenía: firmarlo habría sido invisible en producción.
   ...ChainLinkFields,
+  ...OperationLinkFields,
+  // Evidencia de State Witness — SSOT en `schema/state-witness-evidence.ts`.
+  // Sin estos campos, un checkout que se ejecutó porque el estado NO había
+  // cambiado no dejaba constancia firmada de que se hubiera comprobado.
+  ...StateWitnessEvidenceFields,
+  // Evidencia de mandato y aprobación — SSOT en `schema/mandate-evidence.ts`.
+  // Sin estos campos el recibo publica el importe cobrado y NO el límite que
+  // lo autorizaba, que es justo lo que un tercero necesita para comprobarlo.
+  ...MandateEvidenceFields,
+  ...ApprovalEvidenceFields,
 
   // Attachments
   attachments: z.array(AttachmentSchema).default([]),

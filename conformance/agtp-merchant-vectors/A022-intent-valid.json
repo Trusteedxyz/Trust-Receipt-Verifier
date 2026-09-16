@@ -1,0 +1,15 @@
+{
+  "name": "A022-intent-valid",
+  "description": "§5.2 — aserción bien formada, firmada y vigente",
+  "kind": "intent",
+  "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6Imdvdi0yMDI2LWEifQ.eyJpc3MiOiJodHRwczovL2dvdmVybmFuY2UuZXhhbXBsZS9hZ3RwIiwic3ViIjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiMyIsImF1ZCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYTciLCJhZ2VudF9pZCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYjMiLCJpdGVtX2RpZ2VzdCI6InNoYTI1Njo3ZDVkMjU2NzI3MzczMmE5MmMzM2IxMmJiZWM1YWJkOTk1NTBjMjU3OWE3NzNiZmVlNmU5NmIyMmM0OWUxYWQ2IiwiYW1vdW50X2NlaWxpbmciOnsidmFsdWUiOiIyNS4wMCIsImN1cnJlbmN5IjoiRVVSIn0sImlhdCI6MTc4NzM5MjgwMCwibmJmIjoxNzg3MzkyODAwLCJleHAiOjE3ODczOTI5MjAsImp0aSI6IjAxSlFkMTI5ZWE5NCJ9.wmkRGdYq0mJv8NdMunJOzLW7zE-VAme3Ah7iQx8gwpKTkzhUtjI1LdoKdRCuRpridfz3MVsMaEeH3MGEZ0XnBA",
+  "now": "2026-08-22T10:01:00Z",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "expectedAgentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3",
+  "resolvableKids": [
+    "gov-2026-a"
+  ],
+  "expected": {
+    "valid": true
+  }
+}

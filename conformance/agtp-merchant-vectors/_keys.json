@@ -1,0 +1,10 @@
+{
+  "platformJwk": {
+    "crv": "Ed25519",
+    "x": "YyoQpfU8aTS46GwXendGpxr2ERDwdZbeI0BeMFmAUIk",
+    "kty": "OKP",
+    "kid": "gov-2026-a",
+    "use": "sig",
+    "alg": "EdDSA"
+  }
+}

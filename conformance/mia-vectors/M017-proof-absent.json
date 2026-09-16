@@ -1,0 +1,24 @@
+{
+  "now": "2026-08-22T00:00:00Z",
+  "name": "M017-proof-absent",
+  "description": "No proof field. §10.4 step 3: reject.",
+  "document": {
+    "version": 1,
+    "subject": "supplier.example.com",
+    "legalName": "Example Supply Corporation",
+    "entityType": "corporation",
+    "jurisdiction": "US",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "issuer": {
+      "name": "Example Supply Corporation",
+      "domain": "supplier.example.com",
+      "keyDirectory": "https://supplier.example.com/.well-known/jwks.json"
+    },
+    "registrationId": "12-3456789"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "proof_absent"
+  }
+}

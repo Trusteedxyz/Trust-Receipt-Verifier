@@ -8,7 +8,7 @@ This document is assembled from the released changelog entries (`1.1`, `1.1.1`,
 [SPEC.md §11](../../SPEC.md). Where the two disagree, **SPEC.md wins** — it is
 the normative document, this one is a reading aid.
 
-> **Scope.** This covers the *verification* surface. Issuer-side changes (KMS
+> **Scope.** This covers the _verification_ surface. Issuer-side changes (KMS
 > signing algorithms, DLP scanning, manifest signing) are listed only where they
 > alter what a verifier receives.
 
@@ -18,13 +18,13 @@ the normative document, this one is a reading aid.
 
 A v1.0 receipt **is** a JWS. A v1.1 receipt **contains** one.
 
-| | v1.0 | v1.1 |
-| --- | --- | --- |
-| Wire shape | JWS Compact — three dot-separated base64url segments | JSON object |
-| Required keys | n/a (opaque string) | `receipt` (the JWS Compact string) + `envelope_metadata` (object) |
-| Optional keys | n/a | `protocol_artifact_sidecars`, `timestamp_evidence` |
-| Media type | `application/jose` | `application/vnd.trusteed.receipt-envelope+json` |
-| Entry point | `verifyTrustReceipt()` / `verifyReceiptV10()` | `verifyReceiptEnvelope()` |
+|               | v1.0                                                 | v1.1                                                              |
+| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| Wire shape    | JWS Compact — three dot-separated base64url segments | JSON object                                                       |
+| Required keys | n/a (opaque string)                                  | `receipt` (the JWS Compact string) + `envelope_metadata` (object) |
+| Optional keys | n/a                                                  | `protocol_artifact_sidecars`, `timestamp_evidence`                |
+| Media type    | `application/jose`                                   | `application/vnd.trusteed.receipt-envelope+json`                  |
+| Entry point   | `verifyTrustReceipt()` / `verifyReceiptV10()`        | `verifyReceiptEnvelope()`                                         |
 
 Consequences:
 
@@ -49,10 +49,10 @@ directions — it either reports a degraded receipt as fully verified, or discar
 a valid one.
 
 `accepted_degraded` means signature and structure verified while the receipt
-*itself declares* its chain of trust unverifiable (a
+_itself declares_ its chain of trust unverifiable (a
 `legal_posture_warnings[]` entry with `reason: "trust_anchor_staging"`). It
 attests internal consistency and issuer intent, never issuer authenticity. A
-receipt that stays *silent* about an unverifiable anchor is `rejected` — silence
+receipt that stays _silent_ about an unverifiable anchor is `rejected` — silence
 is never read as consent. See SPEC.md §11.9 (NORMATIVE).
 
 If your existing code branches on `outcome === "accepted"`, it keeps refusing
@@ -63,13 +63,13 @@ to be a conscious act.
 
 ## 3. Breaking changes to `VerifyOptions` (1.1.1)
 
-| Change | What you must do |
-| --- | --- |
-| `tsaRootCertSha256Allowlist` is now **required** for RFC 3161 timestamp pinning | Supply the allowlist yourself. An envelope-supplied `tsa_root_cert_sha256` is no longer trusted on its own — trust anchors are operator-controlled, never envelope-controlled. |
-| `allowStagingRoots` added, default `false` | Nothing, if you run in production. Receipts whose issuer root is flagged staging now fail with `root_not_in_trust_anchor` unless you explicitly opt in. Never opt in outside staging/CI. |
-| `revocation_evidence.kind` is now a discriminated union `'ocsp' \| 'crl' \| 'unavailable'` | Handle the `unavailable` branch: it carries `reason` (`ocsp_unreachable`, `crl_unreachable`, `fetch_timeout`, `synthetic_fixture`) and `attempted_at`. |
-| Field renamed: `intent_salt_version` → `intent_hmac_key_version` | Rename at your read sites. The old name is gone, not aliased. |
-| Export removed: `verifyTimestampEvidenceStub` | Use `verifyTimestampEvidence`. |
+| Change                                                                                     | What you must do                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tsaRootCertSha256Allowlist` is now **required** for RFC 3161 timestamp pinning            | Supply the allowlist yourself. An envelope-supplied `tsa_root_cert_sha256` is no longer trusted on its own — trust anchors are operator-controlled, never envelope-controlled.           |
+| `allowStagingRoots` added, default `false`                                                 | Nothing, if you run in production. Receipts whose issuer root is flagged staging now fail with `root_not_in_trust_anchor` unless you explicitly opt in. Never opt in outside staging/CI. |
+| `revocation_evidence.kind` is now a discriminated union `'ocsp' \| 'crl' \| 'unavailable'` | Handle the `unavailable` branch: it carries `reason` (`ocsp_unreachable`, `crl_unreachable`, `fetch_timeout`, `synthetic_fixture`) and `attempted_at`.                                   |
+| Field renamed: `intent_salt_version` → `intent_hmac_key_version`                           | Rename at your read sites. The old name is gone, not aliased.                                                                                                                            |
+| Export removed: `verifyTimestampEvidenceStub`                                              | Use `verifyTimestampEvidence`.                                                                                                                                                           |
 
 ### New failure codes
 
@@ -87,14 +87,14 @@ Switch on these codes, never on message text.
 
 Reproduced from SPEC.md §11.7, which is normative:
 
-| v1.0 field | v1.1 replacement |
-| --- | --- |
-| `mandate_hash` | `payment_authorization_hash` + `authorization_scheme = "ap2_mandate_jws"` |
-| `permit2_authorization_hash` | `payment_authorization_hash` + `authorization_scheme = "evm_permit2"` |
-| `mcp_tool_invocation_hash` | `payment_authorization_hash` + `authorization_scheme = "mcp_tool_invocation"` |
-| `consent_context.consent_hash` | `buyer_agent_consent_context.consent_hash` (algorithm-tagged) |
-| Salt-based `user_intent_hash` | KMS-keyed HMAC-SHA-256, `hmac-sha256:` prefix |
-| Embedded `timestamp_evidence` (inside the signed body) | Envelope-level `timestamp_evidence` (**NOT** signed) |
+| v1.0 field                                             | v1.1 replacement                                                              |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `mandate_hash`                                         | `payment_authorization_hash` + `authorization_scheme = "ap2_mandate_jws"`     |
+| `permit2_authorization_hash`                           | `payment_authorization_hash` + `authorization_scheme = "evm_permit2"`         |
+| `mcp_tool_invocation_hash`                             | `payment_authorization_hash` + `authorization_scheme = "mcp_tool_invocation"` |
+| `consent_context.consent_hash`                         | `buyer_agent_consent_context.consent_hash` (algorithm-tagged)                 |
+| Salt-based `user_intent_hash`                          | KMS-keyed HMAC-SHA-256, `hmac-sha256:` prefix                                 |
+| Embedded `timestamp_evidence` (inside the signed body) | Envelope-level `timestamp_evidence` (**NOT** signed)                          |
 
 Two of these change meaning, not just location:
 
@@ -120,21 +120,21 @@ also pass the `expectedSubject` option, a mismatch fails with
 
 Relevant only if you run the verification stack yourself:
 
-| Variable | Purpose |
-| --- | --- |
-| `QTSA_ROOT_CERT_SHA256_ALLOWLIST` | CSV of trusted RFC 3161 TSA root certificate SHA-256 fingerprints. Operator-controlled; never sourced from the envelope. |
-| `EU_LOTL_URL` | EU List-of-Trusted-Lists XML endpoint. Default `https://ec.europa.eu/tools/lotl/eu-lotl.xml`. Parsed with a 24h cache and a documented degraded fallback (`outcome: "degraded"`). |
-| `EMBEDDED_ISSUER_ROOTS` | PEM-concat input for the trust export bundle. |
+| Variable                          | Purpose                                                                                                                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QTSA_ROOT_CERT_SHA256_ALLOWLIST` | CSV of trusted RFC 3161 TSA root certificate SHA-256 fingerprints. Operator-controlled; never sourced from the envelope.                                                          |
+| `EU_LOTL_URL`                     | EU List-of-Trusted-Lists XML endpoint. Default `https://ec.europa.eu/tools/lotl/eu-lotl.xml`. Parsed with a 24h cache and a documented degraded fallback (`outcome: "degraded"`). |
+| `EMBEDDED_ISSUER_ROOTS`           | PEM-concat input for the trust export bundle.                                                                                                                                     |
 
 mdoc CBOR verification remains explicitly out of scope
 (`mdoc_verification_not_implemented`). SD-JWT-VC verification is implemented.
 
 ---
 
-## 7. What v1.1 does *not* give you
+## 7. What v1.1 does _not_ give you
 
 - **It is not a Qualified Electronic Seal.** A v1.1 record is at best an
-  *advanced* electronic seal candidate (AdES candidate) under eIDAS. Qualified
+  _advanced_ electronic seal candidate (AdES candidate) under eIDAS. Qualified
   seals require issuance by an EU-listed QTSP, which is outside this package.
   Do not market v1.1 with QTSP or qualified-tier wording.
 - **The trust anchor shipped in this package is a staging stub.**

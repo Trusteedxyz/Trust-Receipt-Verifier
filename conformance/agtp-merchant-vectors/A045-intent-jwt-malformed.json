@@ -1,0 +1,16 @@
+{
+  "name": "A045-intent-jwt-malformed",
+  "description": "Compact JWS con dos segmentos",
+  "kind": "intent",
+  "jwt": "aaa.bbb",
+  "now": "2026-08-22T10:01:00Z",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "expectedAgentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3",
+  "resolvableKids": [
+    "gov-2026-a"
+  ],
+  "expected": {
+    "valid": false,
+    "reason": "jwt_malformed"
+  }
+}

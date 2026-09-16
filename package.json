@@ -1,6 +1,6 @@
 {
   "name": "trust-receipt-verifier",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "description": "TrustReceipt open standard — cross-protocol agentic commerce evidence receipt verifier",
   "license": "MIT",
@@ -31,6 +31,7 @@
     "lint": "eslint src/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:vectors:x402-binding": "vitest run src/x402-binding/__tests__/conformance-vector-loader.test.ts",
     "vectors:generate": "tsx scripts/generate-test-vectors-v11.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
   },

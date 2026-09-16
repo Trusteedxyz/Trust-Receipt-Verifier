@@ -175,13 +175,64 @@ All fields at the top level of the receipt payload. Fields marked **Required** M
 
 #### Audit Chain
 
-| Field             | Type   | Required | Description                                                                                                                                                  |
-| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `hash_chain_prev` | string | Optional | SHA-256 hex of the previous receipt in the merchant's audit stream. Enables ordered, tamper-evident receipt chains. `null` for the first receipt in a chain. |
-| `signers` | array | Optional | Declared signers of this receipt. Each element carries `party` (`issuer`/`merchant`/`agent`/`psp`), `kid`, `custody` (`platform_held`/`party_held`) and `relation_to_subject` (`processor`/`self`/`independent`). Absent means the receipt makes no claim about signer custody — NOT that a single signer is implied. |
-| `evaluation_id` | string | Optional | Identity of the policy evaluation that produced the verdict. Identifies the EVALUATION, not the operation: a cached verdict is reused, so several operations may carry the same value, and it MUST NOT be used as an idempotency key. Absent when the identity would not resolve to a retrievable record (cached verdict, or a decision the issuer did not persist). |
-| `rule_set_version` | integer | Optional | Version of the policy catalogue under which the verdict was evaluated. |
-| `evaluated_rules` | array of string | Optional | Rule codes that RAN. Distinct from `rules_triggered`, which lists those that fired. An empty array means the catalogue was consulted and no rule applied; absent means the receipt makes no claim. |
+| Field              | Type            | Required | Description                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------ | --------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hash_chain_prev`  | string          | Optional | SHA-256 hex of the previous receipt in the merchant's audit stream. Enables ordered, tamper-evident receipt chains. `null` for the first receipt in a chain.                                                                                                                                                                                                         |
+| `signers`          | array           | Optional | Declared signers of this receipt. Each element carries `party` (`issuer`/`merchant`/`agent`/`psp`), `kid`, `custody` (`platform_held`/`party_held`) and `relation_to_subject` (`processor`/`self`/`independent`). Absent means the receipt makes no claim about signer custody — NOT that a single signer is implied.                                                |
+| `evaluation_id`    | string          | Optional | Identity of the policy evaluation that produced the verdict. Identifies the EVALUATION, not the operation: a cached verdict is reused, so several operations may carry the same value, and it MUST NOT be used as an idempotency key. Absent when the identity would not resolve to a retrievable record (cached verdict, or a decision the issuer did not persist). |
+| `rule_set_version` | integer         | Optional | Version of the policy catalogue under which the verdict was evaluated.                                                                                                                                                                                                                                                                                               |
+| `evaluated_rules`  | array of string | Optional | Rule codes that RAN. Distinct from `rules_triggered`, which lists those that fired. An empty array means the catalogue was consulted and no rule applied; absent means the receipt makes no claim.                                                                                                                                                                   |
+
+#### Mandate, Approval, State Witness & Operation Link Evidence (added 2026-09)
+
+Optional field groups, injected identically into all three receipt shapes (v1.0 canonical,
+v1.0-legacy-compact, v1.1 strict). No `schema_version` bump: the frozen v1.0-FINAL JSON Schema
+does not declare `additionalProperties` at the top level, so new fields never invalidate a
+signature computed before this reference implementation started emitting them.
+
+**Mandate evidence** — lets a third party recompute `mandate_claims_hash` and confirm a charged
+amount fell inside what was actually authorized, instead of trusting the receipt's own claim:
+
+| Field                       | Type    | Required | Description                                                                                                    |
+| ---------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| `mandate_id`                 | string  | Optional | Identity of the applied mandate. Opaque — no shape is imposed.                                                    |
+| `mandate_claims_hash`        | string  | Optional | SHA-256 hex over the mandate's claims. See `computeMandateClaimsHash` (exported) for the exact material.          |
+| `mandate_max_amount_cents`   | integer | Optional | The ceiling, in minor units, that `amount` is compared against.                                                   |
+| `mandate_currency`           | string  | Optional | ISO 4217 currency of the MANDATE — may differ from the cart's; a mismatch is a receipt-level fact, not lost.      |
+| `mandate_subject`            | string  | Optional | `sub`: the agent the mandate was granted to. Never the buyer.                                                     |
+| `mandate_audience`           | string  | Optional | `aud`: the merchant the mandate is valid for.                                                                     |
+| `mandate_expires_at`         | integer | Optional | `exp` in Unix seconds.                                                                                            |
+| `mandate_verification`       | enum    | Optional | What was checked: `"structure_only"` (claims read and the ceiling applied, no signature checked) \| `"signature_verified"` (nobody emits this yet) — a closed union, so an issuer cannot declare a verification class that does not exist. |
+
+**Approval evidence** — a human said yes to THIS purchase, distinct from what the mandate allowed:
+
+| Field              | Type    | Required | Description                                                                                                            |
+| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `approval_ref`     | string  | Optional | Opaque reference to the approval recorded on the issuer's own surface.                                                   |
+| `approval_channel` | string  | Optional | Where it came from (e.g. a confirmation dialog). Free-form string, not an enum — rejecting the whole receipt over an unrecognised channel would turn a valid artifact invalid. |
+| `approval_at`      | integer | Optional | Unix seconds of the approval, comparable against `issued_at`.                                                            |
+
+**State Witness evidence** — what the state comparator resolved before money moved, and against
+which authoritative state. Closes the gap where a checkout that executed because nothing had
+changed left no signed record that the comparison ran at all:
+
+| Field                               | Type            | Required | Description                                                                                                    |
+| ------------------------------------ | --------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `state_witness_resolution`           | enum            | Optional | `"EXECUTE"` \| `"EXECUTE_WITHIN_TOLERANCE"` \| `"RECONFIRM"`. No `BLOCK` value — a blocked checkout does not execute, so its receipt cannot say otherwise. |
+| `state_witness_authoritative_hash`   | string          | Optional | SHA-256 (RFC 8785) of the authoritative merchant state at execution time.                                       |
+| `state_witness_reasons`              | array of enum   | Optional | Up to 6 of: `price_within_tolerance`, `price_diverged`, `price_diverged_severely`, `stock_insufficient`, `policy_version_changed`, `authoritative_state_unavailable`. |
+
+**Operation link** — ties a corrected retry or a reconfirmed execution back to the receipt it
+supersedes. Deliberately **not** `hash_chain_prev`: that field orders a merchant's receipts by
+issuance time and makes no claim that one continues another's operation; this field makes exactly
+that claim, for the two flows where it is true:
+
+| Field                      | Type   | Required | Description                                                                                                    |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `operation_id`              | string | Optional | Correlation key for the whole operation (the same value the issuer's enforcement, receipt, and State Witness pipelines already share). |
+| `supersedes_receipt_hash`   | string | Optional | SHA-256 hex of the receipt this one supersedes.                                                                 |
+| `superseded_reason`         | enum   | Optional | `"state_reconfirmed"` \| `"mandate_corrected"`.                                                                 |
+| `reconfirmed_state_hash`    | string | Optional | The authoritative state the buyer explicitly reconfirmed. Present only with `superseded_reason: "state_reconfirmed"`. |
 
 #### Attachments
 
@@ -593,7 +644,7 @@ In addition to the v1.0 codes:
 
 ### 11.6 Conformance vectors (v1.1)
 
-11 v1.1 vectors live under `test-vectors/v11/` and are catalogued alongside the legacy 10 v1.0 vectors:
+12 v1.1 vectors live under `test-vectors/v11/` (corrected from "11" — the table below always had 12 rows, including `019b`) and are catalogued alongside the legacy 10 v1.0 vectors:
 
 | ID   | File                                             | Outcome          | Failure code                       | Notes                                                                         |
 | ---- | ------------------------------------------------ | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------- |

@@ -1,0 +1,31 @@
+{
+  "now": "2026-08-22T00:00:00Z",
+  "name": "M003-third-party-unauthorized",
+  "description": "Third-party issuer with neither a DNS TXT record nor a delegation document. §8.2: relying parties MUST treat the MIA as invalid.",
+  "document": {
+    "version": 1,
+    "subject": "supplier.example.com",
+    "legalName": "Example Supply Corporation",
+    "entityType": "corporation",
+    "jurisdiction": "US",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "issuer": {
+      "name": "Example Trust Registry",
+      "domain": "trust.example.org",
+      "keyDirectory": "https://trust.example.org/.well-known/jwks.json"
+    },
+    "registrationId": "12-3456789",
+    "proof": {
+      "type": "MerchantIdentityProof-v1",
+      "alg": "Ed25519",
+      "created": "2026-04-15T00:00:00Z",
+      "verificationMethod": "https://trust.example.org/.well-known/jwks.json#issuer-key-01",
+      "proofValue": "z0iZwnP606PhDEm0YD5cO-WuMGeUXSZ0gOQgL3BXCyggWmwP82Uf1UO3k31ASbsZx241Se_eSEZGzQZXDjoCBA"
+    }
+  },
+  "expected": {
+    "valid": false,
+    "reason": "third_party_not_authorized"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "A019-identity-tier-below-policy",
+  "description": "§4.1 paso 5 — Tier 2 con política que exige Tier 1",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "role": "merchant",
+    "status": "Active",
+    "trust_tier": 2,
+    "verification_path": "org-asserted",
+    "legal_entity_name": "Ejemplo Comercio SL",
+    "merchant_category_code": "5812",
+    "registered_jurisdiction": "ES",
+    "trust_warning": "legal-entity-unverified"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "trust_tier_below_policy",
+    "retryable": true
+  },
+  "minimumTrustTier": 1
+}
