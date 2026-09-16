@@ -33,6 +33,7 @@ Esta sincronización pone el repo público al día con la implementación de ref
 - Un 7º vector de conformidad `legacy-compact` (declaración de firmantes).
 - **Dos correcciones de exactitud a la documentación existente**, halladas al verificar en vez de asumir: la línea "11 vectores v1.1" subcontaba una tabla que ya tenía 12 filas (SPEC.md §11.6), y `CONTRIBUTING.md` / `docs/architecture.md` / la sección Conformidad de este README ahora revelan que `scripts/validate-vectors.ts` reporta actualmente **9/10**, no 10/10 (TC-007 / `expired`, [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6) — una discrepancia real y fechada entre código y spec, no una errata).
 - **Un hueco de empaquetado preexistente ahora con seguimiento**: la fila de RFC 3161 decía "opcional"; en realidad no es usable por ningún instalador externo hoy ([issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5)).
+- **Limpieza de CHANGELOG.md**: dos entradas llevaban desde antes del lanzamiento público bajo un encabezado "Unreleased" desactualizado pese a haber sido ya publicadas — retituladas con la versión y fecha reales, y eliminados un párrafo sobre acoplamiento de despliegue interno de Trusteed y una referencia cruzada a un paquete hermano inalcanzable (ambos filtrados desde el monorepo).
 
 Ver [CHANGELOG.md](CHANGELOG.md) para el historial completo de versiones.
 

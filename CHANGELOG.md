@@ -50,26 +50,29 @@ level.
   (`@agenticmcpstores/trust-receipt-tsa-client`) is Trusteed-internal and not
   published, so that path does not resolve for an external `npm install`
   today. See [issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5).
+- Retitled this file's two stale "Unreleased" headings (below) to the real
+  version + date they actually shipped under (`0.3.0` / `0.2.0`), removed an
+  internal Trusteed deployment-coupling paragraph and an unreachable
+  sibling-package cross-reference that leaked in from the source monorepo,
+  and added a note explaining the pre-launch `1.1.2`→`1.0` version counter
+  below is a separate, older axis from this package's own `0.x` line.
 
-## Unreleased — v1.0 enriched-payload regime + declared trust-anchor degradation
+## 0.3.0 — 2026-07-30 — v1.0 enriched-payload regime + declared trust-anchor degradation
 
-Additive, non-breaking. Folded into the same **1.2.0** release proposed below.
+Additive, non-breaking. (Retitled 2026-09-16 from a stale "Unreleased" heading
+— this shipped as `0.3.0`; it just never got its version/date filled in here
+at the time. Also removed an internal Trusteed deployment-coupling note that
+did not describe anything about this package's own behavior.)
 
-### Emitter↔verifier coupling (BLOCKING — read before deploying)
+### Emitter↔verifier coupling
 
-The production issuer now stamps `schema_version: "1.0"` and `canon: "jcs"` onto
-the signed compact payload and canonicalizes with RFC 8785 unconditionally. The
-legacy-compact branch used to be gated on the payload NOT declaring a
-`schema_version` at all, so **every newly issued receipt would have failed with
-`schema_invalid`** — and `receipt-integrity.service.ts` re-verifies the whole
-90-day corpus into the merchant-visible trust score, so the integrity signal
-would have collapsed toward zero.
-
-**Issuer and verifier are NOT independently deployable.** The minimum verifier
-version compatible with the enriched issuer is **1.2.0**. `apps/api` resolves
-this package through its built `dist/`, which is gitignored — so any deploy or
-CI job that ships the new issuer MUST also rebuild this package. A stale `dist/`
-reproduces the failure exactly.
+An issuer emitting the enriched v1.0 compact payload now stamps
+`schema_version: "1.0"` and `canon: "jcs"` on it and canonicalizes with RFC
+8785 unconditionally. The legacy-compact branch used to be gated on the
+payload NOT declaring a `schema_version` at all, so a verifier still on the
+pre-`0.3.0` guard would have rejected every enriched receipt as
+`schema_invalid` — an issuer and a verifier running this logic must agree on
+which schema-version values route to the legacy-compact path.
 
 ### Changed
 
@@ -115,9 +118,14 @@ reproduces the failure exactly.
   contradiction, pending a human decision; that is a further reason not to make
   it a validity gate yet.
 
-## Unreleased — Extension Artifact Verification
+## 0.2.0 — 2026-05-16 — Extension Artifact Verification
 
-Adds verification for two new artifact families produced by the Trusteed Extension Marketplace ecosystem: **erasure receipts** (developer-signed proof of merchant-data destruction post-uninstall) and **extension manifests** (developer-signed declarations of scopes, endpoints, and lifecycle metadata). Also surfaces existing JWKS-history verification through the CLI. Schema version remains `1.1` (no receipt payload changes). Proposed SemVer bump on release: **1.2.0** (additive, non-breaking).
+(Retitled 2026-09-16 from a stale "Unreleased" heading with a "Proposed SemVer
+bump on release: 1.2.0" line — `1.2.0` was the private monorepo's own,
+separate version counter, not this public package's; this feature actually
+shipped under this package's `0.2.0`.)
+
+Adds verification for two new artifact families produced by the Trusteed Extension Marketplace ecosystem: **erasure receipts** (developer-signed proof of merchant-data destruction post-uninstall) and **extension manifests** (developer-signed declarations of scopes, endpoints, and lifecycle metadata). Also surfaces existing JWKS-history verification through the CLI. Schema version remains `1.1` (no receipt payload changes) — additive, non-breaking.
 
 ### New library API
 
@@ -141,7 +149,7 @@ Adds verification for two new artifact families produced by the Trusteed Extensi
 ### Reference docs
 
 - `README.md` capability matrix updated (Status: implemented vs candidate/experimental) and integration framing realigned around merchant-side evidence rather than "first-mover" claims.
-- `README.md` new sections: **What a TrustReceipt does NOT prove** (settlement, delivery, KYC, QeSeal, liability, intent humano), **Threat model** (10 attack classes × defence × verifier reason), **Versioning policy** (SemVer × wire format, cross-version v1.0 ↔ v1.1 compatibility commitment ≥12 months).
+- `README.md` new sections: **What a TrustReceipt does NOT prove** (settlement, delivery, KYC, QeSeal, liability, human intent), **Threat model** (10 attack classes × defence × verifier reason), **Versioning policy** (SemVer × wire format, cross-version v1.0 ↔ v1.1 compatibility commitment ≥12 months).
 - Tagline shifted from "cross-protocol evidence receipts" to "merchant-side evidence layer for agentic commerce — protocol-compatible, not protocol-competing".
 
 ### Tests
@@ -157,10 +165,15 @@ Adds verification for two new artifact families produced by the Trusteed Extensi
 
 ### Related
 
-- Sibling package: `@agenticmcpstores/developer-mcp` — the developer-facing
-  documentation MCP server. See its CHANGELOG `Unreleased` entry for the
-  matching IDE-time tools (`get_extension_manifest_schema`,
-  `get_webhook_event_schema`, `get_extension_scopes`).
+- These artifact shapes are also consumed by Trusteed's own internal
+  developer tooling, which is not part of this public package or repo.
+
+> **Versioning note.** Entries below this point (`1.1.2` down to `1.0`) predate
+> this repo's public launch and use a separate, older version counter from
+> this package's own `0.x` line above — they are not out of order, and `0.x`
+> did not "regress" from `1.1.2`. Kept for historical reference; SPEC.md's own
+> version history (§10) is unaffected and uses schema versions (`1.0`/`1.1`),
+> not this package's release versions, which is a separate axis entirely.
 
 ## 1.1.2 — 2026-05-10 — Audit Hardening
 

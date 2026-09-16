@@ -33,6 +33,7 @@ This sync brings the public repo current with the reference implementation (prev
 - A 7th `legacy-compact` conformance vector (signer declarations).
 - **Two accuracy fixes to existing docs**, found while verifying rather than assuming: the "11 v1.1 vectors" line undercounted an already-12-row table (SPEC.md §11.6), and `CONTRIBUTING.md` / `docs/architecture.md` / this README's Conformance section now disclose that `scripts/validate-vectors.ts` currently reports **9/10**, not 10/10 (TC-007 / `expired`, [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6) — a real, dated code/spec discrepancy, not a typo).
 - **One pre-existing packaging gap now tracked**: the RFC 3161 capability row was marked optional; it is actually non-functional for any external installer today ([issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5)).
+- **CHANGELOG.md cleanup**: two entries had sat under a stale "Unreleased" heading since before this repo's public launch even though they had already shipped — retitled to the real version + date, and an internal Trusteed deployment-coupling paragraph plus an unreachable sibling-package cross-reference (both leaked in from the source monorepo) were removed.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 

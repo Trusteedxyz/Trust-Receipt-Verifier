@@ -33,6 +33,7 @@ Cette synchronisation met le dépôt public à jour avec l'implémentation de r�
 - Un 7ᵉ vecteur de conformité `legacy-compact` (déclaration de signataires).
 - **Deux corrections d'exactitude apportées à la documentation existante**, trouvées en vérifiant plutôt qu'en supposant : la ligne « 11 vecteurs v1.1 » sous-comptait un tableau qui en listait déjà 12 (SPEC.md §11.6), et `CONTRIBUTING.md` / `docs/architecture.md` / la section Conformité de ce README révèlent désormais que `scripts/validate-vectors.ts` rapporte actuellement **9/10**, pas 10/10 (TC-007 / `expired`, [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6) — une divergence réelle et datée entre le code et la spec, pas une coquille).
 - **Une lacune de packaging préexistante désormais suivie** : la ligne RFC 3161 était marquée « optionnelle » ; elle n'est en réalité utilisable par aucun installateur externe aujourd'hui ([issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5)).
+- **Nettoyage de CHANGELOG.md** : deux entrées étaient restées sous un intitulé « Unreleased » obsolète depuis avant le lancement public, alors qu'elles avaient déjà été publiées — retitrées avec la version et la date réelles, et suppression d'un paragraphe sur le couplage de déploiement interne à Trusteed ainsi que d'une référence croisée vers un paquet frère inaccessible (tous deux infiltrés depuis le monorepo).
 
 Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.
 
