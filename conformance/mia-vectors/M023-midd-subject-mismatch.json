@@ -1,0 +1,46 @@
+{
+  "now": "2026-08-22T00:00:00Z",
+  "name": "M023-midd-subject-mismatch",
+  "description": "The delegation document names a different subject than the assertion.",
+  "document": {
+    "version": 1,
+    "subject": "supplier.example.com",
+    "legalName": "Example Supply Corporation",
+    "entityType": "corporation",
+    "jurisdiction": "US",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "issuer": {
+      "name": "Example Trust Registry",
+      "domain": "trust.example.org",
+      "keyDirectory": "https://trust.example.org/.well-known/jwks.json"
+    },
+    "registrationId": "12-3456789",
+    "proof": {
+      "type": "MerchantIdentityProof-v1",
+      "alg": "Ed25519",
+      "created": "2026-04-15T00:00:00Z",
+      "verificationMethod": "https://trust.example.org/.well-known/jwks.json#issuer-key-01",
+      "proofValue": "z0iZwnP606PhDEm0YD5cO-WuMGeUXSZ0gOQgL3BXCyggWmwP82Uf1UO3k31ASbsZx241Se_eSEZGzQZXDjoCBA"
+    }
+  },
+  "midd": {
+    "version": 1,
+    "type": "MerchantIdentityDelegation",
+    "subject": "other.example.com",
+    "authorizedIssuer": "trust.example.org",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "proof": {
+      "type": "MerchantIdentityProof-v1",
+      "alg": "Ed25519",
+      "created": "2026-04-15T00:00:00Z",
+      "verificationMethod": "https://supplier.example.com/.well-known/jwks.json#merchant-key-01",
+      "proofValue": "mUV4CtxVxWuLmeiaoq5Ju9et6j34hoss-Ze9vSgsFFt7OLYJa2eGsji-z0xktz7_2g8hOYZtGovx3sVsezquCw"
+    }
+  },
+  "expected": {
+    "valid": false,
+    "reason": "delegation_subject_mismatch"
+  }
+}

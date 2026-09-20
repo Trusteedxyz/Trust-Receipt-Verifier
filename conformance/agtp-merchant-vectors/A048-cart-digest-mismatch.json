@@ -1,0 +1,20 @@
+{
+  "name": "A048-cart-digest-mismatch",
+  "description": "§6.3 — digest que no casa ⇒ 409 Conflict",
+  "kind": "cart",
+  "cart": {
+    "items": [
+      {
+        "sku": "SKU-1",
+        "qty": 3,
+        "unit": "12.50"
+      }
+    ],
+    "currency": "EUR"
+  },
+  "presented": "sha256:7d5d2567273732a92c33b12bbec5abd99550c2579a773bfee6e96b22c49e1ad6",
+  "expected": {
+    "valid": false,
+    "reason": "digest_mismatch"
+  }
+}

@@ -46,6 +46,7 @@ export {
   verifyAivsProofBundle,
   type AivsProofBundle,
   type AivsAuditLogEntry,
+  type AivsChainStatus,
   type AivsPublicJwk,
   type VerifyAivsBundleOptions,
   type VerifyAivsBundleResult,
@@ -67,6 +68,12 @@ export {
 // with the v1.0 `VerifyOptions` already exported above from `./verifier.js`.
 export {
   verifyReceiptEnvelope,
+  // Trust-provider assertion narrowing predicates. README documents these as
+  // importable from the package root; before this export they only existed on
+  // the module, so the documented import failed.
+  isRfc9421ProviderAssertion,
+  isHumanProviderAssertion,
+  isVisaTapProviderAssertion,
   type V11VerifyResult,
   type V11VerifyErrorCode,
   type VerifyOptions as VerifyV11Options,
@@ -327,3 +334,93 @@ export {
   type AttestationVerificationReason,
   type VerifyPiiAttestationArgs,
 } from "./x402-binding/attestation-verifier.js";
+
+// Trust-receipts audit §R1 Wave C — consumer-side revocation check against a
+// merchant's `/.well-known/trust-receipt-status/{merchantId}` list. Pure and
+// offline: the caller fetches, this decides. Every failure mode resolves to
+// `unknown`, never to `not_revoked`.
+export {
+  checkRevocation,
+  hashReceiptId,
+  type CheckRevocationInput,
+  type RevocationResult,
+  type RevocationStatus,
+  type StatusListEntry,
+  type TrustReceiptStatusList,
+} from "./revocation.js";
+
+// M-01 (plan de evolución 2026-08-21, §3) — verificador de Merchant Identity
+// Assertions de terceros, `draft-anders-merchant-identity-assertions-01`.
+// Verificar la MIA de otro no exige ser QTSP ni depende de InfoCert ni de EUDI,
+// y conserva valor aunque el draft muera.
+export * from "./mia/types.js";
+export * from "./mia/domain.js";
+export {
+  verifyMiaDocument,
+  verifyMiaForDomain,
+  miaSigningInput,
+  splitVerificationMethod,
+  type MiaVerifierIo,
+  type FetchedDocument,
+  type VerifyMiaOptions,
+} from "./mia/verify.js";
+
+// M-01, segundo draft — identidad de comerciante en AGTP,
+// `draft-hood-agtp-merchant-identity-02` sobre `draft-hood-independent-agtp-09`.
+//
+// Se exporta lo que el draft declara verificable SIN hablar AGTP: la Intent
+// Assertion (§5.3 la diseña explícitamente para que la reenvíe y verifique un
+// tercero), la validación del Agent Identity Document con rol de comerciante
+// (§3, §4) como función pura, y el Cart-Digest (§6, §9.4). NO hay cliente AGTP:
+// eso es un transporte propio (puerto 4480, framing propio, TLS 1.3), no un
+// verificador. Ver `src/agtp-merchant/types.ts` y el extracto normativo en
+// `docs/referencias/drafts-mia/NORMATIVE-EXTRACT-agtp-merchant-02.md`.
+export * from "./agtp-merchant/types.js";
+export {
+  verifyMerchantIdentityDocument,
+  computeManifestFingerprint,
+  type VerifyMerchantIdentityOptions,
+} from "./agtp-merchant/identity-document.js";
+export {
+  verifyIntentAssertion,
+  compareDecimalStrings,
+  INTENT_ASSERTION_ALG,
+  type IntentAssertionKeyLookup,
+  type VerifyIntentAssertionOptions,
+} from "./agtp-merchant/intent-assertion.js";
+export {
+  verifyCartDigest,
+  computeCartDigest,
+  isWellFormedCartDigest,
+  CART_DIGEST_PATTERN,
+  type CartDigestResult,
+  type CartDigestFailureReason,
+} from "./agtp-merchant/cart-digest.js";
+
+// Evidencia de MANDATO y APROBACIÓN (2026-09-10) — lo que permite a un tercero
+// comprobar que el importe cobrado cabía dentro de lo autorizado, en vez de
+// creérselo. `computeMandateClaimsHash` se exporta porque un verificador
+// externo que tenga el mandato original necesita poder RECOMPUTARLO; si sólo
+// publicáramos el digest, el campo sería opaco y no probaría nada.
+export {
+  computeMandateClaimsHash,
+  serializeMandateClaimsForHash,
+  MandateEvidenceFields,
+  MANDATE_EVIDENCE_KEYS,
+  ApprovalEvidenceFields,
+  APPROVAL_EVIDENCE_KEYS,
+  MandateVerificationSchema,
+  type MandateClaimsForHash,
+  type MandateVerification,
+} from "./schema/mandate-evidence.js";
+
+// Evidencia de STATE WITNESS (2026-09-14) — qué resolvió el comparador de
+// spec-063 antes de mover dinero, y contra qué estado autoritativo. Cierra el
+// hueco de `reconfirmed_state_hash`: un checkout que se ejecutó porque el
+// estado NO había cambiado no dejaba constancia firmada de esa comprobación.
+export {
+  StateWitnessEvidenceFields,
+  STATE_WITNESS_EVIDENCE_KEYS,
+  StateWitnessResolutionSchema,
+  StateWitnessReasonSchema,
+} from "./schema/state-witness-evidence.js";

@@ -1,0 +1,18 @@
+{
+  "issuerJwk": {
+    "crv": "Ed25519",
+    "x": "ozI44lyzYKkAqM6KOgjNzbRIWazHUFvqN3mrysX9NQc",
+    "kty": "OKP",
+    "kid": "issuer-key-01",
+    "use": "sig",
+    "alg": "EdDSA"
+  },
+  "merchantJwk": {
+    "crv": "Ed25519",
+    "x": "nmPfKOvv3uKvjJDzDVrN9src-GUa1KQkojBgEZerSaA",
+    "kty": "OKP",
+    "kid": "merchant-key-01",
+    "use": "sig",
+    "alg": "EdDSA"
+  }
+}

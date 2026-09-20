@@ -16,6 +16,14 @@
  */
 
 import { z } from "zod";
+import { PolicyEvidenceFields } from "./schema/policy-evidence.js";
+import {
+  ApprovalEvidenceFields,
+  MandateEvidenceFields,
+} from "./schema/mandate-evidence.js";
+import { OperationLinkFields } from "./schema/operation-link.js";
+import { SignerFields } from "./schema/signers.js";
+import { StateWitnessEvidenceFields } from "./schema/state-witness-evidence.js";
 
 // ---------------------------------------------------------------------------
 // Tagged digest primitives
@@ -159,6 +167,14 @@ export const LegalPostureWarningSchema = z.object({
     "consent_evidence_absent",
     "esign_disclosure_unverified",
     "pending_counsel_approval",
+    /**
+     * The issuer had no production trust anchor available (the T420 offline key
+     * ceremony has not run) and DECLARES that the chain of trust behind this
+     * receipt is unverifiable. Additive 2026-07-27 per audit §B1: without it an
+     * issuer had no way to say "I am degraded", so the verifier's only options
+     * were reject-everything or an operator flag that weakened ALL receipts.
+     */
+    "trust_anchor_staging",
   ]),
   since: z.number().int().nonnegative(),
   evidence_ref: z.string().optional(),
@@ -515,6 +531,14 @@ export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
  *    NO fuerzan warnings — pueden ir vacíos/ausentes.
  *  - Schema lock v1: NO `intent` field aquí (siempre "charge" — `session` rechazado
  *    por parser con UnsupportedIntentError, diferido a spec-057).
+ *  - `method` restringido a `1*LOWERALPHA` (draft MPP §Method Identifier Format) —
+ *    idéntico al ABNF del protocolo real, no solo min/max length.
+ *  - `realm` (protection space del `WWW-Authenticate: Payment` real, slot 0 del
+ *    binding HMAC del draft) OPCIONAL: presente cuando hubo challenge context
+ *    stored (`confirmed`/`recovered`-con-ctx), ausente en `unverified` honesto
+ *    (sin ctx no hay realm conocido). Gap encontrado 2026-07-04 vía fetch directo
+ *    de `tempoxyz/mpp-specs` — antes de este fix, dos challenges de distinto
+ *    realm con el resto de campos iguales colisionaban en el mismo binding_hash.
  *
  * Status: ✅ SSOT activo (2026-06-02). Exportado del barrel del paquete y
  * consumido por `MppReceiptIssuerService` (emisión) y `MppBindingVerifier`
@@ -540,12 +564,19 @@ export const MppBindingExtensionSchema = z
     binding_profile_version: z.literal("mpp-binding/1.0"),
     /** ULID Crockford base32 — identificador unique del receipt. NO es la replay cache key. */
     binding_id: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/),
-    /** Payment method ("stripe" | "tempo" | "lightning" | "solana" | "visa" | "bnpl" | ...). */
-    method: z.string().min(1).max(64),
+    /** Payment method ("stripe" | "tempo" | "lightning" | "solana" | "visa" | "bnpl" | ...). Draft MPP §Method Identifier Format: lowercase ASCII only. */
+    method: z.string().regex(/^[a-z]{1,64}$/),
     /** Method-specific tx reference (Stripe charge id, lightning preimage, solana sig, ...). */
     reference: z.string().min(1).max(512),
     /** HMAC-SHA256 challenge id del WWW-Authenticate: Payment original. */
     challenge_id: z.string().min(1).max(256),
+    /**
+     * Protection space (`realm` del WWW-Authenticate: Payment original) —
+     * slot 0 del binding formal MPP; sin esto dos challenges de distinto
+     * realm colisionarían en binding_hash. Ausente cuando posture="unverified"
+     * SIN challenge context stored (no hay realm conocido que atar).
+     */
+    realm: z.string().min(1).max(256).optional(),
     /** Resource URI canonicalizado per §Canonicalization Rules. */
     resource_uri_c14n: z.string().url(),
     /** HTTP method del resource (uppercase) — previene cross-verb replay. */
@@ -672,6 +703,29 @@ export const TrustReceiptV11BodySchema = z
      */
     platformOrderId: z.string().optional(),
     platform: z.string().optional(),
+    /**
+     * Evidencia de política (R-02, 2026-07-29) — SSOT en
+     * `schema/policy-evidence.ts`. Aquí NO son opcionales por comodidad: el
+     * root es `.strict()`, así que sin declararlos un body que los llevara
+     * sería rechazado como clave desconocida. Compartir la declaración con las
+     * dos formas v1.0 es deliberado: tres copias a mano de los mismos cinco
+     * campos es exactamente cómo divergen los puertos.
+     */
+    ...PolicyEvidenceFields,
+    ...OperationLinkFields,
+    // Evidencia de State Witness — SSOT en `schema/state-witness-evidence.ts`.
+    // El root es `.strict()`: sin declararlos, un body que los llevara sería
+    // rechazado entero como clave desconocida.
+    ...StateWitnessEvidenceFields,
+    // Evidencia de mandato y aprobación — SSOT en `schema/mandate-evidence.ts`.
+    // El root es `.strict()`: sin declararlos, un body que los llevara sería
+    // rechazado entero como clave desconocida.
+    ...MandateEvidenceFields,
+    ...ApprovalEvidenceFields,
+    // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
+    // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
+    // y subirse la clase de verificación.
+    ...SignerFields,
   })
   // A1 (security audit 2026-07-03): reject unknown keys at the ROOT body, not
   // just inside the x402_binding/mpp_binding extensions (M-1). Without this a

@@ -10,7 +10,7 @@
 This document covers how TrustReceipt works: the signing envelope, key resolution, canonicalization, the verification algorithm and the conformance suite.
 
 For the complete field-level specification, see [SPEC.md](../SPEC.md).
-For JSON Schema validation, see [schema/trust-receipt-v1.schema.json](../schema/trust-receipt-v1.schema.json).
+For JSON Schema validation, see [schema/trust-receipt-v1.0-final.schema.json](../schema/trust-receipt-v1.0-final.schema.json) — the normative schema. See [schema/README.md](../schema/README.md) for why a second, superseded file also lives in that directory.
 For conformance test vectors, see [test-vectors/](../test-vectors/).
 
 ---
@@ -25,12 +25,16 @@ Trust-Receipt-Verifier/
 ├── LICENSE                              — MIT
 ├── TRADEMARKS.md                        — Third-party trademark notices
 ├── schema/
-│   └── trust-receipt-v1.schema.json     — JSON Schema (v1.0)
+│   ├── trust-receipt-v1.0-final.schema.json — JSON Schema (v1.0, NORMATIVE)
+│   ├── trust-receipt-v1.schema.json     — SUPERSEDED draft, kept for link stability (see schema/README.md)
+│   └── README.md                        — Explains which of the two is normative
 ├── test-vectors/
 │   ├── vectors.json                     — Conformance vector manifest
 │   ├── README.md                        — How to run the vectors
 │   ├── valid/                           — TC-001 through TC-005
 │   └── invalid/                         — TC-006 through TC-010
+├── reference-verifier/
+│   └── README.md                        — npm package usage + CLI reference
 └── docs/
     └── architecture.md                  — This document
 ```
@@ -41,13 +45,13 @@ Trust-Receipt-Verifier/
 
 Two formats were considered during design: **JWS Compact** (RFC 7515) and **COSE Sign1** (RFC 8152 / CBOR).
 
-| Dimension            | JWS Compact                           | COSE Sign1                       |
-| -------------------- | ------------------------------------- | -------------------------------- |
-| Human-readable       | Yes (Base64url, inspectable in tools) | No (binary CBOR)                 |
-| Existing tooling     | Wide JWT/JWS ecosystem                | Growing (SD-JWT / mdoc focus)    |
-| Typical receipt size | ~350–600 bytes                        | ~280–450 bytes (smaller)         |
-| Language support     | Every major language                  | More limited                     |
-| Wallet ecosystem     | Universal JWT support                 | Emerging                         |
+| Dimension            | JWS Compact                           | COSE Sign1                    |
+| -------------------- | ------------------------------------- | ----------------------------- |
+| Human-readable       | Yes (Base64url, inspectable in tools) | No (binary CBOR)              |
+| Existing tooling     | Wide JWT/JWS ecosystem                | Growing (SD-JWT / mdoc focus) |
+| Typical receipt size | ~350–600 bytes                        | ~280–450 bytes (smaller)      |
+| Language support     | Every major language                  | More limited                  |
+| Wallet ecosystem     | Universal JWT support                 | Emerging                      |
 
 **Decision**: JWS Compact. COSE deferred until a partner wallet or SDK requires it, or payload-size benchmarks justify the added dependency.
 
@@ -121,6 +125,7 @@ When a `jwksUrl` is provided, the verifier fetches the key set from that URL. Fo
 ### 4.3 Inline JWK set
 
 When an inline array of public JWKs is provided, no network request is made. This is the recommended approach for:
+
 - Offline or air-gapped verification environments
 - CI/CD pipelines running the conformance suite
 - Audit tools that pin a specific key snapshot
@@ -163,8 +168,16 @@ Step 5 — Schema validation
 
 Step 6 — Expiry check
   now = current Unix time (seconds).
-  Fail → "expired"       if now > expires_at + clockTolerance.
   Fail → "not_yet_valid" if now < issued_at − clockTolerance.
+  Report (NOT fatal, since 2026-07-28) → result.freshness.expired = true
+    if now > expires_at + clockTolerance. A v1.0 receipt must keep verifying
+    for the multi-year retention window FR-018 (spec-049) requires, so
+    `verifyTrustReceipt` no longer fails on expiry alone — see the comment
+    above `verifyLegacyCompact` in src/verifier.ts. NOT YET reconciled with
+    test-vectors/vectors.json TC-007 (still `expected: "invalid"`, `expired`)
+    — see the note on the failure-code table in CONTRIBUTING.md.
+    `verifyReceiptEnvelope` (v1.1) is unaffected: `receipt_expired` stays fatal
+    there.
 
 Step 7 — Return
   { valid: true, receipt: <decoded payload> }
@@ -191,23 +204,23 @@ Step 0 — Validate JWKS history signature
 
 Additional v1.1 error codes returned by `verifyReceiptEnvelope`:
 
-| Error code                         | Condition                                                                      |
-| ---------------------------------- | ------------------------------------------------------------------------------ |
-| `jwks_history_signature_invalid`   | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust list  |
-| `unknown_kid`                      | Receipt `kid` not found in the resolved JWKS history entries                   |
-| `receipt_expired`                  | `expires_at < now - toleranceSeconds`                                          |
-| `receipt_not_yet_valid`            | `issued_at > now + toleranceSeconds`                                           |
-| `missing_required_consent_context` | `receipt_subject = "buyer_agent"` but `consent_context` absent                 |
-| `receipt_subject_mismatch`         | `expectedSubject` option set but `receipt_subject` differs                     |
-| `schema_invalid`                   | Zod schema parse failed (missing required field, wrong type, etc.)             |
+| Error code                         | Condition                                                                     |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| `jwks_history_signature_invalid`   | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust list |
+| `unknown_kid`                      | Receipt `kid` not found in the resolved JWKS history entries                  |
+| `receipt_expired`                  | `expires_at < now - toleranceSeconds`                                         |
+| `receipt_not_yet_valid`            | `issued_at > now + toleranceSeconds`                                          |
+| `missing_required_consent_context` | `receipt_subject = "buyer_agent"` but `consent_context` absent                |
+| `receipt_subject_mismatch`         | `expectedSubject` option set but `receipt_subject` differs                    |
+| `schema_invalid`                   | Zod schema parse failed (missing required field, wrong type, etc.)            |
 
 v1.1 warnings (non-fatal, appended to `result.warnings`):
 
-| Warning                                               | Meaning                                                                           |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `jwks_history_signature_unverifiable_staging_root`    | Root SHA not in embedded list, but `allowStagingRoots: true` was set              |
-| `unknown_trust_provider_present`                      | `trust_provider_assertions[]` contains a `provider` not in the known set          |
-| `tsa_unavailable`                                     | RFC 3161 timestamp evidence absent or fetch failed; posture falls to `ades_candidate_no_tsa` |
+| Warning                                            | Meaning                                                                                      |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `jwks_history_signature_unverifiable_staging_root` | Root SHA not in embedded list, but `allowStagingRoots: true` was set                         |
+| `unknown_trust_provider_present`                   | `trust_provider_assertions[]` contains a `provider` not in the known set                     |
+| `tsa_unavailable`                                  | RFC 3161 timestamp evidence absent or fetch failed; posture falls to `ades_candidate_no_tsa` |
 
 ---
 
@@ -238,13 +251,15 @@ Default validity window: 3600 seconds (1 hour). Issuers MAY use longer windows f
 
 ## 7. Schema
 
-The machine-readable schema lives at [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v1.schema.json). It is the normative reference for:
+The machine-readable, normative schema lives at [`schema/trust-receipt-v1.0-final.schema.json`](../schema/trust-receipt-v1.0-final.schema.json). It is the normative reference for:
 
 - Required vs optional fields
 - Type constraints (UUID v4, Unix seconds, SHA-256 hex, enum values)
 - Nested object shapes (`trust_provider_assertions`, `protocol_artifacts`, `verification_methods`, …)
 
 Any implementation claiming TrustReceipt conformance MUST validate receipts against this schema (or a byte-equivalent implementation) before accepting them as valid.
+
+A second file, [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v1.schema.json), also lives in that directory under a similar name. It is a **superseded historic draft**, kept only so existing links keep resolving — it MUST NOT be implemented against. See [`schema/README.md`](../schema/README.md) for the full explanation of why two files exist and how they differ.
 
 ---
 
@@ -267,6 +282,8 @@ The conformance suite defines correct verifier behavior through 10 test vectors 
 
 A verifier claims **TrustReceipt v1.0 Conformant** if and only if it produces the exact expected outcome for all 10 vectors. See [`test-vectors/README.md`](../test-vectors/README.md) for how to run them.
 
+> ⚠️ **Known gap, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` against the current reference verifier reports **9/10**, not 10/10 — TC-007 now verifies `valid` (with `freshness.expired: true` reported, not fatal) because `verifyTrustReceipt`'s expiry check became informative-only on 2026-07-28 (§6 above), a change this vector's `expected: "invalid"` entry has not yet been reconciled with. See the note on the failure-code table in `CONTRIBUTING.md`.
+
 ---
 
 ## 9. Audit chain
@@ -288,7 +305,7 @@ Because canonicalization (§3) is deterministic, any party can independently com
 | **Signature integrity** | Ed25519, 64-byte signature, no custom crypto |
 | **Payload integrity** | RFC 8785 canonicalization, deterministic across all languages |
 | **Key rotation** | `kid` pinning, so old receipts remain verifiable after key rotation |
-| **Expiry** | `expires_at` enforced by every conformant verifier |
+| **Expiry** | Fatal for `verifyReceiptEnvelope` (v1.1); reported but non-fatal for `verifyTrustReceipt` (v1.0) since 2026-07-28, see §6 and §8 above |
 | **No raw PII** | `user_intent_hash`, `cart_hash`, `order_hash` are SHA-256 hashes only |
 | **Offline verifiable** | JWKS URL is public and cacheable; no call back to issuer required |
 | **Audit chain** | `hash_chain_prev`: tamper-evident linkage, RFC 8785 deterministic |
@@ -322,7 +339,7 @@ The reference implementation is published at:
 npm install trust-receipt-verifier
 ```
 
-See the [README](../README.md) for usage and the CLI reference, and [CONTRIBUTING.md](../CONTRIBUTING.md) for porting instructions.
+See [`reference-verifier/README.md`](../reference-verifier/README.md) for usage, CLI reference, and porting instructions.
 
 ---
 

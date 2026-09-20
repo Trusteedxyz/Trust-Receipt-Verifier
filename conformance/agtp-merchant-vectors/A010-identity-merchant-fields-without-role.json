@@ -1,0 +1,17 @@
+{
+  "name": "A010-identity-merchant-fields-without-role",
+  "description": "§3.2 — campos de comerciante SIN rol: se ignoran y se registra",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "status": "Active",
+    "legal_entity_name": "Suplantador SL",
+    "dispute_policy_uri": "https://x.example/d"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "merchant_fields_without_role",
+    "retryable": false
+  }
+}

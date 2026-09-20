@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://trusteed.xyz/schemas/trust-receipt/v1.0",
-  "title": "TrustReceipt",
-  "description": "Cross-protocol evidence receipt for agentic commerce transactions",
-  "version": "1.0",
+  "title": "TrustReceipt (v1.0-draft \u2014 SUPERSEDED, DO NOT IMPLEMENT AGAINST)",
+  "description": "SUPERSEDED historic draft schema. Kept in this repository ONLY so existing links resolve to interpretable content for historic artifacts; it MUST NOT be used to validate new receipts. The normative v1.0 schema is 'trust-receipt-v1.0-final.schema.json' in this same directory ($id https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json). See schema/README.md for the full explanation of why both files exist and how their required fields differ.",
+  "version": "1.0-superseded-draft",
   "type": "object",
   "required": [
     "receipt_id",
@@ -67,15 +67,36 @@
       "description": "SHA-256 hex digest of the user intent text"
     },
     "cart_hash": {
-      "oneOf": [{ "type": "string" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "SHA-256 hex digest of the cart contents (optional)"
     },
     "order_hash": {
-      "oneOf": [{ "type": "string" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "SHA-256 hex digest of the order (optional)"
     },
     "transaction_id": {
-      "oneOf": [{ "type": "string" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Platform transaction ID (optional)"
     },
     "protocol": {
@@ -85,24 +106,34 @@
     },
     "protocol_artifacts": {
       "type": "array",
-      "items": { "$ref": "#/definitions/ProtocolArtifact" },
+      "items": {
+        "$ref": "#/definitions/ProtocolArtifact"
+      },
       "description": "Protocol-specific cryptographic artifacts"
     },
     "payment_reference": {
       "oneOf": [
-        { "$ref": "#/definitions/PaymentReference" },
-        { "type": "null" }
+        {
+          "$ref": "#/definitions/PaymentReference"
+        },
+        {
+          "type": "null"
+        }
       ],
       "description": "Payment processor reference (no raw payment data)"
     },
     "risk_signals": {
       "type": "array",
-      "items": { "$ref": "#/definitions/RiskSignal" },
+      "items": {
+        "$ref": "#/definitions/RiskSignal"
+      },
       "description": "Normalized risk signals from fraud/trust providers"
     },
     "trust_provider_assertions": {
       "type": "array",
-      "items": { "$ref": "#/definitions/TrustProviderAssertion" },
+      "items": {
+        "$ref": "#/definitions/TrustProviderAssertion"
+      },
       "description": "Assertions from trust and fraud score providers"
     },
     "policy_decision": {
@@ -112,25 +143,42 @@
     },
     "liability_context": {
       "oneOf": [
-        { "$ref": "#/definitions/LiabilityContext" },
-        { "type": "null" }
+        {
+          "$ref": "#/definitions/LiabilityContext"
+        },
+        {
+          "type": "null"
+        }
       ],
       "description": "Liability assertor and scope (optional)"
     },
     "consent_context": {
-      "oneOf": [{ "$ref": "#/definitions/ConsentContext" }, { "type": "null" }],
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ConsentContext"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "User consent record (optional)"
     },
     "privacy_classification": {
       "oneOf": [
-        { "$ref": "#/definitions/PrivacyClassification" },
-        { "type": "null" }
+        {
+          "$ref": "#/definitions/PrivacyClassification"
+        },
+        {
+          "type": "null"
+        }
       ],
       "description": "Privacy and data classification (optional)"
     },
     "verification_methods": {
       "type": "array",
-      "items": { "$ref": "#/definitions/VerificationMethod" },
+      "items": {
+        "$ref": "#/definitions/VerificationMethod"
+      },
       "description": "Methods to verify the receipt signature"
     },
     "kid": {
@@ -143,13 +191,17 @@
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
         },
-        { "type": "null" }
+        {
+          "type": "null"
+        }
       ],
       "description": "SHA-256 hex digest of the previous receipt in the audit chain (optional)"
     },
     "attachments": {
       "type": "array",
-      "items": { "$ref": "#/definitions/Attachment" },
+      "items": {
+        "$ref": "#/definitions/Attachment"
+      },
       "description": "Supporting evidence attachments"
     },
     "signature": {
@@ -182,7 +234,7 @@
     "PaymentReference": {
       "type": "object",
       "title": "PaymentReference",
-      "description": "Payment processor reference — no raw card or account data",
+      "description": "Payment processor reference \u2014 no raw card or account data",
       "required": ["psp", "ref"],
       "additionalProperties": false,
       "properties": {
@@ -209,9 +261,15 @@
         },
         "value": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "number" },
-            { "type": "boolean" }
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
           ],
           "description": "Signal value (string, number, or boolean)"
         },
@@ -253,12 +311,21 @@
               "minimum": 0,
               "maximum": 1
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ],
           "description": "Normalized score in [0, 1] range (null if not applicable)"
         },
         "score_range": {
-          "oneOf": [{ "type": "string" }, { "type": "null" }],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Human-readable score range, e.g. 0-1, 0-1000 (null if not applicable)"
         },
         "ts": {

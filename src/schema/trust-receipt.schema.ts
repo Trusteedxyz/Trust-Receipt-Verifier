@@ -10,6 +10,15 @@
  */
 
 import { z } from "zod";
+import { ChainLinkFields } from "./chain-link.js";
+import {
+  ApprovalEvidenceFields,
+  MandateEvidenceFields,
+} from "./mandate-evidence.js";
+import { OperationLinkFields } from "./operation-link.js";
+import { PolicyEvidenceFields } from "./policy-evidence.js";
+import { SignerFields } from "./signers.js";
+import { StateWitnessEvidenceFields } from "./state-witness-evidence.js";
 
 // ─── Sub-schemas ─────────────────────────────────────────────────────────────
 
@@ -106,6 +115,16 @@ export const TrustReceiptSchema = z.object({
   // Decision
   policy_decision: z.enum(["allow", "deny", "review", "challenge"]),
 
+  // Policy evidence (R-02, 2026-07-29) — el veredicto SIN la política que lo
+  // produjo es lo que hacía este artefacto rebatible. Todos opcionales:
+  // presentes ⇒ autoritativos, ausentes ⇒ el receipt no atestigua política.
+  // Ver `policy-evidence.ts` para el porqué de cada uno.
+  ...PolicyEvidenceFields,
+  // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
+  // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
+  // y subirse la clase de verificación.
+  ...SignerFields,
+
   // Compliance/legal
   liability_context: LiabilityContextSchema.nullable().optional(),
   consent_context: ConsentContextSchema.nullable().optional(),
@@ -116,7 +135,20 @@ export const TrustReceiptSchema = z.object({
   kid: z.string(), // Key ID used to sign
 
   // Audit chain
-  hash_chain_prev: z.string().nullable().optional(), // SHA-256 hex of previous receipt
+  // Enlace de cadena — SSOT en `schema/chain-link.ts`. Estaba declarado en
+  // línea SÓLO aquí, y el esquema legacy (el que valida el corpus real) no lo
+  // tenía: firmarlo habría sido invisible en producción.
+  ...ChainLinkFields,
+  ...OperationLinkFields,
+  // Evidencia de State Witness — SSOT en `schema/state-witness-evidence.ts`.
+  // Sin estos campos, un checkout que se ejecutó porque el estado NO había
+  // cambiado no dejaba constancia firmada de que se hubiera comprobado.
+  ...StateWitnessEvidenceFields,
+  // Evidencia de mandato y aprobación — SSOT en `schema/mandate-evidence.ts`.
+  // Sin estos campos el recibo publica el importe cobrado y NO el límite que
+  // lo autorizaba, que es justo lo que un tercero necesita para comprobarlo.
+  ...MandateEvidenceFields,
+  ...ApprovalEvidenceFields,
 
   // Attachments
   attachments: z.array(AttachmentSchema).default([]),

@@ -9,7 +9,7 @@
 [![Version](https://img.shields.io/badge/spec-v1.1-blue)](SPEC.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![npm](https://img.shields.io/npm/v/trust-receipt-verifier)](https://www.npmjs.com/package/trust-receipt-verifier)
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
 
 ---
 
@@ -23,26 +23,75 @@ This package is the reference verifier and issuer implementation. It is part of 
 
 ---
 
+## Recent updates (2026-09-16)
+
+This sync brings the public repo current with the reference implementation (previous sync: 2026-08-17) and adds an accuracy pass over the existing docs. New:
+
+- Two new third-party identity verifiers, each working without the underlying protocol's transport. Merchant Identity Assertions (MIA) covers self-issued and DNS-authorized third-party issuance (`draft-anders-merchant-identity-assertions-01`, 30 conformance vectors). AGTP merchant identity covers Agent Identity Document, Intent Assertion and Cart-Digest checks (`draft-hood-agtp-merchant-identity-02`, 50 conformance vectors).
+- Mandate and approval evidence, State Witness evidence and operation link: three new optional field groups (see [Receipt anatomy](#receipt-anatomy) and SPEC.md §3.2), injected identically into all three receipt shapes with no `schema_version` bump.
+- The ATEP passport reference verifier (`reference-verifier/verify-atep-passport.mjs`), a zero-dependency script that uses only Node built-ins. It shows that a merchant's portable trust attestation can be verified offline without any Trusteed code.
+- A 7th `legacy-compact` conformance vector (signer declarations).
+- Two accuracy fixes to existing docs, found while verifying rather than assuming. The "11 v1.1 vectors" line undercounted a table that already had 12 rows (SPEC.md §11.6). And `CONTRIBUTING.md`, `docs/architecture.md` and this README's Conformance section now say that `scripts/validate-vectors.ts` currently reports 9/10, not 10/10 (TC-007 / `expired`, [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)). That is a real, dated discrepancy between code and spec, not a typo.
+- A packaging gap that was already there and is now tracked: the RFC 3161 capability row was marked optional, but it is non-functional for any external installer today ([issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5)).
+- CHANGELOG.md cleanup: two entries had sat under a stale "Unreleased" heading since before this repo's public launch even though they had already shipped. They are retitled to the real version and date. An internal Trusteed deployment-coupling paragraph and an unreachable sibling-package cross-reference, both leaked in from the source monorepo, were removed.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
+
+---
+
 ## Capability status
 
-| Capability                                               | Status                              | Notes                                                                                 |
-| -------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
-| JWS verification (Ed25519)                               | ✅ Implemented                      | CLI + library, no custom crypto (uses `jose` v6)                                      |
-| JWKS-based public key resolution                         | ✅ Implemented                      | Cached fetch with TTL; inline JWK set also supported                                  |
-| Schema v1.0                                              | ✅ Stable                           | 10 conformance vectors passing                                                        |
-| Schema v1.1 (eIDAS-aligned fields)                       | 🟡 Code-complete / experimental     | 12 additional vectors passing; field set may evolve before v1.2                       |
-| RFC 8785 canonical JSON                                  | ✅ Implemented                      | Used for signing + audit chain hashes                                                 |
-| Audit chain (`hash_chain_prev`)                          | ✅ Implemented                      | Per-merchant tamper-evident linkage                                                   |
-| eIDAS Advanced Electronic Seal posture                   | 🟡 Candidate                        | Field-level support; **not** a Qualified Electronic Seal (no QTSP)                    |
-| ESIGN / UETA evidence shape                              | 🟡 Partial                          | `esign_disclosure_hash` + consent context; full disclosure workflow in progress       |
-| RFC 3161 trusted timestamp evidence                      | 🟡 Optional / integration-dependent | Hook present via `trust-receipt-tsa-client`; depends on TSA provider                  |
-| AWS KMS issuer-side signing                              | 🟡 Optional / issuer-side           | Provided by sibling package `trust-receipt-kms-signer`; not required for verification |
-| Reference ports (TS) / language ports (Python, Go, Java) | 🟡 TS only today                    | Ports welcome, see `CONTRIBUTING.md`                                                 |
-| AIVS proof-bundle export/verify (`aivs-export.ts`)       | 🟡 Code-complete                    | Projects a signed v1.0 receipt into an AIVS-compatible `{ manifest_hash, session_sig, audit_log }` bundle. Verifiable offline with no Trusteed code (spec-062 US1: alignment, not escrow) |
-| Extension artifact verification (`verify-extension-artifact.ts`) | 🟡 Code-complete             | Verifies developer-signed erasure receipts and extension manifests from the Trusteed Extension Marketplace |
-| v1.0-legacy compact receipt shape (`verifier.ts`)        | ✅ Implemented                      | `verifyTrustReceipt` also accepts the JWT-style compact payload emitted by the platform issuer since spec-040. Surfaced as `result.variant` / `result.legacyReceipt` |
+| Capability                                                       | Status                              | Notes                                                                                                                                                                                     |
+| ---------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JWS verification (Ed25519)                                       | ✅ Implemented                      | CLI + library, no custom crypto (uses `jose` v6)                                                                                                                                          |
+| JWKS-based public key resolution                                 | ✅ Implemented                      | Direct `fetch()` per verification (5s timeout), no in-process cache; inline JWK set also supported                                                                                        |
+| Schema v1.0                                                      | ✅ Stable                           | 10 conformance vectors passing                                                                                                                                                            |
+| Schema v1.1 (eIDAS-aligned fields)                               | 🟡 Code-complete / experimental     | 16 additional vectors passing (12 in `test-vectors/v11/` + 4 negative strict-mode vectors in `test-vectors/v11-strict/`, T-AUD-012); field set may evolve before v1.2                     |
+| RFC 8785 canonical JSON                                          | ✅ Implemented                      | Used for signing + audit chain hashes                                                                                                                                                     |
+| Audit chain (`hash_chain_prev`)                                  | ✅ Implemented                      | Per-merchant tamper-evident linkage                                                                                                                                                       |
+| Signer declarations (`signers`)                                  | ✅ Implemented                      | Who signed, under which custody model, and how each signer relates to the subject — a platform-held key and a merchant-held key are no longer indistinguishable                           |
+| Evaluation identity (`evaluation_id`)                            | ✅ Implemented                      | Points at the enforcement record that produced the verdict, so correlation stops relying on timestamp proximity. Identifies the EVALUATION, not the operation                             |
+| eIDAS Advanced Electronic Seal posture                           | 🟡 Candidate                        | Field-level support; **not** a Qualified Electronic Seal (no QTSP)                                                                                                                        |
+| ESIGN / UETA evidence shape                                      | 🟡 Partial                          | `esign_disclosure_hash` + consent context; full disclosure workflow in progress                                                                                                           |
+| RFC 3161 trusted timestamp evidence                              | 🔴 Hook present, not externally usable | `verify-timestamp-evidence.ts` imports the real implementation from `@agenticmcpstores/trust-receipt-tsa-client`, a Trusteed-internal package that is **not published to npm and not vendored in this repo** — `npm install` resolves everything else but that one dependency has no registry entry; tracked in [issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5) |
+| Merchant Identity Assertions (MIA) — third-party verifier        | ✅ Implemented                      | Verifies `draft-anders-merchant-identity-assertions-01` documents — self-issued and DNS-authorized third-party issuance, replay/tamper/redirect detection; 30 conformance vectors under `conformance/mia-vectors/` |
+| AGTP merchant identity — Intent Assertion / Cart-Digest          | ✅ Implemented                      | Verifies exactly what `draft-hood-agtp-merchant-identity-02` declares checkable **without speaking AGTP** — no AGTP transport client ships here, only the Agent Identity Document, Intent Assertion, and Cart-Digest checks; 50 conformance vectors under `conformance/agtp-merchant-vectors/` |
+| Mandate & approval evidence (`mandate-evidence.ts`)              | 🟡 Structural only                  | Lets a third party recompute `mandate_claims_hash` and confirm a charged amount fell inside what was authorized; `mandate_verification` is a closed enum and today only ever reports `"structure_only"` — no issuer verifies a mandate signature yet |
+| State Witness evidence (`state-witness-evidence.ts`)             | ✅ Implemented                      | Declares what the issuer's state comparator resolved before money moved, and against which authoritative state — closes the gap where an unchanged-state checkout left no signed record that the comparison ran |
+| Operation link (`operation-link.ts`)                             | ✅ Implemented (schema only)         | Ties a corrected retry or a reconfirmed execution back to the receipt it supersedes — distinct from `hash_chain_prev`, which only orders receipts by time and makes no continuation claim; not re-exported from `index.ts`, import from `trust-receipt-verifier/schema/operation-link.js` |
+| AWS KMS issuer-side signing                                      | 🟡 Optional / issuer-side           | Provided by sibling package `trust-receipt-kms-signer`; not required for verification                                                                                                     |
+| Reference ports (TS) / language ports (Python, Go, Java)         | 🟡 TS only today                    | Ports welcome — see `CONTRIBUTING.md`                                                                                                                                                     |
+| AIVS proof-bundle export/verify (`aivs-export.ts`)               | 🟡 Code-complete                    | Projects a signed v1.0 receipt into an AIVS-compatible `{ manifest_hash, session_sig, audit_log }` bundle — offline-verifiable with no Trusteed code (spec-062 US1, alignment not escrow) |
+| Extension artifact verification (`verify-extension-artifact.ts`) | 🟡 Code-complete                    | Verifies developer-signed erasure receipts and extension manifests from the Trusteed Extension Marketplace ecosystem                                                                      |
+| v1.0-legacy compact receipt shape (`verifier.ts`)                | ✅ Implemented                      | `verifyTrustReceipt` also accepts the JWT-style compact payload emitted by the platform issuer since spec-040; surfaced as `result.variant` / `result.legacyReceipt`                      |
+| Declared trust-anchor degradation (`accepted_degraded`)          | ✅ Implemented                      | Three-valued verdict for v1.1 envelopes — see [Verification verdicts](#verification-verdicts) and SPEC.md §4.1 (NORMATIVE)                                                                |
+| Consumer-side revocation (`revocation.ts`)                       | ✅ Implemented                      | `checkRevocation()` against a merchant's published status list. Pure and offline: you fetch, it decides. Every failure resolves to `unknown`, never `not_revoked`                         |
+| Canonicalization reporting (`result.canonicalization`)           | ✅ Implemented                      | `"jcs"` vs `"json-stringify-legacy"` on the legacy-compact path — independent of `variant`, which describes the payload shape                                                             |
 
 > ✅ = production-grade implementation. 🟡 = present and tested but subject to change before v1.2 GA, or dependent on operator-side integration.
+
+### Verification verdicts
+
+`verifyReceiptEnvelope` (v1.1) returns **three** values, not two. Treating the
+verdict as binary is a conformance failure in either direction — it either
+reports a degraded receipt as fully verified, or discards a valid one.
+
+| Verdict             | Meaning                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `accepted`          | Signature, structure, and chain of trust all verified.                                      |
+| `accepted_degraded` | Signature and structure verified; the receipt **declares** its chain of trust unverifiable. |
+| `rejected`          | Any check failed.                                                                           |
+
+`accepted_degraded` is emitted only when the issuer root behind the bundled JWKS
+history could not be cryptographically verified **and** the receipt's _signed
+body_ carries a `legal_posture_warnings[]` entry with
+`reason: "trust_anchor_staging"`. A receipt that stays silent about an
+unverifiable anchor is `rejected` — silence is never read as consent, and the
+unsigned `envelope_metadata` mirror alone can never unlock the downgrade.
+
+It attests internal consistency and issuer intent, **never issuer
+authenticity**. Consumers that branch on `outcome === "accepted"` keep refusing
+it; accepting the weaker guarantee has to be a conscious act.
 
 ---
 
@@ -78,7 +127,7 @@ sequenceDiagram
     participant Schema as 📐 Zod Schema
 
     Verifier->>Verifier: Parse JWS header<br/>extract kid + alg
-    Verifier->>JWKS: GET public keys<br/>(cached, TTL 1h)
+    Verifier->>JWKS: GET public keys<br/>(direct fetch, 5s timeout)
     JWKS-->>Verifier: Public JWK set
     Verifier->>Verifier: Match kid → public key
     Verifier->>Verifier: Verify Ed25519 signature<br/>(jose — no custom crypto)
@@ -128,9 +177,11 @@ flowchart LR
 
 **Key properties:**
 
-- Verification works offline. It needs only the JWKS URL (publicly cached) and never calls back to the issuer
+- Verification works offline. It needs only the JWKS URL (publicly reachable and HTTP-cacheable at the edge) and never calls back to the issuer
 - One receipt format covers x402, AP2, ACP, MCP, UCP and MCAP through `protocol_artifacts`
 - `hash_chain_prev` links receipts into a tamper-evident, per-merchant chain (RFC 8785)
+- `signers` states who signed and in whose custody the key lives
+- `evaluation_id` points at the enforcement record behind the verdict
 - `legal_posture` tracks the eIDAS, ESIGN and UK-DIATF compliance posture of each receipt
 
 ---
@@ -143,7 +194,7 @@ flowchart LR
 
 > **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-_The full claims policy is the TrustReceipt Claims Policy (`docs/legal/trust-receipt-claims-policy.md` in the Trusteed monorepo). It is not part of this repository._
+_The issuer maintains an internal claims policy that fixes the permitted and prohibited wording for every posture in this table. It is not published with this repository; ask the issuer if you need the canonical list._
 
 ### Regulatory compatibility status
 
@@ -190,7 +241,7 @@ const opts: VerifyOptions = {
     jws_compact: "<SignedJwksHistory JWS>",
     signed_by_root_sha256: "<issuer-root-sha256>",
   },
-  trustAnchorPemSha256: "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
+  trustAnchorPemSha256: "<64-hex-sha256-of-the-issuer-root-PEM>",
   policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
   // toleranceSeconds: 30,  // default clock-skew tolerance (seconds)
   // mode: "strict",        // default "compat" — see "Strict vs compat" below
@@ -212,6 +263,18 @@ if (result.outcome === "accepted") {
 ```
 
 > **`allowStagingRoots`**: defaults to `false`. When `false` (production default) any `jwksHistory.signed_by_root_sha256` not present in the embedded trust anchor list causes immediate rejection (`jwks_history_signature_invalid`). Set to `true` only in staging or CI environments that use unsigned/stub JWKS history bundles.
+
+> ⚠️ **The trust anchor shipped in this package is a staging stub, not a
+> production root.** `EMBEDDED_ISSUER_ROOTS` (`src/embedded-issuer-root.ts`)
+> currently holds a single structurally-valid-but-non-verifying placeholder
+> certificate whose subject CN is marked `(STAGING)`. `validateChain()`
+> deliberately fail-closes on it with `root_key_not_provisioned`, so no caller
+> can mistake the placeholder for authoritative trust. The real self-signed
+> Ed25519 root is produced by an offline key ceremony that has not yet run; when
+> it does, the constant is replaced and the verifier package gets a SemVer bump.
+> Until then, **pin your own `trustAnchorPemSha256`** — do not rely on the
+> embedded list, and treat every `trustAnchorPemSha256` value in this README as
+> a placeholder to be substituted, never a value to copy.
 
 ---
 
@@ -259,15 +322,23 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 **Compliance**
 
-| Field                    | Type        | Description                                                      |
-| ------------------------ | ----------- | ---------------------------------------------------------------- |
-| `liability_context`      | object      | Assertor and scope (optional)                                    |
-| `consent_context`        | object      | Consent hash, scope, timestamp (optional)                        |
-| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional)                |
-| `verification_methods`   | array       | JWKS URL or DID for key resolution. At least one entry required |
-| `kid`                    | string      | Key ID used to sign this receipt                                 |
-| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                       |
-| `attachments`            | array       | Named, hashed file references (optional)                         |
+| Field                    | Type        | Description                                                                         |
+| ------------------------ | ----------- | ----------------------------------------------------------------------------------- |
+| `liability_context`      | object      | Assertor and scope (optional)                                                       |
+| `consent_context`        | object      | Consent hash, scope, timestamp (optional)                                           |
+| `privacy_classification` | object      | PII flag, retention days, jurisdiction (optional)                                   |
+| `verification_methods`   | array       | JWKS URL or DID for key resolution; at least one entry required                     |
+| `kid`                    | string      | Key ID used to sign this receipt                                                    |
+| `hash_chain_prev`        | SHA-256 hex | Previous receipt in audit chain (optional)                                          |
+| `signers`                | array       | Declared signers: party, `kid`, custody model, relation to subject (optional)       |
+| `evaluation_id`          | string      | Identity of the evaluation that produced the verdict (optional); see caveats below  |
+| `rule_set_version`       | integer     | Version of the policy catalogue the verdict was evaluated under (optional)          |
+| `evaluated_rules`        | array       | Rule codes that RAN, as opposed to `rules_triggered` which fired (optional)         |
+| `mandate_id` / `mandate_claims_hash` / `mandate_max_amount_cents` / `mandate_currency` / `mandate_subject` / `mandate_audience` / `mandate_expires_at` / `mandate_verification` | mixed | Mandate evidence (2026-09, optional): lets a third party confirm the charged amount fell inside what was authorized; see SPEC.md §3.2 for the full field-by-field reference |
+| `approval_ref` / `approval_channel` / `approval_at` | mixed | Out-of-band human approval evidence (2026-09, optional). Distinct from the mandate: the mandate says what an agent COULD spend, this says a person said yes to THIS purchase |
+| `state_witness_resolution` / `state_witness_authoritative_hash` / `state_witness_reasons` | mixed | State Witness evidence (2026-09, optional): what the comparator resolved before money moved, and against which authoritative state |
+| `operation_id` / `supersedes_receipt_hash` / `superseded_reason` / `reconfirmed_state_hash` | mixed | Operation link (2026-09, optional): ties a corrected retry or reconfirmed execution back to the receipt it supersedes; distinct from `hash_chain_prev`, which only orders by time |
+| `attachments`            | array       | Named, hashed file references (optional)                                            |
 
 ---
 
@@ -288,7 +359,11 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 A verifier implementation must pass all 10 test vectors (v1.0) to claim TrustReceipt conformance. Three levels are defined:
 
-> **v1.1 status (2026-05-06).** eIDAS hardening adds 12 v1.1 vectors under `test-vectors/v11/`. v1.1 schema drops legacy `mandate_hash` / `permit2` / `mcp` rail fields and introduces `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, and `esign_disclosure_hash`. Combined suite 58/58 passing.
+> **v1.1 status (2026-05-06)** — eIDAS hardening adds 12 v1.1 vectors under `test-vectors/v11/` (corrected from "11" — the table in SPEC.md §11.6 always listed 12 rows, including `019b`; only this summary line was stale). v1.1 schema drops legacy `mandate_hash` / `permit2` / `mcp` rail fields and introduces `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, and `esign_disclosure_hash`.
+
+> ⚠️ **Conformance discrepancy, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` today reports **9/10**, not 10/10. `verifyTrustReceipt`'s expiry check became informative-only (`result.freshness.expired`, not fatal) on 2026-07-28 to satisfy spec-049 FR-018's multi-year retention requirement, and TC-007's `expected: "invalid"` entry was never reconciled with that change. Do not implement a port against this line without reading that issue first — `test-vectors/vectors.json` is the cross-language verifier ABI (see `PUBLISH.md`), and the wrong side of this discrepancy could get frozen into an independent port.
+
+> **2026-09-16 additions** — two new third-party identity verifiers, each with its own conformance suite: **50 vectors** under `conformance/agtp-merchant-vectors/` (`draft-hood-agtp-merchant-identity-02`) and **30 vectors** under `conformance/mia-vectors/` (`draft-anders-merchant-identity-assertions-01`), plus a 7th `legacy-compact` vector (`L007-signers-declaration.json`). Counting every vector file across `test-vectors/` and `conformance/` (v1.0 core 10, v1.1 12, v1.1-strict 4, legacy-compact 7, x402-binding 11, agtp-merchant 50, mia 30) gives **124 conformance vectors** on disk. The automated test suite as a whole (`pnpm test`) is **475 passing tests across 36 files** — more than the raw vector count because several suites assert per-field and boundary behavior beyond the fixed vector set. Both figures were measured directly (`pnpm vitest run` / `npx tsc --noEmit`, both clean) against this exact tree, not carried over from an older release.
 
 | Level | Name     | Requirement                                                             |
 | ----- | -------- | ----------------------------------------------------------------------- |
@@ -317,7 +392,7 @@ npx tsx scripts/validate-vectors.ts
 Add the badge to your project once all 10 pass:
 
 ```markdown
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
 ```
 
 ---
@@ -343,16 +418,33 @@ trust-receipt-verifier/
 │   ├── verify-export-bundle.ts        — offline export-bundle verification
 │   ├── verify-extension-artifact.ts   — erasure receipt / extension manifest verification (Extension Marketplace)
 │   ├── aivs-export.ts                 — AIVS proof-bundle export/verify (spec-062 US1)
+│   ├── revocation.ts                  — consumer-side revocation check against a merchant status list
+│   ├── agtp-merchant/                 — Agent Identity Document / Intent Assertion / Cart-Digest (`draft-hood-agtp-merchant-identity-02`), no AGTP transport client
+│   ├── mia/                           — Merchant Identity Assertions, self-issued + third-party (`draft-anders-merchant-identity-assertions-01`)
 │   ├── __tests__/                     — unit + conformance tests
 │   └── schema/
 │       ├── trust-receipt.schema.ts        — Zod schema (source of truth for v1.0 TypeScript types)
-│       └── trust-receipt-legacy.schema.ts — v1.0-legacy compact shape (issued by platform since spec-040)
+│       ├── trust-receipt-legacy.schema.ts — v1.0-legacy compact shape (issued by platform since spec-040)
+│       ├── policy-evidence.ts             — policy-evidence fields, shared by all three receipt shapes
+│       ├── mandate-evidence.ts            — mandate + approval evidence fields (2026-09)
+│       ├── state-witness-evidence.ts      — state-comparator evidence fields (2026-09)
+│       └── operation-link.ts              — receipt-to-receipt operation linkage, distinct from `hash_chain_prev` (2026-09)
+├── schema/
+│   ├── trust-receipt-v1.0-final.schema.json — NORMATIVE v1.0 JSON Schema (+ .sha256)
+│   └── trust-receipt-v1.schema.json         — superseded draft, retained for link stability — do NOT implement against it
 ├── test-vectors/
 │   ├── README.md                    — how to use the vectors
 │   ├── vectors.json                 — vector manifest with expected outcomes
 │   ├── valid/                       — TC-001 through TC-005
 │   ├── invalid/                     — TC-006 through TC-010
 │   └── v11/, v11-strict/            — v1.1 + strict-mode conformance vectors
+├── conformance/
+│   ├── legacy-compact-vectors/      — L001–L007: both canonicalization regimes, expiry, tamper, unknown kid, signer declarations
+│   ├── agtp-merchant-vectors/       — 50 vectors for `src/agtp-merchant/` (identity, intent, cart-digest)
+│   └── mia-vectors/                 — 30 vectors for `src/mia/` (self-issued + DNS-authorized third-party MIA)
+├── reference-verifier/
+│   ├── verify-aivs-bundle.mjs       — verifies an exported AIVS bundle with no dependency on this package
+│   └── verify-atep-passport.mjs     — zero-dependency ATEP passport verifier (Node built-ins only, no `jose`, no npm install)
 ├── bin/
 │   └── trust-receipt.ts (source) → dist/bin/trust-receipt.js (compiled) — CLI: verify, inspect, generate-key, conformance
 └── demo/                            — runnable demo scripts
@@ -392,7 +484,10 @@ const jws = await issueTrustReceipt({
 **AIVS proof-bundle export.** Projects a signed v1.0 receipt into an AIVS-compatible bundle (`draft-stone-aivs-00`). You can verify it offline with only the JWS and the issuer JWKS:
 
 ```typescript
-import { exportAivsProofBundle, verifyAivsProofBundle } from "trust-receipt-verifier";
+import {
+  exportAivsProofBundle,
+  verifyAivsProofBundle,
+} from "trust-receipt-verifier";
 
 const bundle = exportAivsProofBundle(receiptJws); // { manifest_hash, session_sig, kid, alg, audit_log }
 const result = await verifyAivsProofBundle(bundle, { jwks: issuerJwks });
@@ -410,6 +505,37 @@ const result = await verifyExtensionArtifact(jws, {
 // result.valid: boolean; result.reason on failure ("malformed_jws" | "unsupported_alg" | "missing_kid" | "jwks_unreachable" | "kid_not_found" | "signature_invalid" | "payload_not_json" | "shape_invalid")
 ```
 
+**ATEP passport (zero-dependency)** — a standalone script under `reference-verifier/verify-atep-passport.mjs` proves a merchant's portable trust attestation offline using only Node.js built-ins (no `jose`, no npm install, no code from this package):
+
+```bash
+node reference-verifier/verify-atep-passport.mjs passport.json jwks.json
+```
+
+**Merchant Identity Assertions (MIA)** — verify a third party's own signed identity document, self-issued or DNS-authorized (`draft-anders-merchant-identity-assertions-01`):
+
+```typescript
+import { verifyMiaForDomain } from "trust-receipt-verifier";
+
+const result = await verifyMiaForDomain("supplier.example.com", {
+  io: { fetchDocument: (url) => fetch(url).then(/* → FetchedDocument | null */ null) },
+});
+// result.valid: boolean; result.reason on failure (retrieval, tamper, expiry, DNS authorization mismatch, …)
+```
+
+**AGTP merchant identity** — the parts of `draft-hood-agtp-merchant-identity-02` that are checkable without speaking the AGTP transport itself (no AGTP client ships here):
+
+```typescript
+import {
+  verifyMerchantIdentityDocument,
+  verifyIntentAssertion,
+  verifyCartDigest,
+} from "trust-receipt-verifier";
+
+const identity = verifyMerchantIdentityDocument(agentIdentityDocument, { /* … */ });
+const intent = await verifyIntentAssertion(compactJwt, { /* keyLookup, expected audience, … */ });
+const cart = verifyCartDigest(presentedDigest, cartContents, canonicalizeJSON);
+```
+
 ## CLI
 
 ```bash
@@ -423,14 +549,14 @@ trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwk
 trust-receipt verify envelope.json \
   --type receipt-v11 \
   --jwks-history-file issuer-jwks-history.json \
-  --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
+  --trust-anchor-sha256 <64-hex-sha256-of-the-issuer-root-PEM> \
   --policy-oid 1.2.3.4.5.6.7.8.9
 
 # Verify a v1.1 envelope in STRICT mode (semantic trust-anchor enforcement)
 trust-receipt verify envelope.json \
   --type receipt-v11 \
   --jwks-history-file issuer-jwks-history.json \
-  --trust-anchor-sha256 dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1 \
+  --trust-anchor-sha256 <64-hex-sha256-of-the-issuer-root-PEM> \
   --strict
 
 # Staging / CI only — skip root-anchor check (never use in production)
@@ -566,14 +692,14 @@ TrustReceipt is a cross-protocol evidence format. The following external parties
 
 ### Protocol authors (define schema fields)
 
-| Protocol | Author | TrustReceipt schema field |
-| -------- | ------ | ------------------------- |
-| [ACP (Agentic Commerce Protocol)](https://github.com/agentcommerceprotocol/acp) | [OpenAI](https://openai.com) + [Stripe](https://stripe.com) | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"` |
-| [AP2 (Agent Payment Protocol v2)](https://developers.google.com/wallet) | [Google](https://google.com) | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash` |
-| [x402 (stablecoin payment)](https://github.com/x402-foundation/x402) | [Coinbase](https://coinbase.com) + [Cloudflare](https://cloudflare.com) | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
-| [MCAP (Mastercard Agent Pay)](https://developer.mastercard.com/product/agent-pay/) | [Mastercard](https://mastercard.com) | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash` |
-| [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/specification) | [Anthropic](https://anthropic.com) | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"` |
-| [UCP (Universal Commerce Protocol)](https://github.com/Universal-Commerce-Protocol/ucp) | [Google](https://google.com) | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"` |
+| Protocol                                                                                | Author                                                                  | TrustReceipt schema field                                                                             |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [ACP (Agentic Commerce Protocol)](https://github.com/agentcommerceprotocol/acp)         | [OpenAI](https://openai.com) + [Stripe](https://stripe.com)             | `authorization_scheme: "acp_session_token"`, `protocol: "ACP"`                                        |
+| [AP2 (Agent Payment Protocol v2)](https://developers.google.com/wallet)                 | [Google](https://google.com)                                            | `authorization_scheme: "ap2_mandate_jws"`, `protocol: "AP2"`, `ap2_consent_hash`                      |
+| [x402 (stablecoin payment)](https://github.com/x402-foundation/x402)                    | [Coinbase](https://coinbase.com) + [Cloudflare](https://cloudflare.com) | `authorization_scheme: "evm_permit2" / "svm_token_authorization" / "x402_native"`, `protocol: "x402"` |
+| [MCAP (Mastercard Agent Pay)](https://developer.mastercard.com/product/agent-pay/)      | [Mastercard](https://mastercard.com)                                    | `authorization_scheme: "mcap_cart_binding"`, `protocol: "MCAP"`, `mcap_consent_hash`                  |
+| [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/specification)   | [Anthropic](https://anthropic.com)                                      | `authorization_scheme: "mcp_tool_invocation"`, `protocol: "MCP"`                                      |
+| [UCP (Universal Commerce Protocol)](https://github.com/Universal-Commerce-Protocol/ucp) | [Google](https://google.com)                                            | `authorization_scheme: "ucp_rule_set_plus_agent_token"`, `protocol: "UCP"`                            |
 
 ### Active runtime providers (wired in `trust_provider_assertions[]`)
 
@@ -602,4 +728,28 @@ TrustReceipt is not affiliated with, endorsed by, or officially supported by Mas
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Copyright MCPWebStore (trusteed.xyz), 2026.
+MIT, see [LICENSE](LICENSE). Copyright Trusteed (trusteed.xyz), 2026.
+
+## `evaluation_id`: two properties consumers must not assume
+
+`evaluation_id` was added in `0.4.0`. It makes a receipt point at the enforcement
+record that produced its verdict, so an adjudicator can request that record by
+identity instead of guessing from timestamp proximity. Two things it is **not**:
+
+**It identifies the EVALUATION, not the operation.** A cached verdict is served
+as-is, so several distinct operations can legitimately carry the same
+`evaluation_id`. It is not unique per receipt and must never be used as an
+idempotency key.
+
+**Its absence is a statement, not missing data.** The reference issuer emits the
+field only when it resolves to a record that can actually be fetched. Two cases
+where it is deliberately omitted:
+
+- the verdict came from cache, so the identity belongs to an earlier evaluation
+  rather than to this operation;
+- the decision was not written to the audit table — the ALLOW branch is sampled,
+  so most permitted operations have no record to point at.
+
+Emitting the identity anyway would invite a third party to request an audit
+record that nobody wrote. Absent means "this receipt does not claim an
+evaluation", never "the evaluation is hidden".

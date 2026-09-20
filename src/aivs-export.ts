@@ -10,7 +10,19 @@
  * `session_sig` is the existing EdDSA signature. A consumer needs only the
  * JWS and the issuer JWKS — no Trusteed code — to verify integrity.
  *
+ * SCOPE LIMIT — no hash chain exists (audit 2026-07-26 §F2).
+ * No issuer in this repository writes `hash_chain_prev` onto a TrustReceipt
+ * (verified by exhaustive grep: zero write sites). The receipt corpus is a
+ * plain table, NOT an append-only hash-linked log; the RFC 8785 prev-hash chain
+ * that does exist in the product covers `OAuthAuditLog` and the enforcement
+ * event log, not receipts. Consequently the `audit_log` projected here is a
+ * SINGLE, UNLINKED entry, and the bundle says so explicitly via
+ * {@link AivsProofBundle.chain_status}. This module MUST NOT imply otherwise:
+ * the guarantee it provides is per-receipt integrity + signature, never
+ * chain-of-custody across receipts.
+ *
  * @see specs/062-vcap-verified-commerce-alignment/data-model.md §T062-01
+ * @see docs/analisis/trust-receipts-auditoria-arquitectura-2026-07-26.md §F2
  */
 
 import { createHash } from "node:crypto";
@@ -18,18 +30,32 @@ import { compactVerify, importJWK, type JWK } from "jose";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-/** One hash-chained entry of the AIVS audit log. */
+/** One entry of the AIVS audit log projected from a single receipt. */
 export interface AivsAuditLogEntry {
-  /** Position in the projected chain (0 for a single-receipt bundle). */
+  /** Position within THIS bundle (always 0 — a bundle holds one receipt). */
   seq: number;
   /** This receipt's manifest_hash, tagged `sha256:<hex>`. */
   entry_hash: string;
   /**
-   * The previous receipt's hash (`sha256:<hex>`), or null for a genesis
-   * receipt. Projected from the receipt's `hash_chain_prev`.
+   * The previous receipt's hash (`sha256:<hex>`), read from the receipt's own
+   * `hash_chain_prev` claim. `null` whenever the receipt does not carry that
+   * claim — which is the case for every receipt this platform issues today
+   * (no issuer writes it). A `null` here means "no predecessor is asserted",
+   * NOT "this is the first link of a verified chain".
    */
   prev_hash: string | null;
 }
+
+/**
+ * Whether the projected audit log links to a predecessor.
+ *
+ * - `unlinked_single_entry` — the receipt asserts no predecessor. The bundle
+ *   proves per-receipt integrity ONLY; no chain-of-custody claim is made.
+ * - `linked_single_entry` — the receipt asserts a `hash_chain_prev`. Even then
+ *   this bundle contains one entry: a consumer must obtain the predecessor
+ *   bundle independently to walk the link.
+ */
+export type AivsChainStatus = "unlinked_single_entry" | "linked_single_entry";
 
 /** AIVS-compatible proof bundle projected from a TrustReceipt. */
 export interface AivsProofBundle {
@@ -41,8 +67,18 @@ export interface AivsProofBundle {
   kid: string;
   /** Signature algorithm from the JWS protected header. */
   alg: string;
-  /** Hash-chained audit log preserving the receipt's `hash_chain_prev` link. */
+  /**
+   * Single-entry audit log projected from this receipt. Length is ALWAYS 1 —
+   * the bundle carries one receipt and this module never fabricates links it
+   * cannot prove.
+   */
   audit_log: AivsAuditLogEntry[];
+  /**
+   * Honest, machine-readable declaration of what {@link audit_log} does and
+   * does not assert. Present so a third-party consumer can branch on the
+   * absence of a chain instead of inferring it from a `null` prev_hash.
+   */
+  chain_status: AivsChainStatus;
 }
 
 /** A public JWK with a `kid` for offline key resolution. */
@@ -105,6 +141,8 @@ export function exportAivsProofBundle(jws: string): AivsProofBundle {
     kid: header.kid ?? "",
     alg: header.alg ?? "",
     audit_log: [{ seq: 0, entry_hash: manifestHash, prev_hash: prevHash }],
+    chain_status:
+      prevHash === null ? "unlinked_single_entry" : "linked_single_entry",
   };
 }
 

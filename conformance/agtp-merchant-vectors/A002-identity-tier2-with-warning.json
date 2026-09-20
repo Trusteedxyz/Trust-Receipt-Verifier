@@ -1,0 +1,20 @@
+{
+  "name": "A002-identity-tier2-with-warning",
+  "description": "§3.3 — Tier 2 con el aviso exacto: válido",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "role": "merchant",
+    "status": "Active",
+    "trust_tier": 2,
+    "verification_path": "org-asserted",
+    "legal_entity_name": "Ejemplo Comercio SL",
+    "merchant_category_code": "5812",
+    "registered_jurisdiction": "ES",
+    "trust_warning": "legal-entity-unverified"
+  },
+  "expected": {
+    "valid": true
+  }
+}

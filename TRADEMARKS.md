@@ -1,6 +1,6 @@
 # Trademark Notice
 
-TrustReceipt is an independent open standard maintained by MCPWebStore (trusteed.xyz). It is not affiliated with, endorsed by, sponsored by, or approved by any third party mentioned in this repository.
+TrustReceipt is an independent open standard maintained by Trusteed (trusteed.xyz). It is not affiliated with, endorsed by, sponsored by, or approved by any third party mentioned in this repository.
 
 ## Third-party names used descriptively
 

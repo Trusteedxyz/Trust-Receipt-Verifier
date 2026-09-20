@@ -1,0 +1,16 @@
+{
+  "name": "A009-identity-role-absent",
+  "description": "§4.1 paso 2 — sin rol merchant no es contraparte de PURCHASE",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "status": "Active",
+    "trust_tier": 1
+  },
+  "expected": {
+    "valid": false,
+    "reason": "not_a_merchant",
+    "retryable": false
+  }
+}

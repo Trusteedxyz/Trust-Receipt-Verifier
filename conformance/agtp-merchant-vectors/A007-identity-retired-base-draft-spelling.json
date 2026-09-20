@@ -1,0 +1,21 @@
+{
+  "name": "A007-identity-retired-base-draft-spelling",
+  "description": "Defecto 2 — `retired` (base v09) ≡ `Revoked` (merchant v02)",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": {
+    "agent_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+    "role": "merchant",
+    "status": "retired",
+    "trust_tier": 1,
+    "verification_path": "dns-anchored",
+    "legal_entity_name": "Ejemplo Comercio SL",
+    "merchant_category_code": "5812",
+    "registered_jurisdiction": "ES"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "lifecycle_not_active",
+    "retryable": false
+  }
+}

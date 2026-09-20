@@ -1,0 +1,35 @@
+{
+  "now": "2026-08-22T00:00:00Z",
+  "name": "M024-idn-alabel-ulabel-equal",
+  "description": "§2: an IDN differing only by U-label vs A-label representation MUST be treated as equal. Verified against the U-label form of the same domain.",
+  "document": {
+    "version": 1,
+    "subject": "xn--caf-dma.example.com",
+    "legalName": "Example Supply Corporation",
+    "entityType": "corporation",
+    "jurisdiction": "US",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "issuer": {
+      "name": "Café Example",
+      "domain": "xn--caf-dma.example.com",
+      "keyDirectory": "https://xn--caf-dma.example.com/.well-known/jwks.json"
+    },
+    "registrationId": "12-3456789",
+    "proof": {
+      "type": "MerchantIdentityProof-v1",
+      "alg": "Ed25519",
+      "created": "2026-04-15T00:00:00Z",
+      "verificationMethod": "https://xn--caf-dma.example.com/.well-known/jwks.json#merchant-key-01",
+      "proofValue": "ZCDpY5WRKipH1Q51qP9IjBlknCRBLrkzLLaGbuJAoOHeLLCA_nlJWbt-hRM1-BOcrGn8BUUM3R9zTHydVNzyCQ"
+    }
+  },
+  "directoryOverrides": {
+    "https://xn--caf-dma.example.com/.well-known/jwks.json": "merchant"
+  },
+  "expectedSubject": "café.example.com",
+  "expected": {
+    "valid": true,
+    "issuance": "self"
+  }
+}

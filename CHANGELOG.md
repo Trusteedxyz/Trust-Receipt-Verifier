@@ -2,103 +2,130 @@
 
 All notable changes to the verifier package are documented here.
 
-## Unreleased — Codex Hardening (2026-05-18)
+## 0.5.0 — 2026-09-16 — Third-party identity verifiers + evidence field groups
 
-Security and correctness hardening from Codex round-2 audit. No wire-format changes; schema version stays `1.1`. Proposed SemVer bump on release: **1.2.0**.
+### Added
 
-### Build / export surface fixes
+- **MIA verifier** (`src/mia/`) — verifies third-party Merchant Identity
+  Assertions (`draft-anders-merchant-identity-assertions-01`), self-issued and
+  DNS-authorized issuance. 30 conformance vectors under
+  `conformance/mia-vectors/`.
+- **AGTP merchant identity verifier** (`src/agtp-merchant/`) — verifies the
+  Agent Identity Document, Intent Assertion, and Cart-Digest defined by
+  `draft-hood-agtp-merchant-identity-02`, exactly the surface the draft
+  declares checkable without speaking the AGTP transport itself. No AGTP
+  client ships in this package. 50 conformance vectors under
+  `conformance/agtp-merchant-vectors/`.
+- **Mandate & approval evidence** (`src/schema/mandate-evidence.ts`) — optional
+  receipt fields letting a third party recompute `mandate_claims_hash` and
+  confirm a charged amount fell inside what was authorized, plus separate
+  out-of-band human-approval evidence.
+- **State Witness evidence** (`src/schema/state-witness-evidence.ts`) —
+  optional fields declaring what the issuer's state comparator resolved
+  before money moved, and against which authoritative state.
+- **Operation link** (`src/schema/operation-link.ts`) — optional fields tying
+  a corrected retry or a reconfirmed execution back to the receipt it
+  supersedes. Deliberately distinct from `hash_chain_prev`, which only orders
+  a merchant's receipts by issuance time.
+- **ATEP passport reference verifier**
+  (`reference-verifier/verify-atep-passport.mjs`) — zero-dependency, Node
+  built-ins only, proves a merchant's portable trust attestation is
+  verifiable offline without any Trusteed code.
+- 7th `legacy-compact` conformance vector: `L007-signers-declaration.json`.
 
-Three build-blocking gaps in `index.ts` re-exports — callers who imported the named exports below would get a runtime crash or TypeScript error:
+All new fields are additive with no `schema_version` bump — the frozen
+v1.0-FINAL JSON Schema does not declare `additionalProperties` at the top
+level.
 
-- **`TSA_ROOT_NOT_TRUSTED_ERROR_CODE`** (`verify-timestamp-evidence.ts`) — constant was re-exported from `index.ts:55` but never defined in the source file. Added `export const TSA_ROOT_NOT_TRUSTED_ERROR_CODE = "tsa_root_not_trusted" as const`.
-- **`validateChain` / `ValidateChainError` / `ValidateChainResult`** (`embedded-issuer-root.ts`) — all three were re-exported from `index.ts:89-92` but absent from the source. Added `ValidateChainError` interface, `ValidateChainResult` interface, and `validateChain(roots)` implementation. The function enforces: exactly one active root (`validTo === null`), strictly newest-first ordering, and `validTo ≥ validFrom` on every entry.
-- **Package name mismatch** (`index.ts:72`) — `MerchantTsaPolicy` was imported from `@trusteed/trust-receipt-tsa-client` but `package.json` declares the dependency as `@agenticmcpstores/trust-receipt-tsa-client`. Fixed the import specifier.
+### Fixed (documentation accuracy)
 
-### JWKS history — hard-fail on unknown roots
+- SPEC.md §11.6 said "11 v1.1 vectors"; the table beneath it already listed
+  12 (including `019b`). Corrected the summary line to match.
+- Disclosed a real, dated code/spec discrepancy rather than leaving it
+  silent: `scripts/validate-vectors.ts` currently reports 9/10, not 10/10
+  (`verifyTrustReceipt`'s expiry check became informative-only on
+  2026-07-28, and TC-007's expected outcome was never reconciled with that
+  change). See [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6).
+- Documented that the RFC 3161 capability's dependency
+  (`@agenticmcpstores/trust-receipt-tsa-client`) is Trusteed-internal and not
+  published, so that path does not resolve for an external `npm install`
+  today. See [issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5).
+- Retitled this file's two stale "Unreleased" headings (below) to the real
+  version + date they actually shipped under (`0.3.0` / `0.2.0`), removed an
+  internal Trusteed deployment-coupling paragraph and an unreachable
+  sibling-package cross-reference that leaked in from the source monorepo,
+  and added a note explaining the pre-launch `1.1.2`→`1.0` version counter
+  below is a separate, older axis from this package's own `0.x` line.
 
-**Breaking behaviour change** (opt-out via new flag): previously, when `jwksHistory.signed_by_root_sha256` did not match any embedded trust anchor, the verifier silently fell back to structural-only parsing and emitted a warning. This meant any caller with an unsigned/unknown history would pass without cryptographic verification.
+## 0.3.0 — 2026-07-30 — v1.0 enriched-payload regime + declared trust-anchor degradation
 
-- **`allowStagingRoots?: boolean`** added to `VerifyOptions` (default `false`). When `false` (the new default), an unrecognised root SHA returns `rejected / jwks_history_signature_invalid` immediately. Set `allowStagingRoots: true` only in staging/test environments.
-- The warning `jwks_history_signature_unverifiable_staging_root` is now emitted **only** when `allowStagingRoots: true` and the root is unrecognised.
-- Conformance tests and signature tests updated to pass `allowStagingRoots: true` (they intentionally use the all-zeros staging SHA).
+Additive, non-breaking. (Retitled 2026-09-16 from a stale "Unreleased" heading
+— this shipped as `0.3.0`; it just never got its version/date filled in here
+at the time. Also removed an internal Trusteed deployment-coupling note that
+did not describe anything about this package's own behavior.)
 
-### Temporal validation for v1.1 receipts
+### Emitter↔verifier coupling
 
-`verifyReceiptEnvelope` now checks `issued_at` and `expires_at` against wall-clock time. Both checks apply a configurable `toleranceSeconds` grace period (default `30` seconds) to absorb minor clock skew.
+An issuer emitting the enriched v1.0 compact payload now stamps
+`schema_version: "1.0"` and `canon: "jcs"` on it and canonicalizes with RFC
+8785 unconditionally. The legacy-compact branch used to be gated on the
+payload NOT declaring a `schema_version` at all, so a verifier still on the
+pre-`0.3.0` guard would have rejected every enriched receipt as
+`schema_invalid` — an issuer and a verifier running this logic must agree on
+which schema-version values route to the legacy-compact path.
 
-- **New error code `"receipt_not_yet_valid"`** — returned when `issued_at > now + tolerance`. Indicates the receipt was issued in the future; likely a clock-skew issue or a replay of a pre-issued token.
-- **New error code `"receipt_expired"`** — returned when `expires_at < now - tolerance`. Indicates the receipt validity window has elapsed.
-- **`VerifyOptions.toleranceSeconds?: number`** added (default `30`). Operators with high clock-skew environments can raise this; production deployments should lower it.
+### Changed
 
-Both new error codes are added to the `V11VerifyErrorCode` union.
+- `verifier.ts` — version guard replaced. `isLegacyCompatibleSchemaVersion()`
+  admits the legacy-compact branch when `schema_version` is **absent** (historic
+  corpus) or exactly **`"1.0"`** (enriched issuer). Any other declared value —
+  `"1.1"`, `"v1.0-FINAL"`, a future version — is still never silently downgraded,
+  which is the invariant the old guard existed to protect.
+- `verify-1.1.ts` — `recomputeLegalPosture()` now evaluates the
+  `trust_anchor_staging` floor FIRST, so it dominates the whole FR-019 truth
+  table including `merchant_admin`. `merchant_admin_action` names a subject, not
+  a strength level, and must not shadow an unverifiable anchor.
 
-### CLI — v1.1 envelope routing
+### Added
 
-The CLI `trust-receipt verify` command previously routed all receipt-shaped inputs through the v1.0 path. A v1.1 envelope (`receipt` + `envelope_metadata` top-level keys) is structurally different and must be verified with `verifyReceiptEnvelope`.
+- `VerifyResult.canonicalization: "jcs" | "json-stringify-legacy"` — populated on
+  the `legacy_compact` path. `variant` describes the payload SHAPE,
+  `canonicalization` the SERIALIZATION; they are independent axes, so an
+  enriched compact receipt is `variant: "legacy_compact"` +
+  `canonicalization: "jcs"`. `variant` deliberately did NOT change value, so
+  existing assertions over historic receipts keep holding.
+- `V11VerifyResult.outcome` gains **`"accepted_degraded"`** — a receipt whose
+  SIGNED body declares `trust_anchor_staging` verifies instead of being rejected
+  for an unverifiable trust anchor. A deliberately NEW value: consumers that
+  branch on `outcome === "accepted"` keep refusing it, so accepting the weaker
+  guarantee is an opt-in. Scope limit: it attests internal consistency and
+  issuer intent, **never issuer authenticity**.
+- `"trust_anchor_staging"` added to the closed `LegalPostureWarning` reason enum
+  (`zod-1.1.ts`, `types-1.1.ts`). Without it a degraded receipt failed as
+  `envelope_schema_invalid`.
+- `AivsProofBundle.chain_status` — honest, machine-readable declaration that the
+  projected `audit_log` is a single unlinked entry. No issuer writes
+  `hash_chain_prev` (zero write sites), so the previous "hash-chained audit log"
+  wording was an overclaim.
 
-- **New `VerifyType` value `"receipt-v11"`** — distinct from `"receipt"` (v1.0 JWS compact).
-- **`detectArtifactKind`** updated: a JSON object with both `receipt` and `envelope_metadata` keys now returns `"receipt-v11"` instead of `"receipt"`.
-- **New `cmdVerifyReceiptV11()` function** — calls `verifyReceiptEnvelope` with options built from the new CLI flags below. Requires `--jwks-history-file` and `--trust-anchor-sha256`; exits with code `1` when either is missing.
-- **New CLI flags** (all optional unless noted):
-  - `--jwks-history-file <path>` — path to a `SignedJwksHistory` JSON file (required for `receipt-v11`).
-  - `--trust-anchor-sha256 <hex>` — expected `trustAnchorPemSha256` for root pinning (required for `receipt-v11`).
-  - `--policy-oid <oid>` — may be repeated; builds `policyOidAllowlist` passed to `verifyReceiptEnvelope`.
-  - `--allow-staging-roots` — passes `allowStagingRoots: true` (staging/CI use only).
-- `cmdVerify()` dispatch switch now includes `case "receipt-v11"` routing to `cmdVerifyReceiptV11()`.
+### Explicitly NOT changed
 
-### Unknown trust-provider warning
+- **`expires_at` is not enforced on the legacy-compact branch.** The issuer now
+  stamps one (`iat + 86400`), but FR-018 requires v1.0 receipts to verify for
+  ≥ 7 years and the rows are immutable — gating on it would mark essentially the
+  entire corpus `expired`. Regression tests in all three verifier ports fail if
+  anyone adds the check. The 24h TTL over 7-year evidence is a real open
+  contradiction, pending a human decision; that is a further reason not to make
+  it a validity gate yet.
 
-`verifyReceiptEnvelope` now emits a warning when `trust_provider_assertions[]` contains an entry whose `provider` field is not one of the three known values (`"rfc9421-native"`, `"human"`, `"visa"`).
+## 0.2.0 — 2026-05-16 — Extension Artifact Verification
 
-- **New warning `"unknown_trust_provider_present"`** — added to the warnings array before `recomputeLegalPosture()`. At most one instance is emitted per call regardless of how many unknown providers are present. Does **not** cause rejection — forward compatibility for future providers is preserved.
+(Retitled 2026-09-16 from a stale "Unreleased" heading with a "Proposed SemVer
+bump on release: 1.2.0" line — `1.2.0` was the private monorepo's own,
+separate version counter, not this public package's; this feature actually
+shipped under this package's `0.2.0`.)
 
-### Tests
-
-- `src/__tests__/conformance-1.1.test.ts`: added `allowStagingRoots: true` and `currentTimeSeconds: vector.verify_options.currentTime` to the v1.1 dispatch path so conformance vectors with static timestamps continue to pass after their `expires_at` elapses.
-- `src/__tests__/verify-1.1.signature.test.ts`: same additions to `makeOptions()`.
-- `VerifyOptions.currentTimeSeconds?: number` — injectable clock for the `issued_at`/`expires_at` checks; defaults to `Math.floor(Date.now() / 1000)` in production. Conformance tests use this to pin time to the vector's `currentTime`, avoiding spurious `receipt_expired` failures as static vector timestamps age.
-
----
-
-## Unreleased — Typed Trust-Provider Assertions
-
-Adds typed interfaces and exported type predicates for the known `trust_provider_assertions[]` providers. No runtime behaviour changes; schema version stays `1.1`.
-
-### New library API
-
-- **`Rfc9421ProviderAssertion`** (`types-1.1.ts`) — typed shape for `provider: "rfc9421-native"` assertions. Fields: `verification_status` (`"verified" | "observed" | "spoofed" | "unverified"`), `kid?`, `signer_url?`, `tag?`, `evaluated_at?`.
-- **`HumanProviderAssertion`** (`types-1.1.ts`) — typed shape for `provider: "human"` assertions. Fields: `human_verification_status` (`"verified" | "unverified" | "error"`), `human_transaction_id?`, `human_assurance_level?`, `evaluated_at?`.
-- **`VisaTapProviderAssertion`** (`types-1.1.ts`) — typed shape for `provider: "visa"` assertions. Fields: `tag` (`"agent-browser-auth" | "agent-payer-auth"`), `verification_status` (`"verified" | "invalid"`), `kid?`, `evaluated_at?`.
-- **`KnownTrustProviderAssertion`** (`types-1.1.ts`) — discriminated union of the three typed shapes above.
-- **`isRfc9421ProviderAssertion(a)`** (`verify-1.1.ts`) — exported type predicate; narrows `TrustProviderAssertion` (= `Record<string, unknown>`) to `Rfc9421ProviderAssertion`.
-- **`isHumanProviderAssertion(a)`** (`verify-1.1.ts`) — exported type predicate; narrows to `HumanProviderAssertion`.
-- **`isVisaTapProviderAssertion(a)`** (`verify-1.1.ts`) — exported type predicate; narrows to `VisaTapProviderAssertion`.
-
-### Usage
-
-```ts
-import { isRfc9421ProviderAssertion, isHumanProviderAssertion, isVisaTapProviderAssertion } from "trust-receipt-verifier";
-
-const rfc9421 = receipt.trust_provider_assertions?.find(isRfc9421ProviderAssertion);
-if (rfc9421?.verification_status === "verified") { /* RFC 9421 signature confirmed */ }
-
-const human = receipt.trust_provider_assertions?.find(isHumanProviderAssertion);
-if (human?.human_verification_status === "verified") { /* HUMAN AgenticTrust confirmed */ }
-
-const visa = receipt.trust_provider_assertions?.find(isVisaTapProviderAssertion);
-if (visa?.tag === "agent-payer-auth") { /* Visa TAP payer-auth confirmed */ }
-```
-
-### Non-goals
-
-- No change to `recomputeLegalPosture` logic — any non-empty `trust_provider_assertions` array still counts as "some assertion present" for posture computation regardless of `provider`.
-- `TrustProviderAssertion = Record<string, unknown>` is unchanged — unknown or future providers remain untyped and are accepted for forwards compatibility.
-
----
-
-## Unreleased — Extension Artifact Verification
-
-Adds verification for two new artifact families produced by the Trusteed Extension Marketplace ecosystem: **erasure receipts** (developer-signed proof of merchant-data destruction post-uninstall) and **extension manifests** (developer-signed declarations of scopes, endpoints, and lifecycle metadata). Also surfaces existing JWKS-history verification through the CLI. Schema version remains `1.1` (no receipt payload changes). Proposed SemVer bump on release: **1.2.0** (additive, non-breaking).
+Adds verification for two new artifact families produced by the Trusteed Extension Marketplace ecosystem: **erasure receipts** (developer-signed proof of merchant-data destruction post-uninstall) and **extension manifests** (developer-signed declarations of scopes, endpoints, and lifecycle metadata). Also surfaces existing JWKS-history verification through the CLI. Schema version remains `1.1` (no receipt payload changes) — additive, non-breaking.
 
 ### New library API
 
@@ -122,7 +149,7 @@ Adds verification for two new artifact families produced by the Trusteed Extensi
 ### Reference docs
 
 - `README.md` capability matrix updated (Status: implemented vs candidate/experimental) and integration framing realigned around merchant-side evidence rather than "first-mover" claims.
-- `README.md` new sections: **What a TrustReceipt does NOT prove** (settlement, delivery, KYC, QeSeal, liability, intent humano), **Threat model** (10 attack classes × defence × verifier reason), **Versioning policy** (SemVer × wire format, cross-version v1.0 ↔ v1.1 compatibility commitment ≥12 months).
+- `README.md` new sections: **What a TrustReceipt does NOT prove** (settlement, delivery, KYC, QeSeal, liability, human intent), **Threat model** (10 attack classes × defence × verifier reason), **Versioning policy** (SemVer × wire format, cross-version v1.0 ↔ v1.1 compatibility commitment ≥12 months).
 - Tagline shifted from "cross-protocol evidence receipts" to "merchant-side evidence layer for agentic commerce — protocol-compatible, not protocol-competing".
 
 ### Tests
@@ -138,10 +165,15 @@ Adds verification for two new artifact families produced by the Trusteed Extensi
 
 ### Related
 
-- Sibling package: `@trusteed/developer-mcp` — the developer-facing
-  documentation MCP server. See its CHANGELOG `Unreleased` entry for the
-  matching IDE-time tools (`get_extension_manifest_schema`,
-  `get_webhook_event_schema`, `get_extension_scopes`).
+- These artifact shapes are also consumed by Trusteed's own internal
+  developer tooling, which is not part of this public package or repo.
+
+> **Versioning note.** Entries below this point (`1.1.2` down to `1.0`) predate
+> this repo's public launch and use a separate, older version counter from
+> this package's own `0.x` line above — they are not out of order, and `0.x`
+> did not "regress" from `1.1.2`. Kept for historical reference; SPEC.md's own
+> version history (§10) is unaffected and uses schema versions (`1.0`/`1.1`),
+> not this package's release versions, which is a separate axis entirely.
 
 ## 1.1.2 — 2026-05-10 — Audit Hardening
 

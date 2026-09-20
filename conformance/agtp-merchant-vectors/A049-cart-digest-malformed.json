@@ -1,0 +1,20 @@
+{
+  "name": "A049-cart-digest-malformed",
+  "description": "§2 — sin prefijo de algoritmo no es un Cart-Digest",
+  "kind": "cart",
+  "cart": {
+    "items": [
+      {
+        "sku": "SKU-1",
+        "qty": 2,
+        "unit": "12.50"
+      }
+    ],
+    "currency": "EUR"
+  },
+  "presented": "7d5d2567273732a92c33b12bbec5abd99550c2579a773bfee6e96b22c49e1ad6",
+  "expected": {
+    "valid": false,
+    "reason": "digest_malformed"
+  }
+}

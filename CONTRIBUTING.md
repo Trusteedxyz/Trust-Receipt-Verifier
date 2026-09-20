@@ -76,7 +76,7 @@ The project wants verifier implementations in TypeScript, Python, Java, Go and R
 
 **Failure reason codes your port must return:**
 
-*v1.0 (`verifyTrustReceipt`)*
+_v1.0 (`verifyTrustReceipt`)_
 
 | Code                 | Condition                                                  |
 | -------------------- | ---------------------------------------------------------- |
@@ -84,19 +84,34 @@ The project wants verifier implementations in TypeScript, Python, Java, Go and R
 | `unknown_kid`        | `kid` not found in the resolved JWKS                       |
 | `tampered_signature` | Signature verification failed                              |
 | `schema_invalid`     | Payload does not conform to TrustReceipt 1.0 schema        |
-| `expired`            | `expires_at < now - tolerance`                             |
 | `not_yet_valid`      | `issued_at > now + tolerance`                              |
 | `jwks_fetch_failed`  | JWKS URL unreachable or fetch timed out                    |
 
-*v1.1 (`verifyReceiptEnvelope`) — additional codes*
+> ⚠️ **`expired` is NOT a rejection code for `verifyTrustReceipt` as of 2026-07-28.**
+> This table listed it as fatal until this note; the current TypeScript reference
+> implementation reports expiry via `result.freshness.expired` (informative)
+> instead of failing verification, so that a v1.0 receipt keeps verifying for
+> the multi-year retention window FR-018 (spec-049) requires — see the comment
+> above `verifyLegacyCompact` in `src/verifier.ts`. **This has not yet been
+> reconciled with `test-vectors/vectors.json` TC-007** (still declares
+> `expected: "invalid"`, `expired`), so running `scripts/validate-vectors.ts`
+> today reports 9/10, not 10/10 — tracked in
+> [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6).
+> Track that issue's resolution (either restore a fatal check for the
+> conformance-suite shape specifically, or update the vector manifest + this
+> table together, since it is the cross-language verifier ABI) before porting
+> this behavior. `verifyReceiptEnvelope` (v1.1) is unaffected — `receipt_expired`
+> below is still fatal there.
 
-| Code                                 | Condition                                                                          |
-| ------------------------------------ | ---------------------------------------------------------------------------------- |
-| `jwks_history_signature_invalid`     | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust anchor    |
-| `receipt_expired`                    | `expires_at < now - toleranceSeconds` (v1.1 envelope path)                         |
-| `receipt_not_yet_valid`              | `issued_at > now + toleranceSeconds` (v1.1 envelope path)                          |
-| `missing_required_consent_context`   | `receipt_subject = "buyer_agent"` but `consent_context` absent                     |
-| `receipt_subject_mismatch`           | `expectedSubject` option provided but `receipt_subject` in envelope differs        |
+_v1.1 (`verifyReceiptEnvelope`) — additional codes_
+
+| Code                               | Condition                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `jwks_history_signature_invalid`   | JWKS history JWS malformed, wrong alg, or root SHA not in embedded trust anchor |
+| `receipt_expired`                  | `expires_at < now - toleranceSeconds` (v1.1 envelope path)                      |
+| `receipt_not_yet_valid`            | `issued_at > now + toleranceSeconds` (v1.1 envelope path)                       |
+| `missing_required_consent_context` | `receipt_subject = "buyer_agent"` but `consent_context` absent                  |
+| `receipt_subject_mismatch`         | `expectedSubject` option provided but `receipt_subject` in envelope differs     |
 
 Non-fatal warnings emitted by `verifyReceiptEnvelope`:
 
@@ -112,13 +127,13 @@ Non-fatal warnings emitted by `verifyReceiptEnvelope`:
 
 **Spec versioning:**
 
-- `1.x` patch releases (new optional fields, clarifying language, new conformance vectors): maintained by MCPWebStore with single-maintainer approval.
+- `1.x` patch releases (new optional fields, clarifying language, new conformance vectors): maintained by Trusteed with single-maintainer approval.
 - `1.x` minor releases (new required fields, new `assertion_type` values, new protocol support): require at least 2 maintainer approvals and a 14-day comment period on the PR.
 - `2.0` and major version changes: require named co-authors from at least 3 distinct categories: (1) a fraud or risk provider, (2) a payment network or PSP and (3) an agent platform provider. No major version is published without this multi-party authorship.
 
 **Maintainers:**
 
-MCPWebStore (trusteed.xyz) is the current sole maintainer of spec v1.x. Additional maintainers from partner organizations may be added following a co-authorship contribution (see §2).
+Trusteed (trusteed.xyz) is the current sole maintainer of spec v1.x. Additional maintainers from partner organizations may be added following a co-authorship contribution (see §2).
 
 **Backwards compatibility:**
 
@@ -130,7 +145,7 @@ Existing conformant verifiers must continue to pass all existing test vectors af
 
 This project follows the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
-In short: be respectful, assume good faith and keep disagreements on the technical substance. Escalate concerns to the maintainers by opening an issue in this repository. Maintainers may close issues or PRs that do not meet these standards.
+In short: be respectful, assume good faith and keep disagreements on the technical substance. Escalate concerns to the maintainers by opening a [GitHub issue](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues). Maintainers may close issues or PRs that do not meet these standards.
 
 ---
 

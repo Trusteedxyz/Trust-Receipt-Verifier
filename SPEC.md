@@ -4,8 +4,8 @@
 
 **Status:** Draft
 **Date:** 2026-04-29
-**Authors:** MCPWebStore (trusteed.xyz)
-**Repository:** github.com/trust-receipt/spec
+**Authors:** Trusteed (trusteed.xyz)
+**Repository:** github.com/Trusteedxyz/Trust-Receipt-Verifier
 **License:** MIT
 
 ---
@@ -22,7 +22,7 @@ TrustReceipt is an open standard for cryptographically signed evidence receipts 
 
 > **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-_The full claims policy is the TrustReceipt Claims Policy (`docs/legal/trust-receipt-claims-policy.md` in the Trusteed monorepo). It is not part of this repository._
+_The issuer maintains an internal claims policy that fixes the permitted and prohibited wording for each posture. It is not published with this repository; ask the issuer if you need the canonical list._
 
 ### 1.1 Motivation
 
@@ -175,9 +175,64 @@ All fields at the top level of the receipt payload. Fields marked **Required** M
 
 #### Audit Chain
 
-| Field             | Type   | Required | Description                                                                                                                                                  |
-| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `hash_chain_prev` | string | Optional | SHA-256 hex of the previous receipt in the merchant's audit stream. Enables ordered, tamper-evident receipt chains. `null` for the first receipt in a chain. |
+| Field              | Type            | Required | Description                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------ | --------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hash_chain_prev`  | string          | Optional | SHA-256 hex of the previous receipt in the merchant's audit stream. Enables ordered, tamper-evident receipt chains. `null` for the first receipt in a chain.                                                                                                                                                                                                         |
+| `signers`          | array           | Optional | Declared signers of this receipt. Each element carries `party` (`issuer`/`merchant`/`agent`/`psp`), `kid`, `custody` (`platform_held`/`party_held`) and `relation_to_subject` (`processor`/`self`/`independent`). Absent means the receipt makes no claim about signer custody — NOT that a single signer is implied.                                                |
+| `evaluation_id`    | string          | Optional | Identity of the policy evaluation that produced the verdict. Identifies the EVALUATION, not the operation: a cached verdict is reused, so several operations may carry the same value, and it MUST NOT be used as an idempotency key. Absent when the identity would not resolve to a retrievable record (cached verdict, or a decision the issuer did not persist). |
+| `rule_set_version` | integer         | Optional | Version of the policy catalogue under which the verdict was evaluated.                                                                                                                                                                                                                                                                                               |
+| `evaluated_rules`  | array of string | Optional | Rule codes that RAN. Distinct from `rules_triggered`, which lists those that fired. An empty array means the catalogue was consulted and no rule applied; absent means the receipt makes no claim.                                                                                                                                                                   |
+
+#### Mandate, Approval, State Witness & Operation Link Evidence (added 2026-09)
+
+Optional field groups, injected identically into all three receipt shapes (v1.0 canonical,
+v1.0-legacy-compact, v1.1 strict). No `schema_version` bump: the frozen v1.0-FINAL JSON Schema
+does not declare `additionalProperties` at the top level, so new fields never invalidate a
+signature computed before this reference implementation started emitting them.
+
+**Mandate evidence** — lets a third party recompute `mandate_claims_hash` and confirm a charged
+amount fell inside what was actually authorized, instead of trusting the receipt's own claim:
+
+| Field                       | Type    | Required | Description                                                                                                    |
+| ---------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| `mandate_id`                 | string  | Optional | Identity of the applied mandate. Opaque — no shape is imposed.                                                    |
+| `mandate_claims_hash`        | string  | Optional | SHA-256 hex over the mandate's claims. See `computeMandateClaimsHash` (exported) for the exact material.          |
+| `mandate_max_amount_cents`   | integer | Optional | The ceiling, in minor units, that `amount` is compared against.                                                   |
+| `mandate_currency`           | string  | Optional | ISO 4217 currency of the MANDATE — may differ from the cart's; a mismatch is a receipt-level fact, not lost.      |
+| `mandate_subject`            | string  | Optional | `sub`: the agent the mandate was granted to. Never the buyer.                                                     |
+| `mandate_audience`           | string  | Optional | `aud`: the merchant the mandate is valid for.                                                                     |
+| `mandate_expires_at`         | integer | Optional | `exp` in Unix seconds.                                                                                            |
+| `mandate_verification`       | enum    | Optional | What was checked: `"structure_only"` (claims read and the ceiling applied, no signature checked) \| `"signature_verified"` (nobody emits this yet) — a closed union, so an issuer cannot declare a verification class that does not exist. |
+
+**Approval evidence** — a human said yes to THIS purchase, distinct from what the mandate allowed:
+
+| Field              | Type    | Required | Description                                                                                                            |
+| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `approval_ref`     | string  | Optional | Opaque reference to the approval recorded on the issuer's own surface.                                                   |
+| `approval_channel` | string  | Optional | Where it came from (e.g. a confirmation dialog). Free-form string, not an enum — rejecting the whole receipt over an unrecognised channel would turn a valid artifact invalid. |
+| `approval_at`      | integer | Optional | Unix seconds of the approval, comparable against `issued_at`.                                                            |
+
+**State Witness evidence** — what the state comparator resolved before money moved, and against
+which authoritative state. Closes the gap where a checkout that executed because nothing had
+changed left no signed record that the comparison ran at all:
+
+| Field                               | Type            | Required | Description                                                                                                    |
+| ------------------------------------ | --------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `state_witness_resolution`           | enum            | Optional | `"EXECUTE"` \| `"EXECUTE_WITHIN_TOLERANCE"` \| `"RECONFIRM"`. No `BLOCK` value — a blocked checkout does not execute, so its receipt cannot say otherwise. |
+| `state_witness_authoritative_hash`   | string          | Optional | SHA-256 (RFC 8785) of the authoritative merchant state at execution time.                                       |
+| `state_witness_reasons`              | array of enum   | Optional | Up to 6 of: `price_within_tolerance`, `price_diverged`, `price_diverged_severely`, `stock_insufficient`, `policy_version_changed`, `authoritative_state_unavailable`. |
+
+**Operation link** — ties a corrected retry or a reconfirmed execution back to the receipt it
+supersedes. Deliberately **not** `hash_chain_prev`: that field orders a merchant's receipts by
+issuance time and makes no claim that one continues another's operation; this field makes exactly
+that claim, for the two flows where it is true:
+
+| Field                      | Type   | Required | Description                                                                                                    |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `operation_id`              | string | Optional | Correlation key for the whole operation (the same value the issuer's enforcement, receipt, and State Witness pipelines already share). |
+| `supersedes_receipt_hash`   | string | Optional | SHA-256 hex of the receipt this one supersedes.                                                                 |
+| `superseded_reason`         | enum   | Optional | `"state_reconfirmed"` \| `"mandate_corrected"`.                                                                 |
+| `reconfirmed_state_hash`    | string | Optional | The authoritative state the buyer explicitly reconfirmed. Present only with `superseded_reason: "state_reconfirmed"`. |
 
 #### Attachments
 
@@ -268,6 +323,62 @@ Let `now` be the current Unix timestamp in seconds. Allow a clock tolerance of u
 **Step 6 — Return success**
 
 Return `{ valid: true, receipt: <parsed payload> }`.
+
+### 4.1 Verification verdicts (NORMATIVE)
+
+The steps above describe the **v1.0 body** algorithm, whose verdict is binary.
+A verifier that also consumes **v1.1 envelopes** (§11) MUST implement a
+**three-valued** verdict. Implementers porting this specification MUST read this
+subsection: treating the verdict as binary silently collapses the third value
+into one of the other two, which is a conformance failure in either direction —
+reporting a degraded receipt as fully verified, or discarding a valid one.
+
+| Verdict             | Meaning                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `accepted`          | Signature, structure, and chain of trust all verified.                                      |
+| `accepted_degraded` | Signature and structure verified; the receipt **declares** its chain of trust unverifiable. |
+| `rejected`          | Any check failed.                                                                           |
+
+**When `accepted_degraded` is emitted.** Only when BOTH hold:
+
+1. the issuer root behind the bundled JWKS history could not be cryptographically
+   verified (no production trust anchor is available to the verifier), AND
+2. the receipt's **signed body** carries a `legal_posture_warnings[]` entry with
+   `reason: "trust_anchor_staging"` (§11.9).
+
+**Normative requirements.**
+
+- A conformant verifier **MUST NOT** report `accepted_degraded` as `accepted`.
+  It MUST be a distinct, machine-readable value, so that a consumer written
+  against an earlier revision of this specification — which compares against
+  `accepted` — continues to refuse it. Accepting the weaker guarantee MUST be an
+  explicit, opt-in decision by the consumer.
+- A verifier **MUST** reject, not degrade, a receipt whose chain of trust is
+  unverifiable and which does **not** declare `trust_anchor_staging` in its
+  signed body. Silence is never consent: an undeclared unverifiable anchor is
+  `rejected`.
+- The declaration **MUST** be read from the **signed body**. An unsigned
+  `envelope_metadata` mirror (§11.2) is advisory only; honouring it alone would
+  let anyone able to edit the sidecar, but not to forge the signature, convert a
+  rejection into an acceptance.
+- A verifier **MUST NOT** derive a stronger `legal_posture` than
+  `simple_electronic_seal` for a receipt declaring `trust_anchor_staging`
+  (§11.9 truth-table override).
+- CLI implementations **SHOULD** exit non-zero for `accepted_degraded`, so that
+  automation checking only for a zero exit status remains fail-closed, while
+  printing a verdict that distinguishes it from a genuine rejection.
+
+**Scope limit — what `accepted_degraded` does NOT assert.**
+
+> With no production trust anchor there is no chain of trust. `accepted_degraded`
+> attests **internal consistency and issuer intent, NEVER issuer authenticity.**
+
+Concretely: anyone able to sign a receipt with a key of their own choosing can
+also declare that receipt degraded and obtain this verdict. The verdict says the
+artifact is internally coherent and that whoever signed it said their anchor is
+unverifiable. It does **not** say who signed it, nor that they were entitled to.
+A consumer MUST NOT rely on `accepted_degraded` for any decision that depends on
+issuer identity.
 
 ---
 
@@ -386,7 +497,7 @@ All 10 vectors must pass with zero failures to claim conformance.
 Implementations that pass all 10 vectors may include the following badge in their documentation:
 
 ```markdown
-[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/trust-receipt/spec)
+[![TrustReceipt Conformant](https://img.shields.io/badge/TrustReceipt-v1.0%20Conformant-blue)](https://github.com/Trusteedxyz/Trust-Receipt-Verifier)
 ```
 
 ---
@@ -427,23 +538,25 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 ## 10. Changelog
 
-| Version | Date       | Notes                                                                                |
-| ------- | ---------- | ------------------------------------------------------------------------------------ |
-| 1.0     | 2026-04-29 | Initial draft. 24 fields, 10 conformance vectors, 6 protocols, 3 conformance levels. |
+| Version | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026-04-29 | Initial draft. 24 fields, 10 conformance vectors, 6 protocols, 3 conformance levels.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 1.1     | 2026-05-10 | eIDAS + ESIGN hardening (spec-049). Receipt envelope split, RFC 3161 timestamp evidence, KMS-backed signing, mandatory consent + agent-authorization chain. 11 new vectors.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 1.1.1   | 2026-05-10 | Phase 12 Codex Review Remediation (T-CR-001..T-CR-012). Trust anchor: staging-root opt-in (T-CR-001), TSA root operator-controlled (T-CR-002). KMS: CloudTrail single-attribute filter (T-CR-003), manifest-signer KMS-only (T-CR-004), `ED25519_SHA_512` algo fix (T-CR-005), dual-cap 2900/4096B (T-CR-006). TSA: default `fail_open` + `merchantTsaPolicy` (T-CR-007), `revocation_evidence.kind` discriminatedUnion (T-CR-008). DLP: `high_entropy_secret` block default (T-CR-009), `CLAIMS_POLICY_BYPASS_TOKEN` (T-CR-010). Cleanup: `intent_hmac_key_version` rename (T-CR-011), `verifyTimestampEvidenceStub` removed (T-CR-012). New error codes: `root_not_in_trust_anchor`, `tsa_root_not_trusted`, `tsa_revocation_unavailable`. **Breaking** for downstream verifiers (see migration guide §v1.1.1).                                                                                                                                                         |
+| 1.1.2   | 2026-05-10 | Phase 13 Audit Remediation (T-AUD-001..T-AUD-006). Hot path wiring: `issueReceipt()` v1.1 routed in `trust-receipt.worker.ts` via kill-switch + `trustReceiptV11CanaryPct` + enqueue-contract sufficiency, graceful v1.0 fallback (`// TODO(spec-049-enqueue-v1.1)`), new metric `trust_receipt_worker_path_total{schema_version, outcome}` (T-AUD-001). QTSA: queue cleanup race fix (positional `ltrim` after pipeline success) (T-AUD-002); real RFC 3161 verification post-batch with new env var `QTSA_ROOT_CERT_SHA256_ALLOWLIST` (T-AUD-003). Export bundle: 3 stubs replaced by real loaders in `trust-export-artifacts.ts` with pre-T420 staging-stub HS256 + explicit `warnings` (T-AUD-004). EUDI: SD-JWT-VC real verification via `@sd-jwt/sd-jwt-vc` (T-AUD-005); LOTL real parser via `fast-xml-parser` with `EU_LOTL_URL` env var + 24h cache + degraded fallback (T-AUD-006). Operational eIDAS conformance projected 65-75% post-canary deploy. ADR-034. |
 
 ---
 
 ## 11. TrustReceipt v1.1 Reference (eIDAS + ESIGN Hardening)
 
-**Spec origin**: `specs/049-trust-receipt-eidas-hardening/`
-**Architecture**: `docs/architecture/trust-receipt-eidas-hardening-architecture.md`
-**Migration guide**: `docs/integrations/trust-receipt-v11-migration.md`
+**Architecture**: [docs/architecture.md](docs/architecture.md)
+**Migration guide**: [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-receipt-v11-migration.md)
 
 ### 11.1 Legal disclaimer (FR-003)
 
 > **Disclaimer**: TrustReceipt v1.1 is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. The canonical permitted and prohibited wording list is the TrustReceipt Claims Policy (`docs/legal/trust-receipt-claims-policy.md` in the Trusteed monorepo, not part of this repository).
+The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. The issuer's internal claims policy holds the canonical permitted/prohibited wording list; it is not published with this repository.
 
 ### 11.2 Wire format
 
@@ -532,7 +645,7 @@ In addition to the v1.0 codes:
 
 ### 11.6 Conformance vectors (v1.1)
 
-12 v1.1 vectors live under `test-vectors/v11/` and are catalogued alongside the legacy 10 v1.0 vectors:
+12 v1.1 vectors live under `test-vectors/v11/` (corrected from "11" — the table below always had 12 rows, including `019b`) and are catalogued alongside the legacy 10 v1.0 vectors:
 
 | ID   | File                                             | Outcome          | Failure code                       | Notes                                                                         |
 | ---- | ------------------------------------------------ | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
@@ -563,11 +676,49 @@ As of 2026-05-06 the combined v1.0 + v1.1 conformance run passed 58/58 test case
 | Salt-based `user_intent_hash`               | KMS-keyed HMAC-SHA-256 (`hmac-sha256:` prefix)                                |
 | Embedded `timestamp_evidence` (signed body) | Envelope-level `timestamp_evidence` (NOT signed)                              |
 
-See `docs/integrations/trust-receipt-v11-migration.md` for the full consumer-facing diff including breaking changes and migration steps.
+See [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-receipt-v11-migration.md) for the full consumer-facing diff including breaking changes and migration steps.
 
 ### 11.8 Backward compatibility
 
 A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover (FR-018). v1.0 verifiers cannot consume v1.1 envelopes — content-type negotiation is the dispatch mechanism (see §11.2 media type).
+
+### 11.9 Declared trust-anchor degradation (`trust_anchor_staging`)
+
+An issuer that has no production trust anchor available — typically because the
+offline root-key ceremony has not been performed — MAY still issue receipts, on
+the condition that it says so **inside the signed body**:
+
+```json
+"legal_posture": "simple_electronic_seal",
+"legal_posture_warnings": [
+  { "reason": "trust_anchor_staging", "since": 1777593600 }
+]
+```
+
+`trust_anchor_staging` is a value of the `legal_posture_warnings[].reason` enum
+(§11.3). The same entry SHOULD be mirrored into `envelope_metadata`, but per
+§4.1 the mirror is advisory: verifiers MUST read the signed body.
+
+**Truth-table override.** `trust_anchor_staging` **dominates** the entire
+`legal_posture` recomputation of FR-019. Whatever timestamp evidence or agent
+identity the receipt carries, and **regardless of `receipt_subject`** — including
+`merchant_admin` — the recomputed posture is `simple_electronic_seal`.
+`merchant_admin_action` names a _subject_, not a strength level, and MUST NOT
+shadow an unverifiable anchor. A verifier that short-circuits on subject before
+applying this override will disagree with a conformant issuer and reject its
+honest self-downgrade as a posture mismatch.
+
+**Verdict.** A receipt satisfying the above verifies as `accepted_degraded`
+(§4.1), never `accepted`. Without the declaration, the same receipt is
+`rejected`.
+
+**Why this exists.** Without it, the absence of a key ceremony invalidates the
+entire v1.1 corpus, and the only remedy is an operator-side flag that weakens
+the check for _every_ receipt indiscriminately. This mechanism moves the
+decision into each receipt, where it is bound to the signature and visible to
+the relying party. It reduces evidentiary weight; it does not manufacture trust.
+The ceremony remains necessary for any posture above
+`simple_electronic_seal`.
 
 ---
 
@@ -688,16 +839,29 @@ if (result.valid) {
 
 The reference implementation is written in TypeScript and uses `jose` for all JWS operations and `zod` for schema validation. It implements the verification algorithm in §4. Conformance is decided by the test vectors (§1.2 and §7.1), not by this implementation.
 
-Source: `packages/trust-receipt-verifier/src/verifier.ts`
+Source: [`src/verifier.ts`](src/verifier.ts)
 
 ---
 
 ## Appendix C: JSON Schema
 
-A machine-readable JSON Schema (Draft 2020-12) for TrustReceipt 1.0 is located at:
+A machine-readable JSON Schema (Draft 2020-12) for TrustReceipt 1.0 ships in
+this repository at:
 
 ```
-packages/trust-receipt-verifier/src/schema/trust-receipt.schema.ts
+schema/trust-receipt-v1.0-final.schema.json
 ```
 
-A standalone `schema/trust-receipt-v1.schema.json` distribution file is generated as part of the build. Implementations targeting languages other than TypeScript SHOULD use the JSON Schema file as the schema validation source of truth rather than re-implementing the Zod schema directly.
+**Schema source of truth (corrected 2026-07-27, audit §F1).** That file is the
+normative v1.0 schema (`$id`
+`https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json`), sealed by the
+sibling `.sha256` file and embedded byte-identically into the publishable
+verifiers. Implementations in any language MUST validate against it. The Zod
+schema in `src/schema/trust-receipt.schema.ts` is the TypeScript projection of
+the same document, not a second source of truth.
+
+The historic `schema/trust-receipt-v1.schema.json` is a **superseded draft**
+with an incompatible shape (draft-07, `additionalProperties: true`, a different
+`required` set). It is retained so existing links keep resolving and historic
+artifacts stay interpretable, and MUST NOT be implemented against. See
+[schema/README.md](schema/README.md).

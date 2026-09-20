@@ -105,11 +105,22 @@ export type V11VerifyErrorCode =
   | "trust_anchor_mismatch";
 
 /**
- * Result of `verifyReceiptEnvelope`. When `outcome === "accepted"` the
- * `receipt`, `envelope`, and `recomputedLegalPosture` fields are populated.
+ * Result of `verifyReceiptEnvelope`. When `outcome === "accepted"` (or
+ * `"accepted_degraded"`) the `receipt`, `envelope`, and
+ * `recomputedLegalPosture` fields are populated.
+ *
+ * `accepted_degraded` (additive 2026-07-27, audit §B1) means: the signature and
+ * every structural check passed, but the receipt DECLARES — in its signed body
+ * — that its chain of trust is unverifiable (`trust_anchor_staging`). It is a
+ * deliberately NEW value so existing consumers that branch on
+ * `outcome === "accepted"` keep refusing it; opting in is a conscious act.
+ *
+ * Scope limit: with no production trust anchor there is no chain of trust.
+ * `accepted_degraded` attests internal consistency and issuer intent, NEVER
+ * issuer authenticity.
  */
 export interface V11VerifyResult {
-  outcome: "accepted" | "rejected";
+  outcome: "accepted" | "accepted_degraded" | "rejected";
   schema_version: "1.1";
   errorCode?: V11VerifyErrorCode;
   errorDetail?: string;
@@ -390,15 +401,35 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
  *
  * We stay loose because spec-045 adapter shapes vary and not every issuer
  * embeds a `trust_provider_assertions` field at issuance time.
+ *
+ * Staging floor (audit §B1): a body declaring `trust_anchor_staging` has NO
+ * verifiable chain of trust behind it. Whatever agent identity or timestamp it
+ * carries, the strongest posture it can honestly claim is
+ * `simple_electronic_seal` — so the verifier floors it there rather than
+ * recomputing a stronger posture and then rejecting the issuer's honest
+ * self-downgrade as a mismatch.
+ *
+ * The floor is evaluated FIRST and DOMINATES the entire truth table above,
+ * including `merchant_admin`. `merchant_admin_action` names a subject, not a
+ * strength level, so letting it short-circuit would report a receipt with an
+ * unverifiable anchor as if the anchor were irrelevant. Mirrors the issuer-side
+ * invariant in `apps/api/src/services/trust/legal-posture.resolver.ts`.
  */
 function recomputeLegalPosture(
   body: {
     receipt_subject: ReceiptSubject;
     trust_provider_assertions?: unknown;
     authorization_evidence?: { protocol_authorization_ref?: string };
+    legal_posture_warnings?: ReadonlyArray<{ reason: string }>;
   },
   envelope: { timestamp_evidence: { type: string } }
 ): LegalPosture {
+  const declaresStagingAnchor = (body.legal_posture_warnings ?? []).some(
+    (w) => w.reason === "trust_anchor_staging"
+  );
+  if (declaresStagingAnchor) {
+    return "simple_electronic_seal";
+  }
   if (body.receipt_subject === "merchant_admin") {
     return "merchant_admin_action";
   }
@@ -555,7 +586,22 @@ export async function verifyReceiptEnvelope(
   // behavior is FAIL-CLOSED. Without `allowStagingRoots: true` a forged
   // bundle pointing at an unknown root cannot smuggle its own `kid` past us
   // via structural-only parsing.
+  //
+  // Audit §B1 addendum (2026-07-27): rejecting outright also means the absence
+  // of an offline key ceremony invalidates the ENTIRE v1.1 corpus. So instead
+  // of deciding here, we DEFER: parse structurally, remember why, and require
+  // the receipt's own SIGNED body to declare `trust_anchor_staging` before
+  // downgrading to `accepted_degraded` (see `pendingStagingDowngrade` below).
+  // A receipt that does not declare it is rejected exactly as before — silence
+  // is never read as consent, and the unsigned envelope_metadata mirror alone
+  // can never unlock the downgrade.
   const allowStagingRoots = options.allowStagingRoots ?? false;
+  /**
+   * Set when the chain of trust could NOT be verified and the operator has not
+   * opted into staging roots. Holds the rejection that will fire unless the
+   * signed body declares its own degradation.
+   */
+  let pendingStagingDowngrade: { detail: string } | null = null;
   let historyPayload: VerifiedJwksHistoryPayload | null;
   // A6 — the root whose SIGNATURE we cryptographically verified. Remains null on
   // the staging-fallback path (structural-only parse), where a root validity
@@ -567,11 +613,7 @@ export async function verifyReceiptEnvelope(
   if (!rootEntry) {
     // Unknown root SHA — staging window or unknown issuer.
     if (!allowStagingRoots) {
-      return reject(
-        "jwks_history_signature_invalid",
-        "root_not_in_trust_anchor",
-        warnings
-      );
+      pendingStagingDowngrade = { detail: "root_not_in_trust_anchor" };
     }
     warnings.push("jwks_history_signature_unverifiable_staging_root");
     historyPayload = parseJwksHistoryPayload(options.jwksHistory);
@@ -584,11 +626,7 @@ export async function verifyReceiptEnvelope(
       if (sigResult.reason === "embedded_root_not_production") {
         // Staging stub root — gated structural fallback (opt-in only).
         if (!allowStagingRoots) {
-          return reject(
-            "jwks_history_signature_invalid",
-            "root_not_in_trust_anchor",
-            warnings
-          );
+          pendingStagingDowngrade = { detail: "root_not_in_trust_anchor" };
         }
         warnings.push("jwks_history_signature_unverifiable_staging_root");
         historyPayload = parseJwksHistoryPayload(options.jwksHistory);
@@ -706,6 +744,48 @@ export async function verifyReceiptEnvelope(
     );
   }
   const body = bodyParse.data;
+
+  // 5a'. Deferred staging-root decision (audit §B1) ------------------------
+  // The chain of trust could not be verified and the operator did not opt into
+  // staging roots. The ONLY thing that may keep this receipt alive is the
+  // receipt itself declaring — inside the bytes covered by the signature we
+  // just verified — that it knows its anchor is unverifiable. Reading the
+  // declaration from the SIGNED body (not the unsigned envelope_metadata
+  // mirror) is what binds the admission to the issuer's intent.
+  const declaresStagingDegradation = body.legal_posture_warnings.some(
+    (w) => w.reason === "trust_anchor_staging"
+  );
+  if (pendingStagingDowngrade !== null && !declaresStagingDegradation) {
+    return reject(
+      "jwks_history_signature_invalid",
+      pendingStagingDowngrade.detail,
+      // Drop the structural-fallback warning: fail-closed callers must not see
+      // a "we fell back" signal on a path that did NOT fall back.
+      warnings.filter(
+        (w) => w !== "jwks_history_signature_unverifiable_staging_root"
+      )
+    );
+  }
+  // The verdict is degraded because the RECEIPT SAYS SO — not because this
+  // verifier happened to have trouble with the anchor.
+  //
+  // `trust_anchor_staging` is a permanent, signed property of the artifact: at
+  // signing time the issuer had no ceremonied root, so nothing anchors the key
+  // that produced this signature. Whether the verifier can resolve a root right
+  // now is a transient property of the ENVIRONMENT and must never upgrade the
+  // verdict. Gating on `pendingStagingDowngrade` conflated the two, with two
+  // silent-lie paths: `allowStagingRoots:true`, and — worse — the day after the
+  // key ceremony, when export bundles (which assemble `jwksHistory` at EXPORT
+  // time, not at issuance) ship the degraded backlog with a verifiable root and
+  // the whole backlog would have flipped to `accepted`, backdating trust onto
+  // keys that were never anchored.
+  //
+  // `pendingStagingDowngrade` still governs the REJECTION when there is no
+  // declaration — that part was always right, and is unchanged.
+  const stagingDegraded = declaresStagingDegradation;
+  if (declaresStagingDegradation) {
+    warnings.push("trust_anchor_staging");
+  }
 
   // 5b. Temporal checks (issued_at / expires_at) --------------------------
   // Honor the caller-supplied verification clock when provided (deterministic
@@ -894,8 +974,12 @@ export async function verifyReceiptEnvelope(
   // 10b. T-AUD-012 (GAP H4) — agent-identity binding gate -----------------
   // A buyer_agent receipt with no verifiable agent-identity binding recomputes
   // to a degraded posture. Strict mode treats that as fatal; compat warns.
+  // A receipt floored to `simple_electronic_seal` purely by its declared
+  // `trust_anchor_staging` is NOT missing an agent identity — claiming so would
+  // be a false finding. Its degradation is already named by `trust_anchor_staging`.
   if (
     body.receipt_subject === "buyer_agent" &&
+    !declaresStagingDegradation &&
     (recomputedPosture === "degraded_no_agent_identity" ||
       recomputedPosture === "simple_electronic_seal")
   ) {
@@ -938,7 +1022,10 @@ export async function verifyReceiptEnvelope(
   // Both representations carry identical runtime values (Zod has already
   // enforced the regex), so we cast at the public boundary.
   return {
-    outcome: "accepted",
+    // `accepted_degraded` whenever the receipt declares `trust_anchor_staging`
+    // in its signed body — independent of whether THIS verifier could resolve a
+    // root. Never `accepted`: a consumer must opt in to the weaker guarantee.
+    outcome: stagingDegraded ? "accepted_degraded" : "accepted",
     schema_version: "1.1",
     warnings,
     receipt: body as unknown as TrustReceiptV11Body,

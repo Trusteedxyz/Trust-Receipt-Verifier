@@ -1,0 +1,12 @@
+{
+  "name": "A021-identity-not-an-object",
+  "description": "Forma — un array no es un Identity Document",
+  "kind": "identity",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "document": [],
+  "expected": {
+    "valid": false,
+    "reason": "document_shape_invalid",
+    "retryable": false
+  }
+}

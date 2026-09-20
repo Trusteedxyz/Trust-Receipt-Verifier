@@ -1,0 +1,31 @@
+{
+  "now": "2026-04-15T00:00:00Z",
+  "name": "M029-boundary-exactly-issued-at",
+  "description": "The verification clock is EXACTLY issuedAt. §10.4 step 10 requires the current time strictly between issuedAt and expiresAt (exclusive), so the boundary itself must fail.",
+  "document": {
+    "version": 1,
+    "subject": "supplier.example.com",
+    "legalName": "Example Supply Corporation",
+    "entityType": "corporation",
+    "jurisdiction": "US",
+    "issuedAt": "2026-04-15T00:00:00Z",
+    "expiresAt": "2027-04-15T00:00:00Z",
+    "issuer": {
+      "name": "Example Supply Corporation",
+      "domain": "supplier.example.com",
+      "keyDirectory": "https://supplier.example.com/.well-known/jwks.json"
+    },
+    "registrationId": "12-3456789",
+    "proof": {
+      "type": "MerchantIdentityProof-v1",
+      "alg": "Ed25519",
+      "created": "2026-04-15T00:00:00Z",
+      "verificationMethod": "https://supplier.example.com/.well-known/jwks.json#merchant-key-02",
+      "proofValue": "W4quRblxGCq2x94CSGyGxYngqC7Ia4D9NPzhlrytxXCeTWqya3ny2timm6U9VTSgy5ot06lzto9N2xbtPetpAA"
+    }
+  },
+  "expected": {
+    "valid": false,
+    "reason": "not_yet_valid"
+  }
+}

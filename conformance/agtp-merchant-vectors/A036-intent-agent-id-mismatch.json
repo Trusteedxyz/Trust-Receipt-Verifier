@@ -1,0 +1,16 @@
+{
+  "name": "A036-intent-agent-id-mismatch",
+  "description": "§5.2 — `agent_id` ≠ Agent-ID de la petición",
+  "kind": "intent",
+  "jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6Imdvdi0yMDI2LWEifQ.eyJpc3MiOiJodHRwczovL2dvdmVybmFuY2UuZXhhbXBsZS9hZ3RwIiwic3ViIjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiMyIsImF1ZCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYTciLCJhZ2VudF9pZCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJpdGVtX2RpZ2VzdCI6InNoYTI1Njo3ZDVkMjU2NzI3MzczMmE5MmMzM2IxMmJiZWM1YWJkOTk1NTBjMjU3OWE3NzNiZmVlNmU5NmIyMmM0OWUxYWQ2IiwiYW1vdW50X2NlaWxpbmciOnsidmFsdWUiOiIyNS4wMCIsImN1cnJlbmN5IjoiRVVSIn0sImlhdCI6MTc4NzM5MjgwMCwibmJmIjoxNzg3MzkyODAwLCJleHAiOjE3ODczOTI5MjAsImp0aSI6IjAxSlE0ZTcwYmU0ZiJ9.Br4p478io3-JgkBJBATr04XvVMNOEcfhv95N7JmtpSQaJqP1f3yi4aKTOxmK1EjeSPNaMvFtGp5GYlOSAl_BBA",
+  "now": "2026-08-22T10:01:00Z",
+  "expectedMerchantId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa7",
+  "expectedAgentId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3",
+  "resolvableKids": [
+    "gov-2026-a"
+  ],
+  "expected": {
+    "valid": false,
+    "reason": "agent_id_mismatch"
+  }
+}
