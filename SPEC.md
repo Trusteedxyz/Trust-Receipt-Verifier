@@ -1,6 +1,4 @@
-<!-- generated-by: gsd-doc-writer -->
-
-# TrustReceipt Specification — Version 1.0
+# TrustReceipt Specification: Version 1.0
 
 **Status:** Draft
 **Date:** 2026-04-29
@@ -12,7 +10,7 @@
 
 ## Abstract
 
-TrustReceipt is an open standard for cryptographically signed evidence receipts covering AI-agent-initiated commerce transactions across multiple payment protocols. It exists because no portable, verifiable evidence layer spans today's agentic commerce protocols — x402, AP2, ACP, MCP, UCP, and MCAP all operate without a common record format. TrustReceipt solves this by defining a signed receipt format that is verifiable offline against a public JWKS endpoint, protocol-neutral in its data model, and merchant-owned without ongoing issuer dependency.
+TrustReceipt is an open standard for cryptographically signed evidence receipts covering AI-agent-initiated commerce transactions across multiple payment protocols. It exists because no portable, verifiable evidence layer spans today's agentic commerce protocols: x402, AP2, ACP, MCP, UCP, and MCAP all operate without a common record format. TrustReceipt solves this by defining a signed receipt format that is verifiable offline against a public JWKS endpoint, protocol-neutral in its data model, and merchant-owned without ongoing issuer dependency.
 
 ---
 
@@ -26,7 +24,7 @@ _The issuer maintains an internal claims policy that fixes the permitted and pro
 
 ### 1.1 Motivation
 
-Agentic commerce — where AI agents autonomously execute purchases on behalf of users — is growing faster than the trust infrastructure that should accompany it. Several forces create the gap:
+Agentic commerce, where AI agents autonomously execute purchases on behalf of users, is growing faster than the trust infrastructure that should accompany it. Several forces create the gap:
 
 - An April 2026 survey reportedly found that 98% of websites cannot complete autonomous agent transactions end to end, in part because identity and evidence standards are missing. This figure has not been verified and the survey source is not cited here.
 - No portable evidence record spans today's major agentic commerce protocols. x402, AP2, ACP, MCP, UCP, and MCAP each define their own payment flow but none define a durable, cross-protocol signed receipt.
@@ -38,7 +36,7 @@ Agentic commerce — where AI agents autonomously execute purchases on behalf of
 | Goal                       | Description                                                                                                                                                                                                                                                                                             |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Protocol-neutral**       | A single receipt format can represent evidence hashes from protocols such as x402, AP2, ACP, MCP, UCP, and MCAP. The `protocol` field identifies which protocol ran; `protocol_artifacts` carry protocol-specific evidence hashes. This does not imply certification or approval by any protocol owner. |
-| **Verifier-neutral**       | Any implementation that passes all 10 conformance test vectors is conformant. The conformance suite is the authoritative definition of correct behaviour — no separate implementation is blessed.                                                                                                       |
+| **Verifier-neutral**       | Any implementation that passes all 10 conformance test vectors is conformant. The conformance suite is the authoritative definition of correct behaviour, and no separate implementation is blessed.                                                                                                       |
 | **Provider-neutral**       | `trust_provider_assertions` accepts assertions from any fraud, risk, or identity provider. ClearSale, Trulioo, Mastercard AP, Skyfire, and others are treated as peers.                                                                                                                                 |
 | **Merchant-owned archive** | Receipts are self-contained JWS tokens. A merchant can export and verify them indefinitely without contacting the issuing platform.                                                                                                                                                                     |
 | **Offline verifiable**     | JWS compact serialization with a resolvable JWKS endpoint means any party with the public key can verify any receipt, at any time, without network access to the issuer.                                                                                                                                |
@@ -54,35 +52,35 @@ Agentic commerce — where AI agents autonomously execute purchases on behalf of
 
 TrustReceipt is not affiliated with, endorsed by, sponsored by, or approved by Mastercard, Anthropic, Skyfire, Coinbase, or any other named protocol owner or company referenced in this specification. Protocol names (AP2, MCAP, ACP, MCP, x402, UCP) are used descriptively to indicate interoperability targets only. All trademarks and registered marks are the property of their respective owners. See [TRADEMARKS.md](TRADEMARKS.md) for the full notice.
 
-No claim of compliance with any third-party protocol is made unless separately certified by that protocol owner. Inclusion of a protocol name in this specification means only that TrustReceipt defines a hash-based evidence record format for use alongside that protocol — not that this specification has been reviewed, approved, or certified by the protocol owner.
+No claim of compliance with any third-party protocol is made unless separately certified by that protocol owner. Inclusion of a protocol name in this specification means only that TrustReceipt defines a hash-based evidence record format for use alongside that protocol, not that this specification has been reviewed, approved, or certified by the protocol owner.
 
 ---
 
 ## 2. Terminology
 
-**Receipt** — A JWS compact serialization token whose payload conforms to the TrustReceipt 1.0 schema.
+**Receipt**: A JWS compact serialization token whose payload conforms to the TrustReceipt 1.0 schema.
 
-**Issuer** — The platform that creates and cryptographically signs a receipt. Identified by the `issuer` field (a domain string). Must publish a JWKS or DID document for key resolution.
+**Issuer**: The platform that creates and cryptographically signs a receipt. Identified by the `issuer` field (a domain string). Must publish a JWKS or DID document for key resolution.
 
-**Merchant** — The e-commerce operator on whose behalf the agent acted. Identified by `merchant_id`.
+**Merchant**: The e-commerce operator on whose behalf the agent acted. Identified by `merchant_id`.
 
-**Agent** — The AI agent that performed the transaction. Identified by `agent_id`. May be a specific session, persona, or instance.
+**Agent**: The AI agent that performed the transaction. Identified by `agent_id`. May be a specific session, persona, or instance.
 
-**Agent Provider** — The company or platform that runs the agent (e.g. `"anthropic"`, `"openai"`, `"google"`). Recorded in `agent_provider`.
+**Agent Provider**: The company or platform that runs the agent (e.g. `"anthropic"`, `"openai"`, `"google"`). Recorded in `agent_provider`.
 
-**Trust Provider** — A third-party fraud, risk, or identity service that contributes a signed assertion to the receipt via `trust_provider_assertions` (e.g. ClearSale, Trulioo, Mastercard Agent Pay, Skyfire KYAPay).
+**Trust Provider**: A third-party fraud, risk, or identity service that contributes a signed assertion to the receipt via `trust_provider_assertions` (e.g. ClearSale, Trulioo, Mastercard Agent Pay, Skyfire KYAPay).
 
-**Protocol Artifact** — A SHA-256 hash of a protocol-specific data structure (permit2 authorization, AP2 mandate, ACP session, etc.) recorded in `protocol_artifacts`.
+**Protocol Artifact**: A SHA-256 hash of a protocol-specific data structure (permit2 authorization, AP2 mandate, ACP session, etc.) recorded in `protocol_artifacts`.
 
-**Conformance Suite** — The set of 10 test vectors in `test-vectors/` that define correct verifier behaviour. A verifier is conformant if and only if it produces the exact expected outcome for every vector.
+**Conformance Suite**: The set of 10 test vectors in `test-vectors/` that define correct verifier behaviour. A verifier is conformant if and only if it produces the exact expected outcome for every vector.
 
-**JWKS** — JSON Web Key Set (RFC 7517). A JSON document containing one or more public keys used to verify JWS signatures.
+**JWKS**: JSON Web Key Set (RFC 7517). A JSON document containing one or more public keys used to verify JWS signatures.
 
-**JWS** — JSON Web Signature (RFC 7515). TrustReceipt uses JWS Compact Serialization.
+**JWS**: JSON Web Signature (RFC 7515). TrustReceipt uses JWS Compact Serialization.
 
-**kid** — Key Identifier. An opaque string that identifies which key in a JWKS was used to sign a particular receipt.
+**kid**: Key Identifier. An opaque string that identifies which key in a JWKS was used to sign a particular receipt.
 
-**Policy Decision** — The outcome recorded in `policy_decision`: one of `allow`, `deny`, `review`, or `challenge`. Records what action was taken at transaction time; does not prescribe downstream behaviour.
+**Policy Decision**: The outcome recorded in `policy_decision`: one of `allow`, `deny`, `review`, or `challenge`. Records what action was taken at transaction time; does not prescribe downstream behaviour.
 
 ---
 
@@ -178,7 +176,7 @@ All fields at the top level of the receipt payload. Fields marked **Required** M
 | Field              | Type            | Required | Description                                                                                                                                                                                                                                                                                                                                                          |
 | ------------------ | --------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `hash_chain_prev`  | string          | Optional | SHA-256 hex of the previous receipt in the merchant's audit stream. Enables ordered, tamper-evident receipt chains. `null` for the first receipt in a chain.                                                                                                                                                                                                         |
-| `signers`          | array           | Optional | Declared signers of this receipt. Each element carries `party` (`issuer`/`merchant`/`agent`/`psp`), `kid`, `custody` (`platform_held`/`party_held`) and `relation_to_subject` (`processor`/`self`/`independent`). Absent means the receipt makes no claim about signer custody — NOT that a single signer is implied.                                                |
+| `signers`          | array           | Optional | Declared signers of this receipt. Each element carries `party` (`issuer`/`merchant`/`agent`/`psp`), `kid`, `custody` (`platform_held`/`party_held`) and `relation_to_subject` (`processor`/`self`/`independent`). Absent means the receipt makes no claim about signer custody, NOT that a single signer is implied.                                                |
 | `evaluation_id`    | string          | Optional | Identity of the policy evaluation that produced the verdict. Identifies the EVALUATION, not the operation: a cached verdict is reused, so several operations may carry the same value, and it MUST NOT be used as an idempotency key. Absent when the identity would not resolve to a retrievable record (cached verdict, or a decision the issuer did not persist). |
 | `rule_set_version` | integer         | Optional | Version of the policy catalogue under which the verdict was evaluated.                                                                                                                                                                                                                                                                                               |
 | `evaluated_rules`  | array of string | Optional | Rule codes that RAN. Distinct from `rules_triggered`, which lists those that fired. An empty array means the catalogue was consulted and no rule applied; absent means the receipt makes no claim.                                                                                                                                                                   |
@@ -190,39 +188,39 @@ v1.0-legacy-compact, v1.1 strict). No `schema_version` bump: the frozen v1.0-FIN
 does not declare `additionalProperties` at the top level, so new fields never invalidate a
 signature computed before this reference implementation started emitting them.
 
-**Mandate evidence** — lets a third party recompute `mandate_claims_hash` and confirm a charged
+**Mandate evidence**: lets a third party recompute `mandate_claims_hash` and confirm a charged
 amount fell inside what was actually authorized, instead of trusting the receipt's own claim:
 
 | Field                       | Type    | Required | Description                                                                                                    |
 | ---------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| `mandate_id`                 | string  | Optional | Identity of the applied mandate. Opaque — no shape is imposed.                                                    |
+| `mandate_id`                 | string  | Optional | Identity of the applied mandate. Opaque: no shape is imposed.                                                    |
 | `mandate_claims_hash`        | string  | Optional | SHA-256 hex over the mandate's claims. See `computeMandateClaimsHash` (exported) for the exact material.          |
 | `mandate_max_amount_cents`   | integer | Optional | The ceiling, in minor units, that `amount` is compared against.                                                   |
-| `mandate_currency`           | string  | Optional | ISO 4217 currency of the MANDATE — may differ from the cart's; a mismatch is a receipt-level fact, not lost.      |
+| `mandate_currency`           | string  | Optional | ISO 4217 currency of the MANDATE, which may differ from the cart's; a mismatch is a receipt-level fact, not lost.      |
 | `mandate_subject`            | string  | Optional | `sub`: the agent the mandate was granted to. Never the buyer.                                                     |
 | `mandate_audience`           | string  | Optional | `aud`: the merchant the mandate is valid for.                                                                     |
 | `mandate_expires_at`         | integer | Optional | `exp` in Unix seconds.                                                                                            |
-| `mandate_verification`       | enum    | Optional | What was checked: `"structure_only"` (claims read and the ceiling applied, no signature checked) \| `"signature_verified"` (nobody emits this yet) — a closed union, so an issuer cannot declare a verification class that does not exist. |
+| `mandate_verification`       | enum    | Optional | What was checked: `"structure_only"` (claims read and the ceiling applied, no signature checked) \| `"signature_verified"` (nobody emits this yet). It is a closed union, so an issuer cannot declare a verification class that does not exist. |
 
-**Approval evidence** — a human said yes to THIS purchase, distinct from what the mandate allowed:
+**Approval evidence**: a human said yes to THIS purchase, distinct from what the mandate allowed:
 
 | Field              | Type    | Required | Description                                                                                                            |
 | ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `approval_ref`     | string  | Optional | Opaque reference to the approval recorded on the issuer's own surface.                                                   |
-| `approval_channel` | string  | Optional | Where it came from (e.g. a confirmation dialog). Free-form string, not an enum — rejecting the whole receipt over an unrecognised channel would turn a valid artifact invalid. |
+| `approval_channel` | string  | Optional | Where it came from (e.g. a confirmation dialog). Free-form string, not an enum: rejecting the whole receipt over an unrecognised channel would turn a valid artifact invalid. |
 | `approval_at`      | integer | Optional | Unix seconds of the approval, comparable against `issued_at`.                                                            |
 
-**State Witness evidence** — what the state comparator resolved before money moved, and against
+**State Witness evidence**: what the state comparator resolved before money moved, and against
 which authoritative state. Closes the gap where a checkout that executed because nothing had
 changed left no signed record that the comparison ran at all:
 
 | Field                               | Type            | Required | Description                                                                                                    |
 | ------------------------------------ | --------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| `state_witness_resolution`           | enum            | Optional | `"EXECUTE"` \| `"EXECUTE_WITHIN_TOLERANCE"` \| `"RECONFIRM"`. No `BLOCK` value — a blocked checkout does not execute, so its receipt cannot say otherwise. |
+| `state_witness_resolution`           | enum            | Optional | `"EXECUTE"` \| `"EXECUTE_WITHIN_TOLERANCE"` \| `"RECONFIRM"`. No `BLOCK` value: a blocked checkout does not execute, so its receipt cannot say otherwise. |
 | `state_witness_authoritative_hash`   | string          | Optional | SHA-256 (RFC 8785) of the authoritative merchant state at execution time.                                       |
 | `state_witness_reasons`              | array of enum   | Optional | Up to 6 of: `price_within_tolerance`, `price_diverged`, `price_diverged_severely`, `stock_insufficient`, `policy_version_changed`, `authoritative_state_unavailable`. |
 
-**Operation link** — ties a corrected retry or a reconfirmed execution back to the receipt it
+**Operation link**: ties a corrected retry or a reconfirmed execution back to the receipt it
 supersedes. Deliberately **not** `hash_chain_prev`: that field orders a merchant's receipts by
 issuance time and makes no claim that one continues another's operation; this field makes exactly
 that claim, for the two flows where it is true:
@@ -279,11 +277,11 @@ Other `type` values are permitted; unknown types MUST NOT cause a schema rejecti
 
 A conformant verifier MUST implement the following steps in order. Any step failure returns `{ valid: false, reason: <code> }` immediately; subsequent steps MUST NOT run.
 
-**Step 1 — Parse JWS token**
+**Step 1: Parse JWS token**
 
 Split the compact JWS on `.`. Extract the Base64url-decoded protected header. Verify `alg` is `EdDSA`. Extract `kid` from the header. If the token is malformed or `kid` is absent, return `{ valid: false, reason: "invalid_jws" }`.
 
-**Step 2 — Locate public key**
+**Step 2: Locate public key**
 
 Resolve the public key using one of:
 
@@ -296,11 +294,11 @@ If no key matching `kid` is found in the resolved JWKS, return `{ valid: false, 
 
 Implementations MUST NOT block on JWKS fetch for longer than 5 seconds. If the fetch times out or fails, return `{ valid: false, reason: "jwks_fetch_failed" }`.
 
-**Step 3 — Verify JWS signature**
+**Step 3: Verify JWS signature**
 
 Verify the JWS signature using the Ed25519 public key identified in Step 2. If the signature does not verify, return `{ valid: false, reason: "tampered_signature" }`.
 
-**Step 4 — Validate payload schema**
+**Step 4: Validate payload schema**
 
 Decode the JWS payload as UTF-8 JSON. Validate the resulting object against the TrustReceipt 1.0 schema:
 
@@ -313,14 +311,14 @@ Decode the JWS payload as UTF-8 JSON. Validate the resulting object against the 
 
 If any validation fails, return `{ valid: false, reason: "schema_invalid", errors: [...] }`.
 
-**Step 5 — Check timestamp validity**
+**Step 5: Check timestamp validity**
 
 Let `now` be the current Unix timestamp in seconds. Allow a clock tolerance of up to 60 seconds.
 
 - If `issued_at > now + tolerance`, return `{ valid: false, reason: "not_yet_valid" }`.
 - If `expires_at < now - tolerance`, return `{ valid: false, reason: "expired" }`.
 
-**Step 6 — Return success**
+**Step 6: Return success**
 
 Return `{ valid: true, receipt: <parsed payload> }`.
 
@@ -330,7 +328,7 @@ The steps above describe the **v1.0 body** algorithm, whose verdict is binary.
 A verifier that also consumes **v1.1 envelopes** (§11) MUST implement a
 **three-valued** verdict. Implementers porting this specification MUST read this
 subsection: treating the verdict as binary silently collapses the third value
-into one of the other two, which is a conformance failure in either direction —
+into one of the other two, which is a conformance failure in either direction:
 reporting a degraded receipt as fully verified, or discarding a valid one.
 
 | Verdict             | Meaning                                                                                     |
@@ -350,8 +348,8 @@ reporting a degraded receipt as fully verified, or discarding a valid one.
 
 - A conformant verifier **MUST NOT** report `accepted_degraded` as `accepted`.
   It MUST be a distinct, machine-readable value, so that a consumer written
-  against an earlier revision of this specification — which compares against
-  `accepted` — continues to refuse it. Accepting the weaker guarantee MUST be an
+  against an earlier revision of this specification, which compares against
+  `accepted`, continues to refuse it. Accepting the weaker guarantee MUST be an
   explicit, opt-in decision by the consumer.
 - A verifier **MUST** reject, not degrade, a receipt whose chain of trust is
   unverifiable and which does **not** declare `trust_anchor_staging` in its
@@ -368,7 +366,7 @@ reporting a degraded receipt as fully verified, or discarding a valid one.
   automation checking only for a zero exit status remains fail-closed, while
   printing a verdict that distinguishes it from a genuine rejection.
 
-**Scope limit — what `accepted_degraded` does NOT assert.**
+**Scope limit: what `accepted_degraded` does NOT assert.**
 
 > With no production trust anchor there is no chain of trust. `accepted_degraded`
 > attests **internal consistency and issuer intent, NEVER issuer authenticity.**
@@ -418,15 +416,15 @@ Issuers MAY also use a DID document (`did:web:` or `did:key:`) in place of or al
 
 ## 6. Privacy Considerations
 
-**User intent hashing** — The `user_intent_hash` field is a SHA-256 digest of the original user intent text. The original text MUST NOT appear anywhere in the receipt. This protects conversational privacy while preserving the ability to verify a known intent against its hash.
+**User intent hashing**: The `user_intent_hash` field is a SHA-256 digest of the original user intent text. The original text MUST NOT appear anywhere in the receipt. This protects conversational privacy while preserving the ability to verify a known intent against its hash.
 
-**Payment data** — The `payment_reference` field MUST contain only a PSP name and a PSP-assigned reference string. Raw card numbers, payment tokens, bank account numbers, and cryptographic payment credentials MUST NOT appear in any receipt field. Receipts are not PCI DSS scoped as long as this constraint is respected.
+**Payment data**: The `payment_reference` field MUST contain only a PSP name and a PSP-assigned reference string. Raw card numbers, payment tokens, bank account numbers, and cryptographic payment credentials MUST NOT appear in any receipt field. Receipts are not PCI DSS scoped as long as this constraint is respected.
 
-**PII indicators** — When `privacy_classification.contains_pii` is `true`, the receipt signals that other receipt fields may reference or indirectly identify a natural person. Implementers SHOULD apply the retention limit in `retention_days` and respect the `jurisdiction` field when determining applicable law (e.g. GDPR for `"EU"` jurisdiction).
+**PII indicators**: When `privacy_classification.contains_pii` is `true`, the receipt signals that other receipt fields may reference or indirectly identify a natural person. Implementers SHOULD apply the retention limit in `retention_days` and respect the `jurisdiction` field when determining applicable law (e.g. GDPR for `"EU"` jurisdiction).
 
-**Evidence hashes** — `protocol_artifacts`, `cart_hash`, `order_hash`, `consent_context.consent_hash`, and `trust_provider_assertions.evidence_hash` are all SHA-256 hashes of external objects. The external objects themselves are not embedded; only their digests appear. This design limits the privacy exposure surface of the receipt itself.
+**Evidence hashes**: `protocol_artifacts`, `cart_hash`, `order_hash`, `consent_context.consent_hash`, and `trust_provider_assertions.evidence_hash` are all SHA-256 hashes of external objects. The external objects themselves are not embedded; only their digests appear. This design limits the privacy exposure surface of the receipt itself.
 
-**Consent context** — `consent_context.consent_hash` links to a consent record without embedding it. The `scope` and `ts` fields provide audit trail entries; the full consent record is stored by the consent management system.
+**Consent context**: `consent_context.consent_hash` links to a consent record without embedding it. The `scope` and `ts` fields provide audit trail entries; the full consent record is stored by the consent management system.
 
 ---
 
@@ -434,15 +432,15 @@ Issuers MAY also use a DID document (`did:web:` or `did:key:`) in place of or al
 
 ### 7.1 Conformance Levels
 
-**Level 1 — Verifier Conformance**
+**Level 1: Verifier Conformance**
 
 An implementation achieves Level 1 by passing all 10 test vectors in `test-vectors/vectors.json`. This confirms the implementation correctly handles valid receipts, schema rejections, expiry, and key resolution failures.
 
-**Level 2 — Issuer Conformance**
+**Level 2: Issuer Conformance**
 
 An implementation achieves Level 2 by satisfying Level 1 and correctly issuing receipts such that all 5 valid vector payloads produce valid JWS tokens that pass Level 1 verification. This confirms the implementation can both produce and consume compliant receipts.
 
-**Level 3 — Provider Conformance**
+**Level 3: Provider Conformance**
 
 An implementation achieves Level 3 by satisfying Level 2 and co-authoring at least one `trust_provider_assertions` entry type definition with real assertion data contributed by an external trust, fraud, or identity provider. Provider conformance requires a minimum of 3 signing providers to co-author the assertion schema for that `assertion_type`.
 
@@ -469,11 +467,11 @@ The 10 conformance vectors are located in `test-vectors/` and catalogued in `tes
 
 | ID     | File                                       | Expected outcome | Failure code     | Notes                                      |
 | ------ | ------------------------------------------ | ---------------- | ---------------- | ------------------------------------------ |
-| TC-001 | `valid/TC-001-mcap-allow.json`             | valid            | —                | MCAP, 2 trust providers, EU jurisdiction   |
-| TC-002 | `valid/TC-002-x402-allow.json`             | valid            | —                | x402, Stripe Radar, permit2 artifact       |
-| TC-003 | `valid/TC-003-ap2-multi-provider.json`     | valid            | —                | AP2, 3 trust providers, hash chain         |
-| TC-004 | `valid/TC-004-mcp-privacy-eu.json`         | valid            | —                | MCP, `review` decision, PII, GDPR          |
-| TC-005 | `valid/TC-005-acp-hash-chain.json`         | valid            | —                | ACP, Skyfire, attachment                   |
+| TC-001 | `valid/TC-001-mcap-allow.json`             | valid            | none             | MCAP, 2 trust providers, EU jurisdiction   |
+| TC-002 | `valid/TC-002-x402-allow.json`             | valid            | none             | x402, Stripe Radar, permit2 artifact       |
+| TC-003 | `valid/TC-003-ap2-multi-provider.json`     | valid            | none             | AP2, 3 trust providers, hash chain         |
+| TC-004 | `valid/TC-004-mcp-privacy-eu.json`         | valid            | none             | MCP, `review` decision, PII, GDPR          |
+| TC-005 | `valid/TC-005-acp-hash-chain.json`         | valid            | none             | ACP, Skyfire, attachment                   |
 | TC-006 | `invalid/TC-006-tampered-payload.json`     | invalid          | `schema_invalid` | Empty intent hash + unknown schema_version |
 | TC-007 | `invalid/TC-007-expired-receipt.json`      | invalid          | `expired`        | Timestamps in Nov 2023                     |
 | TC-008 | `invalid/TC-008-wrong-kid.json`            | invalid          | `unknown_kid`    | kid not in JWKS                            |
@@ -504,17 +502,17 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 ## 8. Security Considerations
 
-**Clock skew** — Implementations MUST allow a tolerance of up to 60 seconds when evaluating `issued_at` and `expires_at`. Refusing to allow any tolerance creates false rejections due to NTP drift between issuer and verifier. Tolerances larger than 60 seconds open replay windows that are too permissive for commerce contexts.
+**Clock skew**: Implementations MUST allow a tolerance of up to 60 seconds when evaluating `issued_at` and `expires_at`. Refusing to allow any tolerance creates false rejections due to NTP drift between issuer and verifier. Tolerances larger than 60 seconds open replay windows that are too permissive for commerce contexts.
 
-**Key pinning** — Key pinning is not required by this specification but is RECOMMENDED for high-value or regulated contexts. Implementers may pin a specific `kid` and reject receipts signed with any other key, at the cost of requiring manual intervention on key rotation.
+**Key pinning**: Key pinning is not required by this specification but is RECOMMENDED for high-value or regulated contexts. Implementers may pin a specific `kid` and reject receipts signed with any other key, at the cost of requiring manual intervention on key rotation.
 
-**Receipt tampering** — Because the receipt is a JWS token, any modification to any field in the payload invalidates the signature. Verifiers detect tampering at Step 3 of the verification algorithm. There is no partial integrity mechanism; a receipt is either fully valid or fully invalid.
+**Receipt tampering**: Because the receipt is a JWS token, any modification to any field in the payload invalidates the signature. Verifiers detect tampering at Step 3 of the verification algorithm. There is no partial integrity mechanism; a receipt is either fully valid or fully invalid.
 
-**Replay attacks** — `receipt_id` uniqueness combined with `expires_at` provides replay resistance within the validity window. Verifiers that maintain a short-term cache of seen `receipt_id` values gain full replay protection. The recommended window for caching `receipt_id` values matches the maximum `expires_at` minus `issued_at` delta for the deployment.
+**Replay attacks**: `receipt_id` uniqueness combined with `expires_at` provides replay resistance within the validity window. Verifiers that maintain a short-term cache of seen `receipt_id` values gain full replay protection. The recommended window for caching `receipt_id` values matches the maximum `expires_at` minus `issued_at` delta for the deployment.
 
-**JWKS availability** — The security of the verification flow depends on the availability and integrity of the JWKS endpoint. Issuers SHOULD serve JWKS over HTTPS with valid TLS certificates, publish at a stable URL, and set `Cache-Control: max-age=3600`. Verifiers SHOULD cache JWKS responses for up to 1 hour and MUST NOT block the verification flow for more than 5 seconds waiting for a JWKS fetch.
+**JWKS availability**: The security of the verification flow depends on the availability and integrity of the JWKS endpoint. Issuers SHOULD serve JWKS over HTTPS with valid TLS certificates, publish at a stable URL, and set `Cache-Control: max-age=3600`. Verifiers SHOULD cache JWKS responses for up to 1 hour and MUST NOT block the verification flow for more than 5 seconds waiting for a JWKS fetch.
 
-**Assertion integrity** — `trust_provider_assertions` entries are embedded in the JWS payload and therefore covered by the issuer's signature. A provider assertion cannot be added, removed, or modified after signing. Providers who wish their assertions to be independently verifiable MAY include an `evidence_hash` pointing to a separately signed assertion document.
+**Assertion integrity**: `trust_provider_assertions` entries are embedded in the JWS payload and therefore covered by the issuer's signature. A provider assertion cannot be added, removed, or modified after signing. Providers who wish their assertions to be independently verifiable MAY include an `evidence_hash` pointing to a separately signed assertion document.
 
 ---
 
@@ -527,7 +525,7 @@ Implementations that pass all 10 vectors may include the following badge in thei
 | **ACP** (Agentic Commerce Protocol, OpenAI + Stripe)      | [agentic-commerce-protocol](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)                                       | TrustReceipt captures ACP session and policy hashes. Skyfire KYAPay assertions map to the `agent_trust` or `payment_trust` assertion types.                                                    |
 | **MCP** (Model Context Protocol, Anthropic)               | [modelcontextprotocol.io](https://modelcontextprotocol.io)                                                                                | TrustReceipt records the MCP tool call hash, enabling audit of which tool calls were made during the transaction that produced the receipt.                                                    |
 | **UCP** (Universal Commerce Protocol)                     | [Universal-Commerce-Protocol/ucp](https://github.com/Universal-Commerce-Protocol/ucp)                                                     | TrustReceipt captures the UCP bearer token hash as a protocol artifact.                                                                                                                        |
-| **MCAP** (Mastercard Agent Pay)                           | [developer.mastercard.com — Agent Pay](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | TrustReceipt captures MCAP consent and nonce hashes. `mcap_consent_hash` is the primary artifact type.                                                                                         |
+| **MCAP** (Mastercard Agent Pay)                           | [developer.mastercard.com: Agent Pay](https://developer.mastercard.com/mastercard-checkout-solutions/documentation/use-cases/agent-pay/) | TrustReceipt captures MCAP consent and nonce hashes. `mcap_consent_hash` is the primary artifact type.                                                                                         |
 | **W3C Verifiable Credentials**                            | [w3.org/TR/vc-data-model](https://www.w3.org/TR/vc-data-model/)                                                                           | `verification_methods` supports `type: "did"` entries, enabling DID-based key resolution compatible with W3C VC infrastructure.                                                                |
 | **EU AI Act (Regulation 2024/1689)**                      | [EUR-Lex 32024R1689](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024R1689)                                              | `liability_context` supports Article 13 transparency requirements by recording the assertor and scope. `privacy_classification` supports Article 10 data governance requirements.              |
 | **RFC 7515 (JWS)**                                        | [rfc-editor.org/rfc/rfc7515](https://www.rfc-editor.org/rfc/rfc7515)                                                                      | TrustReceipt uses JWS Compact Serialization for all receipts.                                                                                                                                  |
@@ -556,7 +554,7 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 > **Disclaimer**: TrustReceipt v1.1 is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. The issuer's internal claims policy holds the canonical permitted/prohibited wording list; it is not published with this repository.
+The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS. It is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. The issuer's internal claims policy holds the canonical permitted/prohibited wording list; it is not published with this repository.
 
 ### 11.2 Wire format
 
@@ -645,22 +643,22 @@ In addition to the v1.0 codes:
 
 ### 11.6 Conformance vectors (v1.1)
 
-12 v1.1 vectors live under `test-vectors/v11/` (corrected from "11" — the table below always had 12 rows, including `019b`) and are catalogued alongside the legacy 10 v1.0 vectors:
+12 v1.1 vectors live under `test-vectors/v11/` and are catalogued alongside the legacy 10 v1.0 vectors:
 
 | ID   | File                                             | Outcome          | Failure code                       | Notes                                                                         |
 | ---- | ------------------------------------------------ | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
-| 011  | `v11/011-buyer-agent-happy-path.json`            | valid            | —                                  | Full v1.1 envelope, AP2, agent identity verified, TST present.                |
+| 011  | `v11/011-buyer-agent-happy-path.json`            | valid            | none                               | Full v1.1 envelope, AP2, agent identity verified, TST present.                |
 | 012  | `v11/012-missing-consent-context.json`           | invalid          | `missing_required_consent_context` | buyer_agent without consent.                                                  |
 | 013  | `v11/013-receipt-subject-mismatch.json`          | invalid          | `receipt_subject_mismatch`         | Subject vs verification context conflict.                                     |
-| 014  | `v11/014-valid-timestamp-evidence.json`          | valid            | —                                  | Full RFC 3161 chain validates offline.                                        |
-| 015  | `v11/015-timestamp-unavailable.json`             | valid (degraded) | —                                  | Posture `ades_candidate_no_tsa`, warning entry.                               |
-| 016  | `v11/016-rotated-key-export-bundle.json`         | valid            | —                                  | kid rotated post-issuance, history slice resolves.                            |
-| 017  | `v11/017-legacy-v10-receipt.json`                | valid (legacy)   | —                                  | v1.0 receipt accepted by v1.1 verifier, flagged `legacy_pre_eidas_hardening`. |
-| 018  | `v11/018-pii-absent.json`                        | valid            | —                                  | privacy_classification=pii_absent.                                            |
-| 019  | `v11/019-v11-x402-permit2-required.json`         | valid            | —                                  | x402 EVM Permit2 authorization.                                               |
+| 014  | `v11/014-valid-timestamp-evidence.json`          | valid            | none                               | Full RFC 3161 chain validates offline.                                        |
+| 015  | `v11/015-timestamp-unavailable.json`             | valid (degraded) | none                               | Posture `ades_candidate_no_tsa`, warning entry.                               |
+| 016  | `v11/016-rotated-key-export-bundle.json`         | valid            | none                               | kid rotated post-issuance, history slice resolves.                            |
+| 017  | `v11/017-legacy-v10-receipt.json`                | valid (legacy)   | none                               | v1.0 receipt accepted by v1.1 verifier, flagged `legacy_pre_eidas_hardening`. |
+| 018  | `v11/018-pii-absent.json`                        | valid            | none                               | privacy_classification=pii_absent.                                            |
+| 019  | `v11/019-v11-x402-permit2-required.json`         | valid            | none                               | x402 EVM Permit2 authorization.                                               |
 | 019b | `v11/019b-v11-x402-missing-permit2.json`         | invalid          | `schema_invalid`                   | x402 buyer_agent without authorization.                                       |
-| 020  | `v11/020-v11-mcp-tool-invocation-required.json`  | valid            | —                                  | MCP tool invocation authorization.                                            |
-| 021  | `v11/021-v11-uk-jurisdiction-export-bundle.json` | valid            | —                                  | UK retention metadata + uk-diatf assertion.                                   |
+| 020  | `v11/020-v11-mcp-tool-invocation-required.json`  | valid            | none                               | MCP tool invocation authorization.                                            |
+| 021  | `v11/021-v11-uk-jurisdiction-export-bundle.json` | valid            | none                               | UK retention metadata + uk-diatf assertion.                                   |
 
 As of 2026-05-06 the combined v1.0 + v1.1 conformance run passed 58/58 test cases. That figure counts test cases, not vectors, and it has not been re-run since.
 
@@ -680,12 +678,12 @@ See [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-r
 
 ### 11.8 Backward compatibility
 
-A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover (FR-018). v1.0 verifiers cannot consume v1.1 envelopes — content-type negotiation is the dispatch mechanism (see §11.2 media type).
+A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover (FR-018). v1.0 verifiers cannot consume v1.1 envelopes; content-type negotiation is the dispatch mechanism (see §11.2 media type).
 
 ### 11.9 Declared trust-anchor degradation (`trust_anchor_staging`)
 
-An issuer that has no production trust anchor available — typically because the
-offline root-key ceremony has not been performed — MAY still issue receipts, on
+An issuer that has no production trust anchor available (typically because the
+offline root-key ceremony has not been performed) MAY still issue receipts, on
 the condition that it says so **inside the signed body**:
 
 ```json
@@ -701,8 +699,8 @@ the condition that it says so **inside the signed body**:
 
 **Truth-table override.** `trust_anchor_staging` **dominates** the entire
 `legal_posture` recomputation of FR-019. Whatever timestamp evidence or agent
-identity the receipt carries, and **regardless of `receipt_subject`** — including
-`merchant_admin` — the recomputed posture is `simple_electronic_seal`.
+identity the receipt carries, and **regardless of `receipt_subject`** (including
+`merchant_admin`), the recomputed posture is `simple_electronic_seal`.
 `merchant_admin_action` names a _subject_, not a strength level, and MUST NOT
 shadow an unverifiable anchor. A verifier that short-circuits on subject before
 applying this override will disagree with a conformant issuer and reject its
@@ -724,7 +722,7 @@ The ceremony remains necessary for any posture above
 
 ## Appendix A: Example Receipt Payload (TC-001, JSON)
 
-The following is the TC-001 MCAP receipt payload in human-readable form. This is the JWS **payload** before signing — not the full compact token.
+The following is the TC-001 MCAP receipt payload in human-readable form. This is the JWS **payload** before signing, not the full compact token.
 
 ```json
 {

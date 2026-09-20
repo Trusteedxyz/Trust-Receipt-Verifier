@@ -6,14 +6,14 @@ This demo shows TrustReceipt working across three protocols.
 > expired.** They are generated with a **one-hour** lifetime
 > (`expires_at = issued_at + 3600`) and then committed as-is, so verifying them
 > returns `{ valid: false, reason: "expired" }` at any point after that hour.
-> That is the demo working correctly — expiry is checked before anything else
+> That is the demo working correctly: expiry is checked before anything else
 > useful can be said about a receipt. Regenerate before demoing, and read a
 > failed verification of a stale file as a clock check, not a signature problem.
 
 ## Generate demo receipts
 
 Regenerating rewrites all three receipts **and** `receipts/jwks.json` with a
-freshly minted keypair, so always regenerate the set together — a new receipt
+freshly minted keypair, so always regenerate the set together, because a new receipt
 will not verify against the old `jwks.json`:
 
 ```bash

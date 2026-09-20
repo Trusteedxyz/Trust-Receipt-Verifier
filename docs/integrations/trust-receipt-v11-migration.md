@@ -5,8 +5,8 @@ breaks, what moves, and what you have to change.
 
 This document is assembled from the released changelog entries (`1.1`, `1.1.1`,
 `1.1.2` in [CHANGELOG.md](../../CHANGELOG.md)) and the normative reference in
-[SPEC.md §11](../../SPEC.md). Where the two disagree, **SPEC.md wins** — it is
-the normative document, this one is a reading aid.
+[SPEC.md §11](../../SPEC.md). Where the two disagree, **SPEC.md wins**: it is
+the normative document, and this one is a reading aid.
 
 > **Scope.** This covers the _verification_ surface. Issuer-side changes (KMS
 > signing algorithms, DLP scanning, manifest signing) are listed only where they
@@ -20,7 +20,7 @@ A v1.0 receipt **is** a JWS. A v1.1 receipt **contains** one.
 
 |               | v1.0                                                 | v1.1                                                              |
 | ------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
-| Wire shape    | JWS Compact — three dot-separated base64url segments | JSON object                                                       |
+| Wire shape    | JWS Compact: three dot-separated base64url segments | JSON object                                                       |
 | Required keys | n/a (opaque string)                                  | `receipt` (the JWS Compact string) + `envelope_metadata` (object) |
 | Optional keys | n/a                                                  | `protocol_artifact_sidecars`, `timestamp_evidence`                |
 | Media type    | `application/jose`                                   | `application/vnd.trusteed.receipt-envelope+json`                  |
@@ -45,14 +45,14 @@ Consequences:
 
 `verifyReceiptEnvelope()` returns `accepted`, `accepted_degraded`, or
 `rejected`. Treating the result as a boolean is a conformance failure in both
-directions — it either reports a degraded receipt as fully verified, or discards
+directions: it either reports a degraded receipt as fully verified, or discards
 a valid one.
 
 `accepted_degraded` means signature and structure verified while the receipt
 _itself declares_ its chain of trust unverifiable (a
 `legal_posture_warnings[]` entry with `reason: "trust_anchor_staging"`). It
 attests internal consistency and issuer intent, never issuer authenticity. A
-receipt that stays _silent_ about an unverifiable anchor is `rejected` — silence
+receipt that stays _silent_ about an unverifiable anchor is `rejected`: silence
 is never read as consent. See SPEC.md §11.9 (NORMATIVE).
 
 If your existing code branches on `outcome === "accepted"`, it keeps refusing
@@ -65,7 +65,7 @@ to be a conscious act.
 
 | Change                                                                                     | What you must do                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tsaRootCertSha256Allowlist` is now **required** for RFC 3161 timestamp pinning            | Supply the allowlist yourself. An envelope-supplied `tsa_root_cert_sha256` is no longer trusted on its own — trust anchors are operator-controlled, never envelope-controlled.           |
+| `tsaRootCertSha256Allowlist` is now **required** for RFC 3161 timestamp pinning            | Supply the allowlist yourself. An envelope-supplied `tsa_root_cert_sha256` is no longer trusted on its own; trust anchors are operator-controlled, never envelope-controlled.           |
 | `allowStagingRoots` added, default `false`                                                 | Nothing, if you run in production. Receipts whose issuer root is flagged staging now fail with `root_not_in_trust_anchor` unless you explicitly opt in. Never opt in outside staging/CI. |
 | `revocation_evidence.kind` is now a discriminated union `'ocsp' \| 'crl' \| 'unavailable'` | Handle the `unavailable` branch: it carries `reason` (`ocsp_unreachable`, `crl_unreachable`, `fetch_timeout`, `synthetic_fixture`) and `attempted_at`.                                   |
 | Field renamed: `intent_salt_version` → `intent_hmac_key_version`                           | Rename at your read sites. The old name is gone, not aliased.                                                                                                                            |
@@ -73,8 +73,8 @@ to be a conscious act.
 
 ### New failure codes
 
-`root_not_in_trust_anchor`, `tsa_root_not_trusted`, `tsa_revocation_unavailable`
-— in addition to the v1.1 envelope codes listed in
+`root_not_in_trust_anchor`, `tsa_root_not_trusted`, `tsa_revocation_unavailable`,
+in addition to the v1.1 envelope codes listed in
 [CONTRIBUTING.md §3](../../CONTRIBUTING.md) (`jwks_history_signature_invalid`,
 `receipt_expired`, `receipt_not_yet_valid`, `missing_required_consent_context`,
 `receipt_subject_mismatch`).

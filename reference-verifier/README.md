@@ -8,7 +8,7 @@ contacting Trusteed and without trusting any Trusteed code.**
   `node:fs`, `node:url`. No `jose`, no `@agenticmcpstores/*`, no npm install.
 - **Fully offline.** No network access. You need only the proof bundle and the
   issuer's public keys (JWKS).
-- **Single file.** `verify-aivs-bundle.mjs` — copy it anywhere Node 18+ runs.
+- **Single file.** `verify-aivs-bundle.mjs`: copy it anywhere Node 18+ runs.
 
 ## Run it
 
@@ -16,8 +16,8 @@ contacting Trusteed and without trusting any Trusteed code.**
 node verify-aivs-bundle.mjs <bundle.json> <jwks.json>
 ```
 
-- `bundle.json` — an AIVS proof bundle: `{ manifest_hash, session_sig, kid, alg, audit_log }`.
-- `jwks.json` — the issuer public keys, either a bare JWK array `[ { kid, kty:"OKP", crv:"Ed25519", x } ]`
+- `bundle.json`: an AIVS proof bundle: `{ manifest_hash, session_sig, kid, alg, audit_log }`.
+- `jwks.json`: the issuer public keys, either a bare JWK array `[ { kid, kty:"OKP", crv:"Ed25519", x } ]`
   or a JWKS document `{ "keys": [ ... ] }`.
 
 Prints the verdict as JSON to stdout and sets the exit code:
@@ -40,10 +40,10 @@ const result = verifyAivsBundle(bundle, jwks); // { valid, reason? }
 The verifier reproduces, verdict-for-verdict, the internal
 `verifyAivsProofBundle` (`src/aivs-export.ts`):
 
-1. **`manifest_hash`** — recomputed as `sha256:<hex>` of the **exact signed
+1. **`manifest_hash`**: recomputed as `sha256:<hex>` of the **exact signed
    payload bytes** recovered from the JWS (the base64url-decoded payload
    segment). Mismatch → `manifest_hash_mismatch`.
-2. **`session_sig`** — the existing EdDSA (Ed25519) JWS Compact signature is
+2. **`session_sig`**: the existing EdDSA (Ed25519) JWS Compact signature is
    verified against the issuer key resolved by `kid` from the JWKS:
    - not a 3-segment JWS → `malformed_session_sig`
    - no key matches `kid` → `unknown_kid`
@@ -57,9 +57,9 @@ with exactly those four failure reasons.
 Ed25519 verification with only `node:crypto`:
 
 - `crypto.createPublicKey({ key: jwk, format: "jwk" })` imports the OKP /
-  Ed25519 public JWK — no `jose.importJWK`.
+  Ed25519 public JWK: no `jose.importJWK`.
 - `crypto.verify(null, signingInput, publicKey, signature)` verifies the raw
-  64-byte Ed25519 signature (`null` algorithm = EdDSA) — no `jose.compactVerify`.
+  64-byte Ed25519 signature (`null` algorithm = EdDSA), no `jose.compactVerify`.
 - The JWS signing input is `ASCII("<header>.<payload>")` per RFC 7515.
 
 ## A note on canonicalization (RFC 8785 / JCS)

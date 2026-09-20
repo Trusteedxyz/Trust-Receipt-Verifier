@@ -8,7 +8,7 @@ without contacting Trusteed and without trusting any Trusteed code.**
   `node:fs`, `node:url`. No `jose`, no monorepo-internal packages, no npm install.
 - **Fully offline.** No network access. You need only the passport and the
   issuer's score public keys (JWKS).
-- **Single file.** `verify-atep-passport.mjs` — copy it anywhere Node 18+ runs.
+- **Single file.** `verify-atep-passport.mjs`: copy it anywhere Node 18+ runs.
 
 ## Run it
 
@@ -16,9 +16,9 @@ without contacting Trusteed and without trusting any Trusteed code.**
 node verify-atep-passport.mjs <passport.json> <jwks.json>
 ```
 
-- `passport.json` — a fully-signed ATEP passport (the body fields + `issuer_sig`,
+- `passport.json`: a fully-signed ATEP passport (the body fields + `issuer_sig`,
   with a nested `provenance` carrying the underlying `session_sig`).
-- `jwks.json` — the issuer public keys, either a bare JWK array
+- `jwks.json`: the issuer public keys, either a bare JWK array
   `[ { kid, kty:"OKP", crv:"Ed25519", x } ]` or a JWKS document `{ "keys": [ ... ] }`.
   Both the `issuer_sig.kid` and `provenance.kid` must resolve against it (they
   may be the same key or two distinct keys).
@@ -44,7 +44,7 @@ The verifier reproduces, verdict-for-verdict, the internal `verifyAtepPassport`
 (Trusteed's issuer-side implementation, not part of this package). A passport carries **two
 independent EdDSA anchors**, checked in this exact order:
 
-1. **`issuer_sig`** — a JWS Compact the issuer computes over the WHOLE canonical
+1. **`issuer_sig`**: a JWS Compact the issuer computes over the WHOLE canonical
    (JCS/RFC 8785) passport body (everything except `issuer_sig`). This attests
    the issuer-computed aggregates (`execution_count` / `success_rate` / `badges`)
    that are not present in the snapshot.
@@ -52,12 +52,12 @@ independent EdDSA anchors**, checked in this exact order:
    - no JWKS key matches `issuer_sig.kid` → `unknown_issuer_kid`
    - signature does not verify → `issuer_signature_invalid`
    - signed body ≠ `canonical(body)` → `issuer_projection_mismatch`
-2. **`provenance.session_sig`** — the underlying signed StoreScoreSnapshot's own
+2. **`provenance.session_sig`**: the underlying signed StoreScoreSnapshot's own
    EdDSA JWS.
    - not a 3-segment JWS → `malformed_session_sig`
    - no JWKS key matches `provenance.kid` → `unknown_kid`
    - signature does not verify → `signature_invalid`
-3. **Faithfulness** — the snapshot-attested subset (tier, score, cap,
+3. **Faithfulness**: the snapshot-attested subset (tier, score, cap,
    breakdown, …) re-projects EXACTLY from the signed snapshot body, so a tampered
    tier/score is caught even with a valid issuer signature.
    - subset diverges → `projection_mismatch`
@@ -78,11 +78,11 @@ does not mean the aggregates are independently reproducible:
 
 - `execution_count`, `success_rate` and `badges` are **issuer-attested**, not
   recomputable out-of-band. Recomputation would require an append-only,
-  hash-linked receipt corpus readable by the auditor; **neither exists today** —
+  hash-linked receipt corpus readable by the auditor; **neither exists today**:
   no issuer writes `hash_chain_prev` onto a TrustReceipt (zero write sites in
   the repository), and the corpus is not externally readable.
 - The RFC 8785 prev-hash chain that IS productive in this codebase covers the
-  OAuth audit log and the enforcement event log — **not** trust receipts.
+  OAuth audit log and the enforcement event log, **not** trust receipts.
 
 So the honest claim is: _"the issuer signed these numbers and the passport has
 not been tampered with"_, never _"any auditor can recompute these numbers"_.
@@ -92,17 +92,17 @@ not been tampered with"_, never _"any auditor can recompute these numbers"_.
 Ed25519 verification with only `node:crypto`:
 
 - `crypto.createPublicKey({ key: jwk, format: "jwk" })` imports the OKP /
-  Ed25519 public JWK — no `jose.importJWK`.
+  Ed25519 public JWK: no `jose.importJWK`.
 - `crypto.verify(null, signingInput, publicKey, signature)` verifies the raw
-  64-byte Ed25519 signature (`null` algorithm = EdDSA) — no `jose.compactVerify`.
+  64-byte Ed25519 signature (`null` algorithm = EdDSA), no `jose.compactVerify`.
 - The JWS signing input is `ASCII("<header>.<payload>")` per RFC 7515; the
   verified payload is the base64url-decoded payload segment (what
   `jose.compactVerify(...).payload` returns).
 
 ## A note on canonicalization (RFC 8785 / JCS)
 
-**Unlike the AIVS reference verifier** — which hashes the exact base64url-decoded
-payload **bytes** and never re-canonicalizes — the ATEP `issuer_sig` signs over
+**Unlike the AIVS reference verifier**, which hashes the exact base64url-decoded
+payload **bytes** and never re-canonicalizes: the ATEP `issuer_sig` signs over
 the **JCS-canonicalized body**. So checks A and C must re-canonicalize JSON
 byte-for-byte identically to Trusteed's internal `canonicalizeJSON`
 (issuer-side, not part of this package), which the internal verifier

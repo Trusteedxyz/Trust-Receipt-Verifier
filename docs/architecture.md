@@ -1,4 +1,4 @@
-# TrustReceipt — Architecture
+# TrustReceipt: Architecture
 
 **Spec version**: v1.1 (eIDAS hardening code-complete; v1.0 verification fully preserved)
 **Last updated**: 2026-05-18
@@ -10,7 +10,7 @@
 This document covers how TrustReceipt works: the signing envelope, key resolution, canonicalization, the verification algorithm and the conformance suite.
 
 For the complete field-level specification, see [SPEC.md](../SPEC.md).
-For JSON Schema validation, see [schema/trust-receipt-v1.0-final.schema.json](../schema/trust-receipt-v1.0-final.schema.json) — the normative schema. See [schema/README.md](../schema/README.md) for why a second, superseded file also lives in that directory.
+For JSON Schema validation, see [schema/trust-receipt-v1.0-final.schema.json](../schema/trust-receipt-v1.0-final.schema.json), the normative schema. See [schema/README.md](../schema/README.md) for why a second, superseded file also lives in that directory.
 For conformance test vectors, see [test-vectors/](../test-vectors/).
 
 ---
@@ -19,29 +19,29 @@ For conformance test vectors, see [test-vectors/](../test-vectors/).
 
 ```
 Trust-Receipt-Verifier/
-├── SPEC.md                              — Formal specification (authoritative)
-├── README.md                            — Quick start, field reference, npm package usage and CLI reference
-├── CONTRIBUTING.md                      — How to contribute vectors, ports, schemas
-├── LICENSE                              — MIT
-├── TRADEMARKS.md                        — Third-party trademark notices
+├── SPEC.md                              # Formal specification (authoritative)
+├── README.md                            # Quick start, field reference, npm package usage and CLI reference
+├── CONTRIBUTING.md                      # How to contribute vectors, ports, schemas
+├── LICENSE                              # MIT
+├── TRADEMARKS.md                        # Third-party trademark notices
 ├── schema/
-│   ├── trust-receipt-v1.0-final.schema.json — JSON Schema (v1.0, NORMATIVE)
-│   ├── trust-receipt-v1.schema.json     — SUPERSEDED draft, kept for link stability (see schema/README.md)
-│   └── README.md                        — Explains which of the two is normative
+│   ├── trust-receipt-v1.0-final.schema.json # JSON Schema (v1.0, NORMATIVE)
+│   ├── trust-receipt-v1.schema.json     # SUPERSEDED draft, kept for link stability (see schema/README.md)
+│   └── README.md                        # Explains which of the two is normative
 ├── test-vectors/
-│   ├── vectors.json                     — Conformance vector manifest
-│   ├── README.md                        — How to run the vectors
-│   ├── valid/                           — TC-001 through TC-005
-│   └── invalid/                         — TC-006 through TC-010
+│   ├── vectors.json                     # Conformance vector manifest
+│   ├── README.md                        # How to run the vectors
+│   ├── valid/                           # TC-001 through TC-005
+│   └── invalid/                         # TC-006 through TC-010
 ├── reference-verifier/
-│   └── README.md                        — npm package usage + CLI reference
+│   └── README.md                        # npm package usage + CLI reference
 └── docs/
-    └── architecture.md                  — This document
+    └── architecture.md                  # This document
 ```
 
 ---
 
-## 2. Signing envelope — why JWS Compact
+## 2. Signing envelope: why JWS Compact
 
 Two formats were considered during design: **JWS Compact** (RFC 7515) and **COSE Sign1** (RFC 8152 / CBOR).
 
@@ -73,7 +73,7 @@ The signing algorithm is always `EdDSA` over curve `Ed25519`. No other algorithm
 
 ---
 
-## 3. Canonicalization — RFC 8785
+## 3. Canonicalization: RFC 8785
 
 Before signing, the receipt payload is serialized with **RFC 8785 (JSON Canonicalization Scheme)**:
 
@@ -113,7 +113,7 @@ Port this function when implementing TrustReceipt in another language. It must p
 Every receipt carries a `kid` field in both the JWS protected header and the payload body. The verifier:
 
 1. Extracts `kid` from the JWS header (base64url-decode the first segment).
-2. Resolves the matching public key from the JWKS — by remote URL or inline JWK set.
+2. Resolves the matching public key from the JWKS, by remote URL or inline JWK set.
 3. Verifies the signature using that key only. No fallback to other keys in the set.
 
 If no key with the matching `kid` is found: `{ valid: false, reason: "unknown_kid" }`.
@@ -132,7 +132,7 @@ When an inline array of public JWKs is provided, no network request is made. Thi
 
 ### 4.4 Trust anchor (v1.1+)
 
-v1.1 embeds an issuer root certificate in the verifier package at compile time. An external verifier can check that a JWKS bundle was signed by a key chaining back to that root, so a forged bundle is rejected even if the live endpoint is compromised. Replacing the root takes a SemVer MAJOR bump, which gives downstream consumers an explicit, auditable decision.
+v1.1 embeds an issuer root certificate in the verifier package at compile time. An external verifier can check that a JWKS bundle was signed by a key chaining back to that root, so a forged bundle is rejected even if the live endpoint is compromised. Replacing the root takes a SemVer MAJOR bump, so downstream consumers make an explicit, auditable decision.
 
 The `VerifyOptions.trustAnchorPemSha256` field pins the expected root SHA-256. If `jwksHistory.signed_by_root_sha256` does not match any embedded anchor, the verifier hard-fails with `jwks_history_signature_invalid` by default. Staging and CI environments can turn this off with `allowStagingRoots: true`. Never set that flag in production.
 
@@ -143,43 +143,43 @@ The `VerifyOptions.trustAnchorPemSha256` field pins the expected root SHA-256. I
 A conformant verifier executes these steps in order and stops at the first failure:
 
 ```
-Step 1 — Parse JWS structure
+Step 1: Parse JWS structure
   Split on ".". Require exactly 3 segments.
   Base64url-decode segment 0 → JSON → extract "kid" and "alg".
   Fail → "invalid_jws" if malformed, missing alg/kid, or wrong segment count.
 
-Step 2 — Resolve public key
+Step 2: Resolve public key
   Look up kid in JWKS (remote or inline).
   Fail → "unknown_kid" if not found.
   Fail → "jwks_fetch_failed" if remote JWKS is unreachable (remote mode only).
 
-Step 3 — Verify signature
+Step 3: Verify signature
   Run EdDSA/Ed25519 signature verification over segment0.segment1.
   Fail → "tampered_signature" if verification fails.
 
-Step 4 — Decode payload
+Step 4: Decode payload
   Base64url-decode segment 1 → JSON.parse → object.
   Fail → "invalid_jws" if decode or parse fails.
 
-Step 5 — Schema validation
+Step 5: Schema validation
   Validate the decoded object against the TrustReceipt v1.0 schema.
   Fail → "schema_invalid" if any required field is absent or wrong type.
   Fail → "schema_invalid" if schema_version !== "1.0".
 
-Step 6 — Expiry check
+Step 6: Expiry check
   now = current Unix time (seconds).
   Fail → "not_yet_valid" if now < issued_at − clockTolerance.
   Report (NOT fatal, since 2026-07-28) → result.freshness.expired = true
     if now > expires_at + clockTolerance. A v1.0 receipt must keep verifying
     for the multi-year retention window FR-018 (spec-049) requires, so
-    `verifyTrustReceipt` no longer fails on expiry alone — see the comment
+    `verifyTrustReceipt` no longer fails on expiry alone; see the comment
     above `verifyLegacyCompact` in src/verifier.ts. NOT YET reconciled with
     test-vectors/vectors.json TC-007 (still `expected: "invalid"`, `expired`)
-    — see the note on the failure-code table in CONTRIBUTING.md.
+    See the note on the failure-code table in CONTRIBUTING.md.
     `verifyReceiptEnvelope` (v1.1) is unaffected: `receipt_expired` stays fatal
     there.
 
-Step 7 — Return
+Step 7: Return
   { valid: true, receipt: <decoded payload> }
 ```
 
@@ -190,7 +190,7 @@ Implementors should default the clock tolerance to ±30 seconds, which absorbs s
 v1.1 adds a pre-flight JWKS history trust chain check before Steps 1–7:
 
 ```
-Step 0 — Validate JWKS history signature
+Step 0: Validate JWKS history signature
   Parse jwksHistory.jws_compact (3 segments).
   Check header.alg === "EdDSA".
   Lookup signed_by_root_sha256 in embedded issuer root list.
@@ -229,20 +229,20 @@ v1.1 warnings (non-fatal, appended to `result.warnings`):
 A conformant issuer executes these steps:
 
 ```
-Step 1 — Build payload
+Step 1: Build payload
   Start from caller-supplied fields.
   Auto-populate: receipt_id (UUID v4), schema_version ("1.0"),
     issued_at (current Unix seconds), expires_at (issued_at + validity).
 
-Step 2 — Canonicalize
+Step 2: Canonicalize
   Apply RFC 8785 to the full payload object (§3 above).
 
-Step 3 — Sign
+Step 3: Sign
   Sign the canonical bytes with Ed25519.
   Encode result as JWS Compact Serialization.
   Protected header: { "alg": "EdDSA", "kid": "<kid>", "typ": "JWT" }.
 
-Step 4 — Return compact JWS string
+Step 4: Return compact JWS string
 ```
 
 Default validity window: 3600 seconds (1 hour). Issuers MAY use longer windows for archival receipts. Verifiers MUST respect `expires_at` regardless.
@@ -259,7 +259,7 @@ The machine-readable, normative schema lives at [`schema/trust-receipt-v1.0-fina
 
 Any implementation claiming TrustReceipt conformance MUST validate receipts against this schema (or a byte-equivalent implementation) before accepting them as valid.
 
-A second file, [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v1.schema.json), also lives in that directory under a similar name. It is a **superseded historic draft**, kept only so existing links keep resolving — it MUST NOT be implemented against. See [`schema/README.md`](../schema/README.md) for the full explanation of why two files exist and how they differ.
+A second file, [`schema/trust-receipt-v1.schema.json`](../schema/trust-receipt-v1.schema.json), also lives in that directory under a similar name. It is a **superseded historic draft**, kept only so existing links keep resolving. It MUST NOT be implemented against. See [`schema/README.md`](../schema/README.md) for the full explanation of why two files exist and how they differ.
 
 ---
 
@@ -282,7 +282,7 @@ The conformance suite defines correct verifier behavior through 10 test vectors 
 
 A verifier claims **TrustReceipt v1.0 Conformant** if and only if it produces the exact expected outcome for all 10 vectors. See [`test-vectors/README.md`](../test-vectors/README.md) for how to run them.
 
-> ⚠️ **Known gap, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` against the current reference verifier reports **9/10**, not 10/10 — TC-007 now verifies `valid` (with `freshness.expired: true` reported, not fatal) because `verifyTrustReceipt`'s expiry check became informative-only on 2026-07-28 (§6 above), a change this vector's `expected: "invalid"` entry has not yet been reconciled with. See the note on the failure-code table in `CONTRIBUTING.md`.
+> ⚠️ **Known gap, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` against the current reference verifier reports **9/10**, not 10/10. TC-007 now verifies `valid` (with `freshness.expired: true` reported, not fatal) because `verifyTrustReceipt`'s expiry check became informative-only on 2026-07-28 (§6 above), and this vector's `expected: "invalid"` entry has not yet been reconciled with that change. See the note on the failure-code table in `CONTRIBUTING.md`.
 
 ---
 

@@ -1,5 +1,3 @@
-<!-- generated-by: gsd-doc-writer -->
-
 # Contributing to TrustReceipt
 
 There are four ways to contribute to TrustReceipt: adding conformance vectors, co-authoring as a trust provider, porting the verifier to a new language, and taking part in governance.
@@ -48,7 +46,7 @@ If you run a fraud prevention, identity, risk or payment network service (ClearS
 
 **How to co-author:**
 
-1. Open an issue titled `Provider: <your-company-name> — assertion_type: <type>`.
+1. Open an issue titled `Provider: <your-company-name> (assertion_type: <type>)`.
 2. Describe the assertion schema you want to formalize: field names, types, value ranges, confidence semantics.
 3. The maintainers will work with you to merge the schema addition and vector pair.
 4. Co-authorship requires review and sign-off from at least 2 existing maintainers plus your own technical contact.
@@ -88,22 +86,22 @@ _v1.0 (`verifyTrustReceipt`)_
 | `jwks_fetch_failed`  | JWKS URL unreachable or fetch timed out                    |
 
 > ⚠️ **`expired` is NOT a rejection code for `verifyTrustReceipt` as of 2026-07-28.**
-> This table listed it as fatal until this note; the current TypeScript reference
-> implementation reports expiry via `result.freshness.expired` (informative)
-> instead of failing verification, so that a v1.0 receipt keeps verifying for
-> the multi-year retention window FR-018 (spec-049) requires — see the comment
+> This table used to list it as fatal. The current TypeScript reference
+> implementation reports expiry through `result.freshness.expired` (informative)
+> and does not fail verification, so that a v1.0 receipt keeps verifying for
+> the multi-year retention window FR-018 (spec-049) requires. See the comment
 > above `verifyLegacyCompact` in `src/verifier.ts`. **This has not yet been
-> reconciled with `test-vectors/vectors.json` TC-007** (still declares
-> `expected: "invalid"`, `expired`), so running `scripts/validate-vectors.ts`
-> today reports 9/10, not 10/10 — tracked in
+> reconciled with `test-vectors/vectors.json` TC-007**, which still declares
+> `expected: "invalid"`, `expired`, so running `scripts/validate-vectors.ts`
+> today reports 9/10, not 10/10. The discrepancy is tracked in
 > [issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6).
-> Track that issue's resolution (either restore a fatal check for the
-> conformance-suite shape specifically, or update the vector manifest + this
-> table together, since it is the cross-language verifier ABI) before porting
-> this behavior. `verifyReceiptEnvelope` (v1.1) is unaffected — `receipt_expired`
-> below is still fatal there.
+> `vectors.json` is the cross-language verifier ABI, so follow that issue
+> before you port this behavior: either a fatal check is restored for the
+> conformance-suite shape specifically, or the vector manifest and this table
+> change together. `verifyReceiptEnvelope` (v1.1) is unaffected, and
+> `receipt_expired` below is still fatal there.
 
-_v1.1 (`verifyReceiptEnvelope`) — additional codes_
+_v1.1 (`verifyReceiptEnvelope`), additional codes_
 
 | Code                               | Condition                                                                       |
 | ---------------------------------- | ------------------------------------------------------------------------------- |

@@ -1,10 +1,8 @@
-<!-- generated-by: gsd-doc-writer -->
-
 [English](README.md) | [Español](README.es.md) | [Français](README.fr.md) | **Deutsch**
 
 # TrustReceipt
 
-**Nachweisschicht auf Händlerseite für agentischen Handel: signiert, portabel, offline verifizierbar**
+**Nachweisschicht auf Händlerseite für agentischen Handel: portable, signierte Belege, die sich offline verifizieren lassen**
 
 [![Version](https://img.shields.io/badge/spec-v1.1-blue)](SPEC.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -15,7 +13,7 @@
 
 ## Was es ist
 
-TrustReceipt ist ein offenes Belegformat für Händler. Es hält Nachweise über Transaktionen im agentischen Handel in einer Form fest, die jeder offline verifizieren kann, und zwar über Protokolle wie ACP, AP2, x402, MCP, UCP und MCAP hinweg. Es steht neben diesen Protokollen und konkurriert nicht mit ihnen. AP2-Mandate, ACP-Checkout-Sitzungen, Visa-TAP-Signaturen und x402-Abwicklungen bleiben unverändert, und TrustReceipt ergänzt für jede davon einen portablen kryptografischen Nachweis der angewendeten Richtlinienentscheidung.
+TrustReceipt ist ein offenes Belegformat für Händler. Es hält Nachweise über Transaktionen im agentischen Handel in einer Form fest, die jeder offline verifizieren kann, und zwar über Protokolle wie ACP, AP2, x402, MCP, UCP und MCAP hinweg. Es steht neben diesen Protokollen. AP2-Mandate, ACP-Checkout-Sitzungen, Visa-TAP-Signaturen und x402-Abwicklungen bleiben unverändert, und TrustReceipt ergänzt für jede davon einen portablen kryptografischen Nachweis der angewendeten Richtlinienentscheidung.
 
 Ein TrustReceipt ist eine als JWS signierte JSON-Nutzlast, die Sie offline gegen einen öffentlichen JWKS-Endpunkt verifizieren können. Jeder Beleg hält fest, wer der Agent war, welches Protokoll lief, welche Vertrauensanbieter für die Transaktion gebürgt haben, welche Richtlinie galt und zu welcher Entscheidung sie kam. Das alles steckt in einem einzigen, in sich geschlossenen Token, das jede Partei prüfen kann, ohne den Aussteller anzufragen.
 
@@ -31,7 +29,7 @@ Diese Synchronisierung bringt das öffentliche Repo auf den Stand der Referenzim
 - Mandats- und Genehmigungsnachweis, State-Witness-Nachweis und Operationsverknüpfung: drei neue optionale Feldgruppen (siehe Beleg-Anatomie und SPEC.md §3.2), identisch in alle drei Belegformen eingefügt, ohne `schema_version` zu erhöhen.
 - Der ATEP-Pass-Referenzverifizierer (`reference-verifier/verify-atep-passport.mjs`), ein abhängigkeitsfreies Skript, das nur Node-Built-ins nutzt. Es zeigt, dass eine portable Vertrauensbestätigung eines Händlers offline und ohne jeglichen Trusteed-Code verifizierbar ist.
 - Ein 7. `legacy-compact`-Konformitätsvektor (Signer-Erklärung).
-- Zwei Genauigkeitskorrekturen an bestehender Dokumentation, gefunden durch Überprüfen statt Annehmen. Die Zeile „11 v1.1-Vektoren" unterzählte eine Tabelle, die bereits 12 Zeilen hatte (SPEC.md §11.6). Und `CONTRIBUTING.md`, `docs/architecture.md` und der Konformitätsabschnitt dieses README sagen jetzt, dass `scripts/validate-vectors.ts` derzeit 9/10 meldet, nicht 10/10 (TC-007 / `expired`, [Issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)). Das ist eine reale, datierte Diskrepanz zwischen Code und Spec, kein Tippfehler.
+- Zwei Genauigkeitskorrekturen an bestehender Dokumentation. Die Zeile „11 v1.1-Vektoren" unterzählte eine Tabelle, die bereits 12 Zeilen hatte (SPEC.md §11.6). Und `CONTRIBUTING.md`, `docs/architecture.md` und der Konformitätsabschnitt dieses README sagen jetzt, dass `scripts/validate-vectors.ts` derzeit 9/10 meldet, nicht 10/10 (TC-007 / `expired`, [Issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)). Code und Spec widersprechen sich bei diesem Vektor.
 - Eine Verpackungslücke, die schon bestand und jetzt nachverfolgt wird: Die RFC-3161-Zeile galt als „optional", ist aber für keinen externen Installer heute nutzbar ([Issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5)).
 - CHANGELOG.md-Bereinigung: Zwei Einträge standen seit vor dem öffentlichen Launch unter einer veralteten „Unreleased"-Überschrift, obwohl sie bereits veröffentlicht waren. Sie sind mit der tatsächlichen Version und dem Datum umbenannt. Ein Absatz über die interne Trusteed-Deployment-Kopplung und ein unerreichbarer Verweis auf ein Schwesterpaket, beide aus dem Monorepo eingeschleppt, wurden entfernt.
 
@@ -53,34 +51,34 @@ Siehe [CHANGELOG.md](CHANGELOG.md) für die vollständige Versionshistorie.
 | Identität der Evaluation (`evaluation_id`)                               | ✅ Implementiert                   | Verweist auf den Enforcement-Datensatz, der das Urteil erzeugt hat, sodass die Korrelation nicht mehr von der zeitlichen Nähe von Timestamps abhängt. Identifiziert die EVALUATION, nicht die Operation                    |
 | eIDAS-Haltung als fortgeschrittenes elektronisches Siegel                | 🟡 Kandidat                        | Unterstützung auf Feldebene; **kein** qualifiziertes elektronisches Siegel (kein QTSP)                                                                                                                                     |
 | ESIGN-/UETA-Nachweisform                                                 | 🟡 Teilweise                       | `esign_disclosure_hash` + Einwilligungskontext; vollständiger Offenlegungs-Workflow in Arbeit                                                                                                                              |
-| RFC-3161-Vertrauenszeitstempel-Nachweis                                  | 🔴 Hook vorhanden, extern nicht nutzbar | `verify-timestamp-evidence.ts` importiert die reale Implementierung aus `@agenticmcpstores/trust-receipt-tsa-client`, einem internen Trusteed-Paket, das **nicht auf npm veröffentlicht und nicht in diesem Repo enthalten ist** — `npm install` löst den Rest des Pakets auf, aber diese Abhängigkeit hat keinen Registry-Eintrag; nachverfolgt in [Issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5) |
-| Merchant Identity Assertions (MIA) — Verifizierer für Dritte             | ✅ Implementiert                    | Verifiziert `draft-anders-merchant-identity-assertions-01`-Dokumente — selbst ausgestellt und DNS-autorisiert durch Dritte; 30 Konformitätsvektoren unter `conformance/mia-vectors/` |
-| AGTP-Händleridentität — Intent Assertion / Cart-Digest                   | ✅ Implementiert                    | Verifiziert genau das, was `draft-hood-agtp-merchant-identity-02` als ohne AGTP-Transport prüfbar erklärt — kein AGTP-Transportclient in diesem Paket; 50 Konformitätsvektoren unter `conformance/agtp-merchant-vectors/` |
+| RFC-3161-Vertrauenszeitstempel-Nachweis                                  | 🔴 Hook vorhanden, extern nicht nutzbar | `verify-timestamp-evidence.ts` importiert die reale Implementierung aus `@agenticmcpstores/trust-receipt-tsa-client`, einem internen Trusteed-Paket, das **nicht auf npm veröffentlicht und nicht in diesem Repo enthalten ist**; `npm install` löst den Rest des Pakets auf, aber diese Abhängigkeit hat keinen Registry-Eintrag; nachverfolgt in [Issue #5](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/5) |
+| Merchant Identity Assertions (MIA): Verifizierer für Dritte             | ✅ Implementiert                    | Verifiziert `draft-anders-merchant-identity-assertions-01`-Dokumente: selbst ausgestellt und DNS-autorisiert durch Dritte; 30 Konformitätsvektoren unter `conformance/mia-vectors/` |
+| AGTP-Händleridentität: Intent Assertion / Cart-Digest                   | ✅ Implementiert                    | Verifiziert genau das, was `draft-hood-agtp-merchant-identity-02` als ohne AGTP-Transport prüfbar erklärt, kein AGTP-Transportclient in diesem Paket; 50 Konformitätsvektoren unter `conformance/agtp-merchant-vectors/` |
 | Mandats- und Genehmigungsnachweis (`mandate-evidence.ts`)                | 🟡 Nur strukturell                  | Erlaubt einem Dritten, `mandate_claims_hash` neu zu berechnen und zu bestätigen, dass ein belasteter Betrag innerhalb des Genehmigten lag; `mandate_verification` ist ein geschlossenes Enum und meldet heute nur `"structure_only"` |
 | State-Witness-Nachweis (`state-witness-evidence.ts`)                     | ✅ Implementiert                    | Erklärt, was der Zustandsvergleicher des Ausstellers vor der Geldbewegung ermittelt hat und gegen welchen maßgeblichen Zustand |
-| Operationsverknüpfung (`operation-link.ts`)                              | ✅ Implementiert (nur Schema)       | Verknüpft einen korrigierten Wiederholungsversuch oder eine erneut bestätigte Ausführung mit dem abgelösten Beleg — anders als `hash_chain_prev`, das nur zeitlich ordnet; nicht aus `index.ts` re-exportiert |
+| Operationsverknüpfung (`operation-link.ts`)                              | ✅ Implementiert (nur Schema)       | Verknüpft einen korrigierten Wiederholungsversuch oder eine erneut bestätigte Ausführung mit dem abgelösten Beleg, anders als `hash_chain_prev`, das nur zeitlich ordnet; nicht aus `index.ts` re-exportiert |
 | Ausstellerseitige Signierung mit AWS KMS                                 | 🟡 Optional / ausstellerseitig     | Bereitgestellt vom Schwesterpaket `trust-receipt-kms-signer`; für die Verifikation nicht erforderlich                                                                                                                      |
-| Referenz-Ports (TS) / Sprach-Ports (Python, Go, Java)                    | 🟡 Bisher nur TS                   | Ports sind willkommen — siehe `CONTRIBUTING.md`                                                                                                                                                                            |
-| Export/Verifikation des AIVS-Proof-Bundles (`aivs-export.ts`)            | 🟡 Codevollständig                 | Projiziert einen signierten v1.0-Beleg in ein AIVS-kompatibles Bundle `{ manifest_hash, session_sig, audit_log }` — offline verifizierbar ohne jeglichen Trusteed-Code (spec-062 US1, Angleichung, kein Treuhandverfahren) |
+| Referenz-Ports (TS) / Sprach-Ports (Python, Go, Java)                    | 🟡 Bisher nur TS                   | Ports sind willkommen; siehe `CONTRIBUTING.md`                                                                                                                                                                            |
+| Export/Verifikation des AIVS-Proof-Bundles (`aivs-export.ts`)            | 🟡 Codevollständig                 | Projiziert einen signierten v1.0-Beleg in ein AIVS-kompatibles Bundle `{ manifest_hash, session_sig, audit_log }`, offline verifizierbar ohne jeglichen Trusteed-Code (spec-062 US1, Angleichung, kein Treuhandverfahren) |
 | Verifikation von Erweiterungsartefakten (`verify-extension-artifact.ts`) | 🟡 Codevollständig                 | Verifiziert vom Entwickler signierte Löschbelege und Erweiterungsmanifeste aus dem Ökosystem des Trusteed Extension Marketplace                                                                                            |
 | Kompakte v1.0-Legacy-Belegform (`verifier.ts`)                           | ✅ Implementiert                   | `verifyTrustReceipt` akzeptiert auch die kompakte JWT-artige Nutzlast, die der Plattform-Aussteller seit spec-040 ausgibt; verfügbar als `result.variant` / `result.legacyReceipt`                                         |
 
-| Erklärte Degradierung des Vertrauensankers (`accepted_degraded`) | ✅ Implementiert | Dreiwertiges Urteil für v1.1-Umschläge — siehe [Verifikationsurteile](#verifikationsurteile) und SPEC.md §4.1 (NORMATIV) |
+| Erklärte Degradierung des Vertrauensankers (`accepted_degraded`) | ✅ Implementiert | Dreiwertiges Urteil für v1.1-Umschläge; siehe [Verifikationsurteile](#verifikationsurteile) und SPEC.md §4.1 (NORMATIV) |
 | Verbraucherseitiger Widerruf (`revocation.ts`) | ✅ Implementiert | `checkRevocation()` gegen die vom Händler veröffentlichte Statusliste. Rein und offline: Sie holen ab, es entscheidet. Jeder Fehlerfall endet in `unknown`, nie in `not_revoked` |
-| Gemeldete Kanonisierung (`result.canonicalization`) | ✅ Implementiert | `"jcs"` gegenüber `"json-stringify-legacy"` auf dem Legacy-Compact-Pfad — unabhängige Achse von `variant`, das die FORM der Nutzlast beschreibt |
+| Gemeldete Kanonisierung (`result.canonicalization`) | ✅ Implementiert | `"jcs"` gegenüber `"json-stringify-legacy"` auf dem Legacy-Compact-Pfad, unabhängige Achse von `variant`, das die FORM der Nutzlast beschreibt |
 
 > ✅ = produktionsreife Implementierung. 🟡 = vorhanden und getestet, aber vor der GA von v1.2 änderbar, oder von betreiberseitiger Integration abhängig.
 
 ### Verifikationsurteile
 
-`verifyReceiptEnvelope` (v1.1) liefert **drei** Werte, nicht zwei. Das Urteil als
-binär zu behandeln ist in beide Richtungen ein Konformitätsfehler: entweder gilt
-ein degradierter Beleg als vollständig verifiziert, oder ein gültiger wird
+`verifyReceiptEnvelope` (v1.1) liefert **drei** Werte. Das Urteil als
+binär zu behandeln ist in beide Richtungen ein Konformitätsfehler: Ein
+degradierter Beleg gilt als vollständig verifiziert, oder ein gültiger wird
 verworfen.
 
 | Urteil              | Bedeutung                                                                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------- |
-| `accepted`          | Signatur, Struktur und Vertrauenskette allesamt verifiziert.                                      |
+| `accepted`          | Signatur und Struktur verifiziert, ebenso die Vertrauenskette.                                    |
 | `accepted_degraded` | Signatur und Struktur verifiziert; der Beleg **erklärt** seine Vertrauenskette für nicht prüfbar. |
 | `rejected`          | Eine Prüfung ist fehlgeschlagen.                                                                  |
 
@@ -88,13 +86,13 @@ verworfen.
 mitgelieferten JWKS-Historie kryptografisch nicht verifiziert werden konnte
 **und** der _signierte_ Belegkörper einen `legal_posture_warnings[]`-Eintrag mit
 `reason: "trust_anchor_staging"` trägt. Ein Beleg, der zu einem nicht prüfbaren
-Anker schweigt, wird `rejected`: Schweigen gilt nie als Zustimmung, und das
-unsignierte `envelope_metadata`-Spiegelbild allein kann die Degradierung niemals
+Anker schweigt, wird `rejected`, und das unsignierte
+`envelope_metadata`-Spiegelbild allein kann die Degradierung niemals
 freischalten.
 
 Es bezeugt interne Konsistenz und die Absicht des Ausstellers, **nie dessen
 Authentizität**. Wer gegen `outcome === "accepted"` vergleicht, lehnt es
-weiterhin ab; die schwächere Garantie zu akzeptieren muss eine bewusste
+weiterhin ab. Die schwächere Garantie zu akzeptieren muss eine bewusste
 Entscheidung sein.
 
 ---
@@ -134,7 +132,7 @@ sequenceDiagram
     Verifier->>JWKS: GET öffentliche Schlüssel<br/>(direkter Abruf, 5s Timeout)
     JWKS-->>Verifier: Öffentliches JWK-Set
     Verifier->>Verifier: Ordnet kid → öffentlichem Schlüssel zu
-    Verifier->>Verifier: Verifiziert Ed25519-Signatur<br/>(jose — keine eigene Kryptografie)
+    Verifier->>Verifier: Verifiziert Ed25519-Signatur<br/>(jose, keine eigene Kryptografie)
     Verifier->>Schema: Validiert die dekodierte Nutzlast
     Schema-->>Verifier: Ergebnis des Zod-Parsens
     Verifier->>Verifier: Prüft issued_at / expires_at<br/>(± Uhrentoleranz)
@@ -204,9 +202,9 @@ _Der Aussteller pflegt eine interne Aussagenrichtlinie (claims policy), die für
 
 | Rahmenwerk                                     | Jurisdiktion | Status                                                                                                                                                                                                                                                                        | v1.1-Felder                                                                                                  |
 | ---------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **eIDAS** (Verordnung 910/2014)                | EU           | 🟡 Kandidat — `legal_posture` schreitet fort `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Das qualifizierte Siegel (QeSeal) erfordert einen QTSP.                                                                                           | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
-| **ESIGN / UETA**                               | USA          | 🟡 Teilweise — Verifizierbares Siegel mit Einwilligungsnachweis, Agentenzurechnung, versionierter Offenlegung und auditierbarer Aufbewahrung, konzipiert zur Unterstützung von ESIGN/UETA. Vollständiger Offenlegungs-Workflow (Widerrufs-URI, Versionsfestlegung) in Arbeit. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
-| **Electronic Communications Act 2000 / DIATF** | UK           | 🟡 Schemakompatibel — jurisdiktionsbewusste Aufbewahrung (UK: standardmäßig 7 Jahre) und das Feld `legal_posture` transportieren Nachweise britischer Vertrauensdienste. Die DIATF-Ausrichtung ist auf Schemaebene verifiziert; die operative Zertifizierung steht noch aus.  | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy`                     |
+| **eIDAS** (Verordnung 910/2014)                | EU           | 🟡 Kandidat: `legal_posture` schreitet fort `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Das qualifizierte Siegel (QeSeal) erfordert einen QTSP.                                                                                           | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
+| **ESIGN / UETA**                               | USA          | 🟡 Teilweise: Verifizierbares Siegel mit Einwilligungsnachweis, Agentenzurechnung, versionierter Offenlegung und auditierbarer Aufbewahrung, konzipiert zur Unterstützung von ESIGN/UETA. Vollständiger Offenlegungs-Workflow (Widerrufs-URI, Versionsfestlegung) in Arbeit. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
+| **Electronic Communications Act 2000 / DIATF** | UK           | 🟡 Schemakompatibel: jurisdiktionsbewusste Aufbewahrung (UK: standardmäßig 7 Jahre) und das Feld `legal_posture` transportieren Nachweise britischer Vertrauensdienste. Die DIATF-Ausrichtung ist auf Schemaebene verifiziert; die operative Zertifizierung steht noch aus.  | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy`                     |
 
 > ⚠️ Nichts vom Vorstehenden stellt eine Rechtsberatung dar. Der regulatorische Qualifikationsstatus kann sich mit der Weiterentwicklung der Implementierung ändern. Konsultieren Sie qualifizierten Rechtsbeistand für jurisdiktionsspezifische Anforderungen.
 
@@ -248,8 +246,8 @@ const opts: VerifyOptions = {
   trustAnchorPemSha256: "<64-Hex-SHA-256 des Issuer-Root-PEM>",
   policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
   // toleranceSeconds: 30,  // Standard-Uhrentoleranz (Sekunden)
-  // mode: "strict",        // Standard "compat" — siehe „Strict vs. Compat" unten
-  // allowStagingRoots: true, // nur Staging/CI — niemals in Produktion setzen
+  // mode: "strict",        // Standard "compat"; siehe „Strict vs. Compat" unten
+  // allowStagingRoots: true, // nur Staging/CI, niemals in Produktion setzen
 };
 
 const result = await verifyReceiptEnvelope(envelope, opts);
@@ -271,16 +269,16 @@ if (result.outcome === "accepted") {
 > ⚠️ **Der in diesem Paket mitgelieferte Vertrauensanker ist ein Staging-Stub,
 > keine Produktions-Root.** `EMBEDDED_ISSUER_ROOTS`
 > (`src/embedded-issuer-root.ts`) enthält derzeit ein einziges
-> Platzhalter-Zertifikat — strukturell gültig, aber nicht verifizierungsfähig —
+> Platzhalter-Zertifikat, strukturell gültig, aber nicht verifizierungsfähig,
 > dessen Subject-CN mit `(STAGING)` markiert ist. `validateChain()` schlägt
 > darauf bewusst fail-closed mit `root_key_not_provisioned` fehl, damit kein
 > Aufrufer den Platzhalter für autoritatives Vertrauen halten kann. Die echte
 > selbstsignierte Ed25519-Root entsteht in einer Offline-Schlüsselzeremonie, die
-> noch nicht stattgefunden hat; danach wird die Konstante ersetzt und das
+> noch nicht stattgefunden hat. Danach wird die Konstante ersetzt und das
 > Verifier-Paket erhält einen SemVer-Bump. Bis dahin **pinnen Sie Ihren eigenen
-> `trustAnchorPemSha256`** — verlassen Sie sich nicht auf die eingebettete Liste
+> `trustAnchorPemSha256`**. Verlassen Sie sich nicht auf die eingebettete Liste
 > und behandeln Sie jeden `trustAnchorPemSha256`-Wert in diesem README als zu
-> ersetzenden Platzhalter, niemals als Wert zum Kopieren.
+> ersetzenden Platzhalter.
 
 ---
 
@@ -310,7 +308,7 @@ Eine TrustReceipt-Nutzlast enthält 24 Felder in fünf Gruppen:
 
 | Feld                 | Typ                 | Beschreibung                                                                         |
 | -------------------- | ------------------- | ------------------------------------------------------------------------------------ |
-| `user_intent_hash`   | string (nicht leer) | Hash der ursprünglichen Nutzerabsicht — darf nicht leer sein (SHA-256-Hex empfohlen) |
+| `user_intent_hash`   | string (nicht leer) | Hash der ursprünglichen Nutzerabsicht: darf nicht leer sein (SHA-256-Hex empfohlen) |
 | `cart_hash`          | SHA-256-Hex         | Hash des Warenkorbinhalts zum Entscheidungszeitpunkt (optional)                      |
 | `order_hash`         | SHA-256-Hex         | Hash des abgewickelten Bestellobjekts (optional)                                     |
 | `transaction_id`     | string              | Transaktionsreferenz der Plattform (optional)                                        |
@@ -333,7 +331,7 @@ Eine TrustReceipt-Nutzlast enthält 24 Felder in fünf Gruppen:
 | `liability_context`      | object      | Aussteller der Behauptung und Umfang (optional)                                |
 | `consent_context`        | object      | Einwilligungs-Hash, Umfang, Zeitstempel (optional)                             |
 | `privacy_classification` | object      | PII-Kennzeichen, Aufbewahrungstage, Jurisdiktion (optional)                    |
-| `verification_methods`   | array       | JWKS-URL oder DID zur Schlüsselauflösung — mindestens ein Eintrag erforderlich |
+| `verification_methods`   | array       | JWKS-URL oder DID zur Schlüsselauflösung, mindestens ein Eintrag erforderlich |
 | `kid`                    | string      | Schlüssel-ID, mit der dieser Beleg signiert wurde                              |
 | `hash_chain_prev`        | SHA-256-Hex | Vorheriger Beleg in der Audit-Kette (optional)                                 |
 | `signers`                | array       | Deklarierte Signierende: Partei, `kid`, Verwahrungsmodell, Beziehung zum Subjekt (optional) |
@@ -365,11 +363,11 @@ Eine TrustReceipt-Nutzlast enthält 24 Felder in fünf Gruppen:
 
 Eine Verifizierer-Implementierung muss alle 10 Testvektoren (v1.0) bestehen, um TrustReceipt-Konformität zu beanspruchen. Es sind drei Stufen definiert:
 
-> **v1.1-Status (2026-05-06)** — die eIDAS-Härtung fügt 12 v1.1-Vektoren unter `test-vectors/v11/` hinzu (korrigiert von „11" — die Tabelle in SPEC.md §11.6 listete schon immer 12 Zeilen, einschließlich `019b`; nur diese Zusammenfassungszeile war veraltet). Das v1.1-Schema entfernt die Legacy-Felder `mandate_hash` / `permit2` / `mcp` (Rail) und führt `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings` und `esign_disclosure_hash` ein.
+> **v1.1-Status (2026-05-06).** Die eIDAS-Härtung fügt 12 v1.1-Vektoren unter `test-vectors/v11/` hinzu. Diese Zeile nannte früher 11, aber die Tabelle in SPEC.md §11.6 listete schon immer 12 Zeilen, einschließlich `019b`. Das v1.1-Schema entfernt die Legacy-Felder `mandate_hash` / `permit2` / `mcp` (Rail) und führt `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings` und `esign_disclosure_hash` ein.
 
 > ⚠️ **Konformitätsdiskrepanz, Stand 2026-09-16** ([Issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): Das Ausführen von `npx tsx scripts/validate-vectors.ts` meldet heute **9/10**, nicht 10/10. Die Ablaufprüfung von `verifyTrustReceipt` wurde am 2026-07-28 rein informativ (`result.freshness.expired`, nicht fatal), um die mehrjährige Aufbewahrungsanforderung von spec-049 FR-018 zu erfüllen; der Eintrag `expected: "invalid"` von TC-007 wurde nie damit abgeglichen.
 
-> **Ergänzungen vom 2026-09-16** — zwei neue Drittanbieter-Identitätsverifizierer, jeweils mit eigener Konformitätssuite: **50 Vektoren** unter `conformance/agtp-merchant-vectors/` und **30 Vektoren** unter `conformance/mia-vectors/`, plus ein 7. `legacy-compact`-Vektor. Über alle Vektordateien gezählt (v1.0-Kern 10, v1.1 12, v1.1-strict 4, legacy-compact 7, x402-binding 11, agtp-merchant 50, mia 30) ergeben sich **124 Konformitätsvektoren** auf der Festplatte. Die automatisierte Testsuite insgesamt (`pnpm test`) umfasst **475 bestandene Tests in 36 Dateien** — direkt gemessen (`pnpm vitest run` / `npx tsc --noEmit`, beide sauber) gegen genau diesen Baum.
+> **Ergänzungen vom 2026-09-16.** Zwei neue Drittanbieter-Identitätsverifizierer, jeweils mit eigener Konformitätssuite: **50 Vektoren** unter `conformance/agtp-merchant-vectors/` und **30 Vektoren** unter `conformance/mia-vectors/`, plus ein 7. `legacy-compact`-Vektor. Über alle Vektordateien gezählt (v1.0-Kern 10, v1.1 12, v1.1-strict 4, legacy-compact 7, x402-binding 11, agtp-merchant 50, mia 30) ergeben sich **124 Konformitätsvektoren** auf der Festplatte. Die automatisierte Testsuite insgesamt (`pnpm test`) umfasst **475 bestandene Tests in 36 Dateien**, direkt gemessen (`pnpm vitest run` / `npx tsc --noEmit`, beide sauber) gegen genau diesen Baum.
 
 | Stufe | Name     | Anforderung                                                                        |
 | ----- | -------- | ---------------------------------------------------------------------------------- |
@@ -407,36 +405,36 @@ Fügen Sie Ihrem Projekt das Badge hinzu, sobald alle 10 bestanden sind:
 
 ```
 trust-receipt-verifier/
-├── SPEC.md                            — formale Spezifikation (maßgeblich)
-├── CONTRIBUTING.md                    — wie man Vektoren, Ports und Anbieterschemata beiträgt
-├── LICENSE                            — MIT
+├── SPEC.md                            # formale Spezifikation (maßgeblich)
+├── CONTRIBUTING.md                    # wie man Vektoren, Ports und Anbieterschemata beiträgt
+├── LICENSE                            # MIT
 ├── src/
-│   ├── index.ts                       — Paket-Exports
-│   ├── verifier.ts                    — verifyTrustReceipt() + parseTrustReceiptUnsafe() (v1.0, inkl. legacy-compact-Form)
-│   ├── verify-1.0.ts                  — v1.0-Verifizierer-Interna
-│   ├── verify-1.1.ts                  — verifyReceiptEnvelope() (v1.1-eIDAS-Umschlag) + typisierte Vertrauensanbieter-Prädikate
-│   ├── zod-1.1.ts                     — v1.1-Zod-Schema (strikte Wurzel — lehnt unbekannte Top-Level-Schlüssel ab)
-│   ├── types-1.1.ts                   — typisierte Formen der Vertrauensanbieter-Aussagen
-│   ├── issuer.ts                       — issueTrustReceipt()
-│   ├── embedded-issuer-root.ts        — kompilierzeitlicher Vertrauensanker + validateChain()
-│   ├── verify-jwks-history.ts         — Verifikation der JWKS-Historienkette
-│   ├── verify-timestamp-evidence.ts   — Verifikation des RFC-3161-Zeitstempels
-│   ├── verify-export-bundle.ts        — Offline-Verifikation von Export-Bundles
-│   ├── verify-extension-artifact.ts   — Verifikation von Löschbelegen / Erweiterungsmanifesten (Extension Marketplace)
-│   ├── aivs-export.ts                 — Export/Verifikation des AIVS-Proof-Bundles (spec-062 US1)
-│   ├── __tests__/                     — Unit- + Konformitätstests
+│   ├── index.ts                       # Paket-Exports
+│   ├── verifier.ts                    # verifyTrustReceipt() + parseTrustReceiptUnsafe() (v1.0, inkl. legacy-compact-Form)
+│   ├── verify-1.0.ts                  # v1.0-Verifizierer-Interna
+│   ├── verify-1.1.ts                  # verifyReceiptEnvelope() (v1.1-eIDAS-Umschlag) + typisierte Vertrauensanbieter-Prädikate
+│   ├── zod-1.1.ts                     # v1.1-Zod-Schema (strikte Wurzel, lehnt unbekannte Top-Level-Schlüssel ab)
+│   ├── types-1.1.ts                   # typisierte Formen der Vertrauensanbieter-Aussagen
+│   ├── issuer.ts                       # issueTrustReceipt()
+│   ├── embedded-issuer-root.ts        # kompilierzeitlicher Vertrauensanker + validateChain()
+│   ├── verify-jwks-history.ts         # Verifikation der JWKS-Historienkette
+│   ├── verify-timestamp-evidence.ts   # Verifikation des RFC-3161-Zeitstempels
+│   ├── verify-export-bundle.ts        # Offline-Verifikation von Export-Bundles
+│   ├── verify-extension-artifact.ts   # Verifikation von Löschbelegen / Erweiterungsmanifesten (Extension Marketplace)
+│   ├── aivs-export.ts                 # Export/Verifikation des AIVS-Proof-Bundles (spec-062 US1)
+│   ├── __tests__/                     # Unit- + Konformitätstests
 │   └── schema/
-│       ├── trust-receipt.schema.ts        — Zod-Schema (Quelle der Wahrheit für die v1.0-TypeScript-Typen)
-│       └── trust-receipt-legacy.schema.ts — kompakte v1.0-Legacy-Form (seit spec-040 von der Plattform ausgestellt)
+│       ├── trust-receipt.schema.ts        # Zod-Schema (Quelle der Wahrheit für die v1.0-TypeScript-Typen)
+│       └── trust-receipt-legacy.schema.ts # kompakte v1.0-Legacy-Form (seit spec-040 von der Plattform ausgestellt)
 ├── test-vectors/
-│   ├── README.md                    — wie man die Vektoren verwendet
-│   ├── vectors.json                 — Vektormanifest mit erwarteten Ergebnissen
-│   ├── valid/                       — TC-001 bis TC-005
-│   ├── invalid/                     — TC-006 bis TC-010
-│   └── v11/, v11-strict/            — v1.1- + Strict-Mode-Konformitätsvektoren
+│   ├── README.md                    # wie man die Vektoren verwendet
+│   ├── vectors.json                 # Vektormanifest mit erwarteten Ergebnissen
+│   ├── valid/                       # TC-001 bis TC-005
+│   ├── invalid/                     # TC-006 bis TC-010
+│   └── v11/, v11-strict/            # v1.1- + Strict-Mode-Konformitätsvektoren
 ├── bin/
-│   └── trust-receipt.ts (Quelle) → dist/bin/trust-receipt.js (kompiliert) — CLI: verify, inspect, generate-key, conformance
-└── demo/                            — ausführbare Demo-Skripte
+│   └── trust-receipt.ts (Quelle) → dist/bin/trust-receipt.js (kompiliert) # CLI: verify, inspect, generate-key, conformance
+└── demo/                            # ausführbare Demo-Skripte
 ```
 
 ---
@@ -488,7 +486,7 @@ const result = await verifyAivsProofBundle(bundle, { jwks: issuerJwks });
 import { verifyExtensionArtifact } from "trust-receipt-verifier";
 
 const result = await verifyExtensionArtifact(jws, {
-  kind: "erasure", // oder "manifest" — der Aufrufer gibt an, um welches Artefakt es sich handelt
+  kind: "erasure", // oder "manifest"; der Aufrufer gibt an, um welches Artefakt es sich handelt
   jwksUrl: "https://trusteed.xyz/.well-known/jwks.json",
 });
 // result.valid: boolean; result.reason bei Fehlschlag ("malformed_jws" | "unsupported_alg" | "missing_kid" | "jwks_unreachable" | "kid_not_found" | "signature_invalid" | "payload_not_json" | "shape_invalid")
@@ -517,7 +515,7 @@ trust-receipt verify envelope.json \
   --trust-anchor-sha256 <64-Hex-SHA-256 des Issuer-Root-PEM> \
   --strict
 
-# Nur Staging / CI — überspringt die Prüfung des Wurzelankers (niemals in Produktion verwenden)
+# Nur Staging / CI: überspringt die Prüfung des Wurzelankers (niemals in Produktion verwenden)
 trust-receipt verify envelope.json --type receipt-v11 \
   --jwks-history-file issuer-jwks-history.json \
   --trust-anchor-sha256 <sha256> \
@@ -544,13 +542,13 @@ Vertrauenskette, und Aussteller geben solche Stubs vor einer Produktions-Ankerze
 aus. Die Option `mode` (Bibliothek) und das Flag `--strict` (CLI) fügen eine semantische
 Ebene hinzu:
 
-| Bedingung                                                                 | `compat` (Standard — Canary)         | `strict`                                         |
+| Bedingung                                                                 | `compat` (Standard: Canary)         | `strict`                                         |
 | ------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------ |
 | `trust_anchor_sha256` ist ein opaker Stub (nur Nullen / einzelnes Nibble) | warnt `trust_anchor_sha256_stub`     | lehnt ab `trust_anchor_stub_rejected`            |
 | `jwks_sha256` ist ein opaker Stub                                         | warnt `jwks_sha256_stub`             | lehnt ab `jwks_sha256_stub_rejected`             |
 | `trust_anchor_sha256` ≠ vom Betreiber festgelegter `trustAnchorPemSha256` | warnt `trust_anchor_sha256_mismatch` | lehnt ab `trust_anchor_mismatch`                 |
 | buyer_agent-Beleg ohne Agentenidentitätsbindung                           | warnt `agent_identity_absent`        | lehnt ab `agent_identity_required_strict`        |
-| RFC-3161-/LOTL-Zeitstempel beeinträchtigt (z. B. TSA nicht verfügbar)     | warnt (`tsa_unavailable`)            | warnt (`tsa_unavailable`) — in BEIDEN akzeptiert |
+| RFC-3161-/LOTL-Zeitstempel beeinträchtigt (z. B. TSA nicht verfügbar)     | warnt (`tsa_unavailable`)            | warnt (`tsa_unavailable`): in BEIDEN akzeptiert |
 
 `compat` ist der Standard, damit der Rollout niemanden stört, solange sich
 Beobachtungsdaten ansammeln. Wechseln Sie zu `strict`, sobald die Aussteller die
@@ -576,8 +574,8 @@ const result = await verifyReceiptEnvelope(envelope, {
 
 | Dokument                                     | Beschreibung                                                                                               |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)                           | Formale Spezifikation — Wire-Format, Feldreferenz, Konformitätsregeln                                      |
-| [docs/architecture.md](docs/architecture.md) | Interne Architektur — Signierumschlag, Schlüsselauflösung, Verifikationspipeline, Sicherheitseigenschaften |
+| [SPEC.md](SPEC.md)                           | Formale Spezifikation: Wire-Format, Feldreferenz, Konformitätsregeln                                      |
+| [docs/architecture.md](docs/architecture.md) | Interne Architektur: Signierumschlag, Schlüsselauflösung, Verifikationspipeline, Sicherheitseigenschaften |
 | [CONTRIBUTING.md](CONTRIBUTING.md)           | Wie man Konformitätsvektoren, Sprach-Ports oder Vertrauensanbieterschemata hinzufügt                       |
 | [CHANGELOG.md](CHANGELOG.md)                 | Versionshistorie und Breaking Changes                                                                      |
 
@@ -593,12 +591,12 @@ Siehe [CONTRIBUTING.md](CONTRIBUTING.md), wie man Konformitätsvektoren hinzufü
 
 Ein Beleg ist technischer Nachweis, keine rechtliche Beweisführung und keine operative Garantie. Er behauptet bewusst **nicht**:
 
-- **Dass die Zahlung erfasst oder abgewickelt wurde.** Ein Beleg mit `policy_decision: "allow"` protokolliert die Entscheidung und Absicht. Die Abwicklung wird vom zugrunde liegenden PSP/Rail erfasst (Stripe-Belastung, x402-On-Chain-Transaktion, ACP-Abschluss usw.) und über `payment_reference` oder `protocol_artifacts` referenziert, nicht durch den Beleg selbst.
-- **Dass Waren oder Dienstleistungen geliefert wurden.** Der Erfüllungsnachweis liegt im Bestellsystem des Händlers.
-- **KYC-/KYA-Compliance.** Ein Beleg protokolliert, dass ein Vertrauensanbieter zum Ausstellungszeitpunkt ein Niveau bestätigt hat (z. B. `kya_status`). Er ist kein Ersatz für eine unabhängige KYC-/KYA-Verifikation.
-- **Den Status eines qualifizierten elektronischen Siegels gemäß eIDAS.** Selbst mit befülltem `legal_posture` ist ein TrustReceipt bestenfalls ein Kandidat für ein **fortgeschrittenes** elektronisches Siegel. Qualifizierte Siegel erfordern die Ausstellung durch einen in der EU gelisteten QTSP, was außerhalb des Umfangs dieses Pakets liegt.
-- **Rechtliche Haftung oder Zulässigkeit.** Ein Beleg ist kryptografischer Nachweis. Ob er in einer bestimmten Jurisdiktion zulässig oder überzeugend ist, hängt vom lokalen Recht, den Vereinbarungen der Parteien und Tatsachen ab, die über das Belegformat hinausgehen.
-- **Dass der Nutzer tatsächlich das beabsichtigte, was der Agent getan hat.** Der Beleg protokolliert `user_intent_hash`, was zeigt, dass ein Absichtstext existierte und gehasht wurde. Er zeigt nicht, dass der Hash mit einer verifizierten menschlichen Äußerung übereinstimmt.
+- Dass die Zahlung erfasst oder abgewickelt wurde. Ein Beleg mit `policy_decision: "allow"` protokolliert die Entscheidung und Absicht. Die Abwicklung wird vom zugrunde liegenden PSP/Rail erfasst (Stripe-Belastung, x402-On-Chain-Transaktion, ACP-Abschluss usw.) und über `payment_reference` oder `protocol_artifacts` referenziert, nicht durch den Beleg selbst.
+- Dass Waren oder Dienstleistungen geliefert wurden. Der Erfüllungsnachweis liegt im Bestellsystem des Händlers.
+- KYC-/KYA-Compliance. Ein Beleg protokolliert, dass ein Vertrauensanbieter zum Ausstellungszeitpunkt ein Niveau bestätigt hat (z. B. `kya_status`). Er ist kein Ersatz für eine unabhängige KYC-/KYA-Verifikation.
+- Den Status eines qualifizierten elektronischen Siegels gemäß eIDAS. Selbst mit befülltem `legal_posture` ist ein TrustReceipt bestenfalls ein Kandidat für ein **fortgeschrittenes** elektronisches Siegel. Qualifizierte Siegel erfordern die Ausstellung durch einen in der EU gelisteten QTSP, was außerhalb des Umfangs dieses Pakets liegt.
+- Rechtliche Haftung oder Zulässigkeit. Ein Beleg ist kryptografischer Nachweis. Ob er in einer bestimmten Jurisdiktion zulässig oder überzeugend ist, hängt vom lokalen Recht, den Vereinbarungen der Parteien und Tatsachen ab, die über das Belegformat hinausgehen.
+- Dass der Nutzer tatsächlich das beabsichtigte, was der Agent getan hat. Der Beleg protokolliert `user_intent_hash`, was zeigt, dass ein Absichtstext existierte und gehasht wurde. Er zeigt nicht, dass der Hash mit einer verifizierten menschlichen Äußerung übereinstimmt.
 
 Wenn Ihr Anwendungsfall eine der genannten Garantien braucht, setzen Sie den Beleg als Audit-Primitiv neben diesen Mechanismen ein. Er ersetzt sie nicht.
 
@@ -617,11 +615,11 @@ Der Verifizierer ist darauf ausgelegt, die folgenden Klassen von Manipulation zu
 | Schema-Downgrade / unbekannte Felder        | Zod-Schema-Validierung strikt auf bekannte Felder; unbekannte Top-Level-Schlüssel abgelehnt                                                                           | `"schema_invalid"` / `"schema_invalid"`                                                                              |
 | Gefälschte / unsignierte JWKS-Historie      | `jwksHistory.signed_by_root_sha256` muss mit einem eingebetteten Vertrauensanker übereinstimmen; harter Fehlschlag bei Unbekanntheit, sofern nicht `allowStagingRoots` | n. z. (v1.0) / `"jwks_history_signature_invalid"`                                                                    |
 | Unbekannte Vertrauensanbieter-Aussage       | Der Verifizierer warnt, lehnt aber nicht ab, um Abwärtskompatibilität zu wahren                                                                                       | n. z. (v1.0) / Warnung `"unknown_trust_provider_present"`                                                            |
-| Wiederholung (Replay) eines alten Belegs    | **Außerhalb des Umfangs des Verifizierers allein.** Konsumenten müssen Eindeutigkeit über `receipt_id` + `issued_at` + Geschäftsregeln erzwingen                      | n. z. — der Verifizierer gibt `valid: true` / `outcome: "accepted"` für noch nicht abgelaufene Wiederholungen zurück |
+| Wiederholung (Replay) eines alten Belegs    | **Außerhalb des Umfangs des Verifizierers allein.** Konsumenten müssen Eindeutigkeit über `receipt_id` + `issued_at` + Geschäftsregeln erzwingen                      | n. z.: der Verifizierer gibt `valid: true` / `outcome: "accepted"` für noch nicht abgelaufene Wiederholungen zurück |
 | JWKS-Rotation, während ein Beleg aktiv ist  | Der JWKS-Abruf wird bei einem `kid`-Fehltreffer aktualisiert; alte Schlüssel können während des Rotations-Gnadenfensters im JWKS-Set verbleiben                       | Verifiziert, solange der `kid` noch veröffentlicht ist                                                               |
 | Kompromittierter Aussteller-Schlüssel       | Die Schlüsselwiderrufung liegt beim Betreiber: den `kid` aus dem JWKS-Set entfernen; Verifizierer schlagen dann fehlschlagsicher fehl                                 | `"kid_not_found"` / `"unknown_kid"` nach Entfernung                                                                  |
 | Uhrendrift zwischen Aussteller/Verifizierer | Option `toleranceSeconds` (Standard 30 s)                                                                                                                             | Innerhalb der Toleranz: besteht. Außerhalb: `"expired"` / `"receipt_expired"` oder `"receipt_not_yet_valid"`         |
-| MITM am JWKS-Endpunkt                       | TLS zum JWKS-Host liegt in der Verantwortung des Betreibers; das Festlegen der JWKS-URL außerhalb des Kanals schützt vor betrügerischer Substitution                  | n. z. — der Verifizierer vertraut der konfigurierten URL                                                             |
+| MITM am JWKS-Endpunkt                       | TLS zum JWKS-Host liegt in der Verantwortung des Betreibers; das Festlegen der JWKS-URL außerhalb des Kanals schützt vor betrügerischer Substitution                  | n. z.: der Verifizierer vertraut der konfigurierten URL                                                             |
 
 **Nicht-Ziele.** Der Verifizierer validiert **nicht**: (a) ob die zugrunde liegende Zahlung abgewickelt wurde, (b) ob die Händlerrichtlinie korrekt konfiguriert war, (c) die jurisdiktionelle Zulässigkeit, (d) Widerrufslisten außerhalb des JWKS-Endpunkts, oder (e) protokollspezifischen Nachweis innerhalb von `protocol_artifacts` (diese werden vom Aufrufer gegen die Spezifikation des jeweiligen Protokolls validiert).
 
@@ -634,8 +632,8 @@ Dieses Paket folgt der **semantischen Versionierung** in Bezug auf die öffentli
 | Änderungstyp                                                         | Bump  | Kompatibilität                                                                                                                          |
 | -------------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Optionales Nutzlastfeld hinzufügen                                   | minor | Ältere Verifizierer ignorieren unbekannte Felder **nur, wenn** das Feld namensräumlich getrennt oder explizit als optional markiert ist |
-| Erforderliches Nutzlastfeld hinzufügen                               | major | Ältere Verifizierer lehnen ab — koordinierter Umstieg erforderlich                                                                      |
-| Nutzlastfeld entfernen oder umbenennen                               | major | Disruptiv — Aussteller müssen weiterhin v1.x-Belege ausgeben, bis die Verifizierer-Population nachgezogen ist                           |
+| Erforderliches Nutzlastfeld hinzufügen                               | major | Ältere Verifizierer lehnen ab: koordinierter Umstieg erforderlich                                                                      |
+| Nutzlastfeld entfernen oder umbenennen                               | major | Disruptiv: Aussteller müssen weiterhin v1.x-Belege ausgeben, bis die Verifizierer-Population nachgezogen ist                           |
 | Neuen `protocol`-Enum-Wert hinzufügen                                | minor | Ältere Verifizierer lehnen unbekannte Enum-Werte ab; erst ausgeben, nachdem das Verifizierer-Ökosystem dies unterstützt                 |
 | Zod-Constraint verschärfen (z. B. Format, Länge)                     | minor | Zum Parse-Zeitpunkt abwärtskompatibel; die neue Einschränkung wirkt nur zukunftsgerichtet                                               |
 | API-Änderung der Verifizierer-Bibliothek (Funktionssignatur)         | major | Aufrufender Code muss aktualisiert werden                                                                                               |
@@ -649,7 +647,7 @@ Dieses Paket folgt der **semantischen Versionierung** in Bezug auf die öffentli
 
 ## Danksagungen
 
-TrustReceipt ist ein protokollübergreifendes Nachweisformat. Die folgenden externen Parteien definieren Schemata, Protokolle oder Infrastruktur, auf die TrustReceipt-Belege verweisen oder die sie bestätigen können. Keine dieser Organisationen ist ein formeller Mitwirkender an diesem Repository. Die Beziehungen sind Interoperabilitätsintegrationen. Sie sind keine Empfehlungen.
+TrustReceipt ist ein protokollübergreifendes Nachweisformat. Die folgenden externen Parteien definieren Schemata, Protokolle oder Infrastruktur, auf die TrustReceipt-Belege verweisen oder die sie bestätigen können. Keine dieser Organisationen ist ein formeller Mitwirkender an diesem Repository. Die Beziehungen sind Interoperabilitätsintegrationen, keine Empfehlungen.
 
 ### Protokollautoren (definieren Schemafelder)
 
@@ -676,7 +674,7 @@ Diese Anbieter erzeugen strukturierte Aussagen, die die `recomputeLegalPosture`-
 
 | Werkzeug                               | Rolle                                                                                                                                     |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| [freeTSA](https://freetsa.org/)        | Standard-RFC-3161-Zeitstempelbehörde der Phase 1; die URL ist je Beleg (Feld `tsa_endpoint`) — hier nicht fest codiert                    |
+| [freeTSA](https://freetsa.org/)        | Standard-RFC-3161-Zeitstempelbehörde der Phase 1; die URL ist je Beleg (Feld `tsa_endpoint`), hier nicht fest codiert                    |
 | [AWS KMS](https://aws.amazon.com/kms/) | Ed25519-Ausstellersignaturschlüssel und HMAC-CMKs für aus PII abgeleitete Hashes; verwaltet vom Schwesterpaket `trust-receipt-kms-signer` |
 
 ---
@@ -696,14 +694,14 @@ MIT, siehe [LICENSE](LICENSE). Copyright Trusteed (trusteed.xyz), 2026.
 `evaluation_id` wurde in `0.4.0` hinzugefügt. Damit verweist ein Beleg auf den
 Enforcement-Datensatz, der sein Urteil erzeugt hat, sodass ein Schlichter diesen
 Datensatz über seine Identität anfordern kann, statt ihn aus der zeitlichen Nähe
-von Timestamps zu erraten. Zwei Dinge ist die Kennung **nicht**:
+von Timestamps zu erraten. Zwei Eigenschaften sind für Verbraucher des Belegs wichtig:
 
-**Sie identifiziert die EVALUATION, nicht die Operation.** Ein zwischengespeichertes
+Sie identifiziert die Evaluation, nicht die Operation. Ein zwischengespeichertes
 Urteil wird unverändert ausgeliefert, sodass mehrere verschiedene Operationen
 berechtigterweise dieselbe `evaluation_id` tragen können. Sie ist pro Beleg nicht
 eindeutig und darf niemals als Idempotenzschlüssel verwendet werden.
 
-**Ihr Fehlen ist eine Aussage, kein fehlender Wert.** Der Referenz-Aussteller gibt
+Ihr Fehlen ist eine Aussage, kein fehlender Wert. Der Referenz-Aussteller gibt
 das Feld nur aus, wenn es auf einen Datensatz verweist, der sich tatsächlich abrufen
 lässt. In zwei Fällen wird es absichtlich weggelassen:
 
@@ -714,5 +712,6 @@ lässt. In zwei Fällen wird es absichtlich weggelassen:
   Datensatz existiert, auf den verwiesen werden könnte.
 
 Die Identität trotzdem auszugeben, würde einen Dritten dazu verleiten, einen
-Audit-Datensatz anzufordern, den niemand geschrieben hat. „Fehlt“ heißt: Dieser
-Beleg behauptet keine Evaluation, niemals „die Evaluation ist verborgen“.
+Audit-Datensatz anzufordern, den niemand geschrieben hat. Eine fehlende
+`evaluation_id` heißt, dass der Beleg keine Evaluation behauptet. Sie heißt nicht,
+dass die Evaluation verborgen ist.

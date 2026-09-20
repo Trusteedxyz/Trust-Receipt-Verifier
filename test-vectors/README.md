@@ -4,7 +4,7 @@
 
 TrustReceipt is an open standard for cross-protocol agentic commerce evidence receipts. A TrustReceipt is a JWS-signed JSON document that captures cryptographic evidence of an AI agent transaction across payment protocols (x402, AP2, ACP, MCP, UCP, MCAP).
 
-These test vectors are the **current conformance corpus** for the TrustReceipt v1.0 wire format implemented by this reference verifier (the shape validated by `schema/trust-receipt-v1.schema.json`). Any verifier that claims TrustReceipt v1.0 conformance must produce the exact expected outcome for all 10 vectors. The evolving, normative field-level specification lives in [SPEC.md](../SPEC.md) and [`schema/trust-receipt-v1.0-final.schema.json`](../schema/trust-receipt-v1.0-final.schema.json) — see [`schema/README.md`](../schema/README.md) for how the two relate and why this corpus does not yet validate against the normative schema.
+These test vectors are the **current conformance corpus** for the TrustReceipt v1.0 wire format implemented by this reference verifier (the shape validated by `schema/trust-receipt-v1.schema.json`). Any verifier that claims TrustReceipt v1.0 conformance must produce the exact expected outcome for all 10 vectors. The evolving, normative field-level specification lives in [SPEC.md](../SPEC.md) and [`schema/trust-receipt-v1.0-final.schema.json`](../schema/trust-receipt-v1.0-final.schema.json). See [`schema/README.md`](../schema/README.md) for how the two relate and why this corpus does not yet validate against the normative schema.
 
 > **Note:** All company names, provider names, merchant IDs, transaction IDs, and reference numbers appearing in these test vectors are entirely fictional and used for illustrative purposes only. No real transaction data is included. Named providers (Mastercard, ClearSale, Skyfire, Stripe, etc.) do not endorse or participate in TrustReceipt.
 
@@ -14,20 +14,20 @@ These test vectors are the **current conformance corpus** for the TrustReceipt v
 
 ```
 test-vectors/
-├── README.md           — this file
-├── vectors.json        — manifest: all 10 vectors with expected outcomes and failure codes
+├── README.md           # this file
+├── vectors.json        # manifest: all 10 vectors with expected outcomes and failure codes
 ├── valid/
-│   ├── TC-001-mcap-allow.json          — MCAP, allow, 2 trust providers, EU GDPR
-│   ├── TC-002-x402-allow.json          — x402, allow, Stripe Radar, permit2 artifact
-│   ├── TC-003-ap2-multi-provider.json  — AP2, allow, 3 trust providers, hash chain
-│   ├── TC-004-mcp-privacy-eu.json      — MCP, review, PII, EU jurisdiction, GDPR
-│   └── TC-005-acp-hash-chain.json      — ACP, allow, Skyfire KYAPay, attachment
+│   ├── TC-001-mcap-allow.json          # MCAP, allow, 2 trust providers, EU GDPR
+│   ├── TC-002-x402-allow.json          # x402, allow, Stripe Radar, permit2 artifact
+│   ├── TC-003-ap2-multi-provider.json  # AP2, allow, 3 trust providers, hash chain
+│   ├── TC-004-mcp-privacy-eu.json      # MCP, review, PII, EU jurisdiction, GDPR
+│   └── TC-005-acp-hash-chain.json      # ACP, allow, Skyfire KYAPay, attachment
 └── invalid/
-    ├── TC-006-tampered-payload.json    — schema_invalid: empty intent hash + unknown version
-    ├── TC-007-expired-receipt.json     — expired: timestamps in Nov 2023
-    ├── TC-008-wrong-kid.json           — unknown_kid: key ID not in JWKS
-    ├── TC-009-missing-intent-hash.json — schema_invalid: required fields absent
-    └── TC-010-wrong-protocol-value.json — schema_invalid: bad enum values
+    ├── TC-006-tampered-payload.json    # schema_invalid: empty intent hash + unknown version
+    ├── TC-007-expired-receipt.json     # expired: timestamps in Nov 2023
+    ├── TC-008-wrong-kid.json           # unknown_kid: key ID not in JWKS
+    ├── TC-009-missing-intent-hash.json # schema_invalid: required fields absent
+    └── TC-010-wrong-protocol-value.json # schema_invalid: bad enum values
 ```
 
 ---
@@ -36,13 +36,13 @@ test-vectors/
 
 Each vector file contains the raw TrustReceipt payload as a JSON object. The files do not contain pre-signed JWS tokens. Your test suite is responsible for wrapping the payload in a JWS at test time using a generated Ed25519 key pair.
 
-Invalid vectors TC-006, TC-007, TC-008, TC-009, and TC-010 include a `_test_hint` field. This field is for human readers only — it must be stripped before signing, or ignored by the verifier if present (verifiers should reject unknown top-level fields via strict schema validation, so TC-006/TC-009/TC-010 would be rejected for schema reasons anyway).
+Invalid vectors TC-006, TC-007, TC-008, TC-009, and TC-010 include a `_test_hint` field. This field is for human readers only: it must be stripped before signing, or ignored by the verifier if present (verifiers should reject unknown top-level fields via strict schema validation, so TC-006/TC-009/TC-010 would be rejected for schema reasons anyway).
 
 ---
 
 ## How to use the vectors
 
-### Step 1 — Generate a test Ed25519 key pair
+### Step 1: Generate a test Ed25519 key pair
 
 ```typescript
 import { generateKeyPair, exportJWK } from "jose";
@@ -61,13 +61,13 @@ privateJwk.kid = KID;
 publicJwk.kid = KID;
 ```
 
-### Step 2 — Build a test JWKS
+### Step 2: Build a test JWKS
 
 ```typescript
 const testJwks = { keys: [publicJwk] };
 ```
 
-### Step 3 — Load a vector payload and sign it
+### Step 3: Load a vector payload and sign it
 
 ```typescript
 import { readFileSync } from "fs";
@@ -95,7 +95,7 @@ const jws = await new CompactSign(
 
 > **Note on timestamps**: the vector files contain static `issued_at` and `expires_at` values (the vector's creation date). For valid vectors (TC-001 to TC-005), refresh the timestamps to the current time before signing, or the verifier will return `expired`. Use the invalid vectors (TC-006 to TC-010) with their original timestamps. TC-007 in particular needs `expires_at` in the past to exercise the `expired` path.
 
-### Step 4 — Call the verifier
+### Step 4: Call the verifier
 
 ```typescript
 import { verifyTrustReceipt } from "trust-receipt-verifier";
@@ -103,7 +103,7 @@ import { verifyTrustReceipt } from "trust-receipt-verifier";
 const result = await verifyTrustReceipt(jws, { jwks: testJwks });
 ```
 
-### Step 5 — Assert the outcome matches vectors.json
+### Step 5: Assert the outcome matches vectors.json
 
 ```typescript
 import vectors from "../test-vectors/vectors.json";
@@ -116,15 +116,15 @@ expect(result.valid).toBe(vector.expected === "valid");
 
 ## Special handling per invalid vector
 
-### TC-006, TC-009, TC-010 — schema_invalid
+### TC-006, TC-009, TC-010: schema_invalid
 
 Sign the malformed payload as-is (after stripping `_test_hint`). The signature is valid, so the verifier passes Step 3 (signature) and rejects the payload at Step 4 (schema validation). Expected result: `{ valid: false, error: 'schema_invalid' }`.
 
-### TC-007 — expired
+### TC-007: expired
 
 Sign the payload with the normal test key (kid matches). The verifier must first pass the signature check, then check `expires_at` against the current clock. Expected result: `{ valid: false, error: 'expired' }`.
 
-### TC-008 — unknown_kid
+### TC-008: unknown_kid
 
 Sign the payload with any real test private key whose `kid` is not present in the test JWKS (i.e., do not add the signing key's public key to `testJwks`). Set `kid: 'nonexistent-key-id-abc123'` in the JWS protected header. The verifier fails at step 2 (key lookup), before signature verification is attempted. Expected result: `{ valid: false, error: 'unknown_kid' }`.
 
@@ -155,12 +155,12 @@ The `protocol` field must be one of: `x402`, `AP2`, `ACP`, `MCP`, `UCP`, `MCAP`.
 
 These map to the following agentic commerce payment protocols:
 
-- **x402** — HTTP 402-based micropayments with permit2 ERC-20 authorizations
-- **AP2** — Agent Payment Protocol v2 (Mastercard)
-- **ACP** — Agent Commerce Protocol (Skyfire KYAPay and similar)
-- **MCP** — Model Context Protocol (Anthropic)
-- **UCP** — Universal Commerce Protocol
-- **MCAP** — Mastercard Agent Pay
+- `x402`: HTTP 402-based micropayments with permit2 ERC-20 authorizations
+- `AP2`: Agent Payment Protocol v2 (Mastercard)
+- `ACP`: Agent Commerce Protocol (Skyfire KYAPay and similar)
+- `MCP`: Model Context Protocol (Anthropic)
+- `UCP`: Universal Commerce Protocol
+- `MCAP`: Mastercard Agent Pay
 
 ---
 
@@ -177,7 +177,7 @@ To propose additional vectors:
 1. Open a PR to this repository targeting `test-vectors/`.
 2. Add the payload JSON in the correct subdirectory (`valid/` or `invalid/`).
 3. Add an entry to `vectors.json` with a new sequential TC-0xx id, expected outcome, and failure code if invalid.
-4. At least 3 maintainers must approve before a vector is merged — merged vectors become part of the normative conformance suite.
+4. At least 3 maintainers must approve before a vector is merged. Merged vectors become part of the normative conformance suite.
 
 ---
 

@@ -1,6 +1,6 @@
 # Legacy-compact cross-port vectors
 
-Shared fixtures for the v0.9-legacy compact path — the shape 100% of
+Shared fixtures for the v0.9-legacy compact path, the shape 100% of
 production emits. Consumed by BOTH publishable verifiers:
 
 - TypeScript: `src/__tests__/legacy-compact-vectors.test.ts`

@@ -1,13 +1,13 @@
 # JSON Schemas
 
-## `trust-receipt-v1.0-final.schema.json` — NORMATIVE
+## `trust-receipt-v1.0-final.schema.json`: NORMATIVE
 
 The v1.0 schema. `$id` is `https://trusteed.xyz/spec/v1.0/trust-receipt.schema.json`,
 sealed by the sibling `.sha256` file and embedded byte-identically into the
 publishable verifiers. **Implementations in any language MUST validate against
 this file.**
 
-## `trust-receipt-v1.schema.json` — SUPERSEDED
+## `trust-receipt-v1.schema.json`: SUPERSEDED
 
 A historic draft, formerly the only schema in this directory. Its shape is
 **incompatible** with the normative document above: it is JSON Schema draft-07,
