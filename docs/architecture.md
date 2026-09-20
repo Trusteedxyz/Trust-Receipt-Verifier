@@ -7,7 +7,7 @@
 
 ## Overview
 
-This document describes the architecture of TrustReceipt: the signing envelope format, the key resolution model, the canonicalization scheme, the verification algorithm, and the conformance system.
+This document covers how TrustReceipt works: the signing envelope, key resolution, canonicalization, the verification algorithm and the conformance suite.
 
 For the complete field-level specification, see [SPEC.md](../SPEC.md).
 For JSON Schema validation, see [schema/trust-receipt-v1.schema.json](../schema/trust-receipt-v1.schema.json).
@@ -20,7 +20,7 @@ For conformance test vectors, see [test-vectors/](../test-vectors/).
 ```
 Trust-Receipt-Verifier/
 ├── SPEC.md                              — Formal specification (authoritative)
-├── README.md                            — Quick start and field reference
+├── README.md                            — Quick start, field reference, npm package usage and CLI reference
 ├── CONTRIBUTING.md                      — How to contribute vectors, ports, schemas
 ├── LICENSE                              — MIT
 ├── TRADEMARKS.md                        — Third-party trademark notices
@@ -31,8 +31,6 @@ Trust-Receipt-Verifier/
 │   ├── README.md                        — How to run the vectors
 │   ├── valid/                           — TC-001 through TC-005
 │   └── invalid/                         — TC-006 through TC-010
-├── verifier/
-│   └── README.md                        — npm package usage + CLI reference
 └── docs/
     └── architecture.md                  — This document
 ```
@@ -79,7 +77,7 @@ Before signing, the receipt payload is serialized with **RFC 8785 (JSON Canonica
 - No extra whitespace
 - Unicode characters escaped consistently
 
-This guarantees that `SHA-256(canonical(payload))` is identical in any conformant implementation across any language — which is what makes the `hash_chain_prev` audit chain cross-language verifiable.
+This guarantees that `SHA-256(canonical(payload))` comes out identical in any conformant implementation, in any language. That is what lets the `hash_chain_prev` audit chain be verified across languages.
 
 Reference implementation (TypeScript, no external dependency):
 
@@ -118,7 +116,7 @@ If no key with the matching `kid` is found: `{ valid: false, reason: "unknown_ki
 
 ### 4.2 Remote JWKS
 
-When a `jwksUrl` is provided, the verifier fetches the key set from `/.well-known/jwks.json` on the issuer domain. Implementations should cache this response (recommended TTL: 1 hour) and handle key rotation by re-fetching on a `kid` miss.
+When a `jwksUrl` is provided, the verifier fetches the key set from that URL. For `trusteed.xyz` it is `https://trusteed.xyz/.well-known/jwks.json`. Implementations should cache this response (recommended TTL: 1 hour) and handle key rotation by re-fetching on a `kid` miss.
 
 ### 4.3 Inline JWK set
 
@@ -129,9 +127,9 @@ When an inline array of public JWKs is provided, no network request is made. Thi
 
 ### 4.4 Trust anchor (v1.1+)
 
-In v1.1, an issuer root certificate is embedded at compile time inside the verifier package. External verifiers can validate that a JWKS bundle was signed by a key chaining back to this root — preventing forged JWKS bundles even if the live endpoint were compromised. Rolling the root requires a SemVer MAJOR bump, giving downstream consumers explicit, auditable control.
+v1.1 embeds an issuer root certificate in the verifier package at compile time. An external verifier can check that a JWKS bundle was signed by a key chaining back to that root, so a forged bundle is rejected even if the live endpoint is compromised. Replacing the root takes a SemVer MAJOR bump, which gives downstream consumers an explicit, auditable decision.
 
-The `VerifyOptions.trustAnchorPemSha256` field pins the expected root SHA-256. If `jwksHistory.signed_by_root_sha256` does not match any embedded anchor the verifier **hard-fails** with `jwks_history_signature_invalid` by default. This behaviour can be suppressed in staging/CI environments by passing `allowStagingRoot: true` — this flag must never be set in production.
+The `VerifyOptions.trustAnchorPemSha256` field pins the expected root SHA-256. If `jwksHistory.signed_by_root_sha256` does not match any embedded anchor, the verifier hard-fails with `jwks_history_signature_invalid` by default. Staging and CI environments can turn this off with `allowStagingRoots: true`. Never set that flag in production.
 
 ---
 
@@ -172,7 +170,7 @@ Step 7 — Return
   { valid: true, receipt: <decoded payload> }
 ```
 
-**Clock tolerance**: implementors should default to ±30 seconds to account for clock skew between issuer and verifier systems. The `VerifyOptions.toleranceSeconds` field (default `30`) controls this.
+Implementors should default the clock tolerance to ±30 seconds, which absorbs skew between issuer and verifier systems. `VerifyOptions.toleranceSeconds` (default `30`) sets it.
 
 ### 5.1 v1.1 envelope verification (`verifyReceiptEnvelope`)
 
@@ -183,8 +181,8 @@ Step 0 — Validate JWKS history signature
   Parse jwksHistory.jws_compact (3 segments).
   Check header.alg === "EdDSA".
   Lookup signed_by_root_sha256 in embedded issuer root list.
-    Not found + allowStagingRoot=false → "jwks_history_signature_invalid" (hard fail).
-    Not found + allowStagingRoot=true  → structural-only parse, emit warning
+    Not found + allowStagingRoots=false → "jwks_history_signature_invalid" (hard fail).
+    Not found + allowStagingRoots=true  → structural-only parse, emit warning
                                           "jwks_history_signature_unverifiable_staging_root".
     Found → verify EdDSA signature against root public key.
   Parse payload → SignedJwksHistoryPayload (entries[]).
@@ -207,7 +205,7 @@ v1.1 warnings (non-fatal, appended to `result.warnings`):
 
 | Warning                                               | Meaning                                                                           |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `jwks_history_signature_unverifiable_staging_root`    | Root SHA not in embedded list, but `allowStagingRoot: true` was set               |
+| `jwks_history_signature_unverifiable_staging_root`    | Root SHA not in embedded list, but `allowStagingRoots: true` was set              |
 | `unknown_trust_provider_present`                      | `trust_provider_assertions[]` contains a `provider` not in the known set          |
 | `tsa_unavailable`                                     | RFC 3161 timestamp evidence absent or fetch failed; posture falls to `ades_candidate_no_tsa` |
 
@@ -234,7 +232,7 @@ Step 3 — Sign
 Step 4 — Return compact JWS string
 ```
 
-Default validity window: 3600 seconds (1 hour). Issuers MAY use longer windows for archival receipts; verifiers MUST respect `expires_at` regardless.
+Default validity window: 3600 seconds (1 hour). Issuers MAY use longer windows for archival receipts. Verifiers MUST respect `expires_at` regardless.
 
 ---
 
@@ -261,11 +259,11 @@ The conformance suite defines correct verifier behavior through 10 test vectors 
 | TC-003 | valid   | AP2 receipt, three trust providers, `hash_chain_prev` linking |
 | TC-004 | valid   | MCP receipt, `policy_decision=review`, PII flag, EU jurisdiction |
 | TC-005 | valid   | ACP receipt, Skyfire KYAPay assertion, PDF attachment |
-| TC-006 | invalid | `schema_invalid` — payload field tampered after signing |
-| TC-007 | invalid | `expired` — `expires_at` is in the past |
-| TC-008 | invalid | `unknown_kid` — `kid` in header does not match any key in JWKS |
-| TC-009 | invalid | `schema_invalid` — `user_intent_hash` missing (required field) |
-| TC-010 | invalid | `schema_invalid` — `schema_version` is an unknown value |
+| TC-006 | invalid | `schema_invalid`: `user_intent_hash` is an empty string and `schema_version` is `"2.0"` (unknown version) |
+| TC-007 | invalid | `expired`: `expires_at` is in the past |
+| TC-008 | invalid | `unknown_kid`: `kid` in header does not match any key in JWKS |
+| TC-009 | invalid | `schema_invalid`: two required fields absent, `user_intent_hash` and `verification_methods` |
+| TC-010 | invalid | `schema_invalid`: two enum violations, `protocol` is `INVALID_PROTOCOL` and `policy_decision` is `maybe` |
 
 A verifier claims **TrustReceipt v1.0 Conformant** if and only if it produces the exact expected outcome for all 10 vectors. See [`test-vectors/README.md`](../test-vectors/README.md) for how to run them.
 
@@ -279,7 +277,7 @@ Receipts can be linked in a tamper-evident per-merchant chain via `hash_chain_pr
 receipt_N.hash_chain_prev = SHA-256(canonical(receipt_{N-1}))
 ```
 
-Because canonicalization (§3) is deterministic, any party can independently compute the expected hash and verify chain continuity — with no access to the original raw payloads and no connection to the issuer.
+Because canonicalization (§3) is deterministic, any party can independently compute the expected hash and verify chain continuity, with no access to the original raw payloads and no connection to the issuer.
 
 ---
 
@@ -287,14 +285,14 @@ Because canonicalization (§3) is deterministic, any party can independently com
 
 | Property | Mechanism |
 | --- | --- |
-| **Signature integrity** | Ed25519 — 64-byte signature, no custom crypto |
-| **Payload integrity** | RFC 8785 canonicalization — deterministic across all languages |
-| **Key rotation** | `kid` pinning — old receipts remain verifiable after key rotation |
+| **Signature integrity** | Ed25519, 64-byte signature, no custom crypto |
+| **Payload integrity** | RFC 8785 canonicalization, deterministic across all languages |
+| **Key rotation** | `kid` pinning, so old receipts remain verifiable after key rotation |
 | **Expiry** | `expires_at` enforced by every conformant verifier |
 | **No raw PII** | `user_intent_hash`, `cart_hash`, `order_hash` are SHA-256 hashes only |
 | **Offline verifiable** | JWKS URL is public and cacheable; no call back to issuer required |
-| **Audit chain** | `hash_chain_prev` — tamper-evident linkage, RFC 8785 deterministic |
-| **Protocol neutral** | `protocol_artifacts` array — extensible without schema changes |
+| **Audit chain** | `hash_chain_prev`: tamper-evident linkage, RFC 8785 deterministic |
+| **Protocol neutral** | `protocol_artifacts` array, extensible without schema changes |
 
 ---
 
@@ -305,14 +303,14 @@ v1.1 introduces eIDAS and ESIGN hardening without breaking v1.0 receipts:
 | Area | v1.0 | v1.1 |
 | --- | --- | --- |
 | Receipt envelope | Single compact JWS | JSON envelope: `receipt` (JWS) + `timestamp_evidence` sidecar |
-| Timestamp | None | RFC 3161 TST — independent timestamp authority |
+| Timestamp | None | RFC 3161 TST from an independent timestamp authority |
 | Legal posture | None | `legal_posture` field tracking eIDAS AdES candidate progression |
 | Consent evidence | Optional `consent_context` | Mandatory for buyer-agent receipts; `esign_disclosure_hash` added |
 | Protocol artifacts | Rail-specific fields | `payment_authorization_hash` + `authorization_scheme` |
 | Trust anchor | JWKS URL only | Embedded issuer root cert (compile-time pinned in verifier) |
 | Media type | `application/jose` | `application/vnd.trusteed.receipt-envelope+json` |
 
-v1.0 receipts remain verifiable; conformant implementations dispatch on `schema_version`.
+v1.0 receipts remain verifiable. Conformant implementations dispatch on `schema_version`.
 
 ---
 
@@ -321,10 +319,10 @@ v1.0 receipts remain verifiable; conformant implementations dispatch on `schema_
 The reference implementation is published at:
 
 ```bash
-npm install @agenticmcpstores/trust-receipt-verifier
+npm install trust-receipt-verifier
 ```
 
-See [`verifier/README.md`](../verifier/README.md) for usage, CLI reference, and porting instructions.
+See the [README](../README.md) for usage and the CLI reference, and [CONTRIBUTING.md](../CONTRIBUTING.md) for porting instructions.
 
 ---
 
@@ -332,7 +330,7 @@ See [`verifier/README.md`](../verifier/README.md) for usage, CLI reference, and 
 
 To port the verifier to Go, Python, Java, Rust, or another language:
 
-1. Implement the RFC 8785 canonicalizer (§3) — test it against the vectors.
+1. Implement the RFC 8785 canonicalizer (§3) and test it against the vectors.
 2. Implement the verification algorithm (§5) step-by-step.
-3. Run all 10 conformance vectors — your implementation must produce exact expected outcomes.
+3. Run all 10 conformance vectors. Your implementation must produce the exact expected outcomes.
 4. Open a PR to [CONTRIBUTING.md](../CONTRIBUTING.md) to list your port.

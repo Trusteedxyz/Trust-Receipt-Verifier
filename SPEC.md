@@ -22,13 +22,13 @@ TrustReceipt is an open standard for cryptographically signed evidence receipts 
 
 > **Disclaimer**: TrustReceipt is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-_See [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) for the full claims policy._
+_The full claims policy is the TrustReceipt Claims Policy (`docs/legal/trust-receipt-claims-policy.md` in the Trusteed monorepo). It is not part of this repository._
 
 ### 1.1 Motivation
 
 Agentic commerce — where AI agents autonomously execute purchases on behalf of users — is growing faster than the trust infrastructure that should accompany it. Several forces create the gap:
 
-- An April 2026 survey found that 98% of websites cannot complete autonomous agent transactions end-to-end, in part due to absent identity and evidence standards.
+- An April 2026 survey reportedly found that 98% of websites cannot complete autonomous agent transactions end to end, in part because identity and evidence standards are missing. This figure has not been verified and the survey source is not cited here.
 - No portable evidence record spans today's major agentic commerce protocols. x402, AP2, ACP, MCP, UCP, and MCAP each define their own payment flow but none define a durable, cross-protocol signed receipt.
 - Merchants, auditors, insurers, and regulators need verifiable records of agent-initiated transactions that can be inspected long after the original session ends, without calling back to the issuing platform.
 - The EU AI Act (effective August 2026) requires that high-risk AI systems provide explainable records of consequential decisions, including commercial ones. TrustReceipt's `liability_context` and `privacy_classification` fields are designed to support Article 13 transparency requirements.
@@ -234,7 +234,8 @@ Resolve the public key using one of:
 
 - The caller-provided inline JWKS (array of JWK objects): find the key whose `kid` matches.
 - The caller-provided JWKS URL: fetch and parse the JWKS document; find the matching key.
-- The receipt payload's `verification_methods` array (after Step 4 schema validation has confirmed the payload structure).
+
+This step does not read `verification_methods` from the receipt payload, because the payload is only decoded and validated in Step 4. Those entries still tell a caller where the issuer publishes its keys. Once a receipt has passed Step 4, a caller MAY use a `jwks` or `did` value from `verification_methods` as the input for a new verification run.
 
 If no key matching `kid` is found in the resolved JWKS, return `{ valid: false, reason: "unknown_kid" }`.
 
@@ -295,7 +296,7 @@ When an issuer rotates its signing key:
 The recommended JWKS URL path is:
 
 ```
-/.well-known/trust-receipt-jwks.json
+/.well-known/jwks.json
 ```
 
 The endpoint MUST be served over HTTPS. The response MUST be a valid JWK Set document (RFC 7517). Caching headers SHOULD allow clients to cache the JWKS for up to 1 hour.
@@ -373,7 +374,7 @@ Vectors are unsigned JSON payload files. Test suites generate an ephemeral Ed255
 ### 7.3 Running the Conformance Suite
 
 ```bash
-npm install @agenticmcpstores/trust-receipt-verifier
+npm install trust-receipt-verifier
 npx trust-receipt conformance
 # or: pnpm test (from within the trust-receipt-verifier package)
 ```
@@ -442,7 +443,7 @@ Implementations that pass all 10 vectors may include the following badge in thei
 
 > **Disclaimer**: TrustReceipt v1.1 is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
-The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. See `docs/legal/trust-receipt-claims-policy.md` for the canonical permitted/prohibited wording list.
+The v1.1 record is an **advanced electronic seal candidate (AdES candidate)** under eIDAS — it is NOT a QES and MUST NOT be marketed using QTSP/qualified-tier wording. The canonical permitted and prohibited wording list is the TrustReceipt Claims Policy (`docs/legal/trust-receipt-claims-policy.md` in the Trusteed monorepo, not part of this repository).
 
 ### 11.2 Wire format
 
@@ -510,7 +511,7 @@ Absence permitted ONLY via fail-open path of FR-024 → posture downgrades to `a
 In addition to the v1.0 codes:
 
 | Code                               | Trigger                                                                          |
-| ---------------------------------- | -------------------------------------------------------------------------------- | ------------------- | ----------------------------------- |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
 | `kid_outside_validity_window`      | Receipt `issued_at` outside `[valid_from, valid_to]` of resolved kid.            |
 | `legal_posture_mismatch`           | Verifier-recomputed posture disagrees with `envelope_metadata.legal_posture`.    |
 | `envelope_receipt_id_mismatch`     | `envelope_metadata.receipt_id` ≠ signed body `receipt_id`.                       |
@@ -521,17 +522,17 @@ In addition to the v1.0 codes:
 | `tsa_eku_missing`                  | TSA cert lacks `id-kp-timeStamping` (1.3.6.1.5.5.7.3.8).                         |
 | `tsa_chain_invalid`                | TSA cert chain does not validate to pinned root.                                 |
 | `tsa_cert_revoked`                 | OCSP/CRL evidence shows TSA cert revoked at `genTime`.                           |
-| `tsa_gen_time_out_of_tolerance`    | `                                                                                | genTime - issued_at | > 60s`after applying TSA`accuracy`. |
+| `tsa_gen_time_out_of_tolerance`    | `\|genTime - issued_at\| > 60s` after applying TSA `accuracy`.                   |
 | `tsa_imprint_mismatch`             | TST imprint ≠ SHA-256(JWS Compact bytes).                                        |
 | `missing_required_consent_context` | buyer_agent receipt without `buyer_agent_consent_context`.                       |
 | `receipt_subject_mismatch`         | Subject does not match the verification context.                                 |
 | `agent_identity_required_strict`   | buyer_agent receipt lacks verified spec-045 agent identity (default policy).     |
-| `esign_disclosure_unverified`      | buyer*agent receipt missing `esign_disclosure*\*`.                               |
+| `esign_disclosure_unverified`      | buyer_agent receipt missing `esign_disclosure_*`.                                |
 | `receipt_payload_too_large`        | Canonical body > 2900 bytes OR jws_signing_input > 4096 bytes.                   |
 
 ### 11.6 Conformance vectors (v1.1)
 
-11 v1.1 vectors live under `test-vectors/v11/` and are catalogued alongside the legacy 10 v1.0 vectors:
+12 v1.1 vectors live under `test-vectors/v11/` and are catalogued alongside the legacy 10 v1.0 vectors:
 
 | ID   | File                                             | Outcome          | Failure code                       | Notes                                                                         |
 | ---- | ------------------------------------------------ | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
@@ -548,7 +549,7 @@ In addition to the v1.0 codes:
 | 020  | `v11/020-v11-mcp-tool-invocation-required.json`  | valid            | —                                  | MCP tool invocation authorization.                                            |
 | 021  | `v11/021-v11-uk-jurisdiction-export-bundle.json` | valid            | —                                  | UK retention metadata + uk-diatf assertion.                                   |
 
-Combined v1.0 + v1.1 conformance suite: 58/58 passing as of 2026-05-06.
+As of 2026-05-06 the combined v1.0 + v1.1 conformance run passed 58/58 test cases. That figure counts test cases, not vectors, and it has not been re-run since.
 
 ### 11.7 Legacy v1.0 → v1.1 field migration
 
@@ -558,6 +559,7 @@ Combined v1.0 + v1.1 conformance suite: 58/58 passing as of 2026-05-06.
 | `permit2_authorization_hash`                | `payment_authorization_hash` + `authorization_scheme = "evm_permit2"`         |
 | `mcp_tool_invocation_hash`                  | `payment_authorization_hash` + `authorization_scheme = "mcp_tool_invocation"` |
 | `consent_context.consent_hash`              | `buyer_agent_consent_context.consent_hash` (algorithm-tagged)                 |
+| `privacy_classification` object (`contains_pii`, `retention_days?`, `jurisdiction?`) | Enum string: `pii_redacted`, `pii_hashed_salted` or `pii_absent` |
 | Salt-based `user_intent_hash`               | KMS-keyed HMAC-SHA-256 (`hmac-sha256:` prefix)                                |
 | Embedded `timestamp_evidence` (signed body) | Envelope-level `timestamp_evidence` (NOT signed)                              |
 
@@ -665,13 +667,13 @@ The following is the TC-001 MCAP receipt payload in human-readable form. This is
 The reference verifier is published as an npm package:
 
 ```bash
-npm install @agenticmcpstores/trust-receipt-verifier
+npm install trust-receipt-verifier
 ```
 
 Minimal verification in 5 lines:
 
 ```typescript
-import { verifyTrustReceipt } from "@agenticmcpstores/trust-receipt-verifier";
+import { verifyTrustReceipt } from "trust-receipt-verifier";
 
 const result = await verifyTrustReceipt(jwsToken, {
   jwksUrl: "https://trusteed.xyz/.well-known/jwks.json",
@@ -684,7 +686,7 @@ if (result.valid) {
 }
 ```
 
-The reference implementation is written in TypeScript and uses `jose` for all JWS operations and `zod` for schema validation. It is the authoritative implementation of the verification algorithm in §4 and the normative reference for all Level 1 conformance claims.
+The reference implementation is written in TypeScript and uses `jose` for all JWS operations and `zod` for schema validation. It implements the verification algorithm in §4. Conformance is decided by the test vectors (§1.2 and §7.1), not by this implementation.
 
 Source: `packages/trust-receipt-verifier/src/verifier.ts`
 

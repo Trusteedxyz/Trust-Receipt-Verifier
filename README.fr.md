@@ -4,7 +4,7 @@
 
 # TrustReceipt
 
-**Couche de preuve côté marchand pour le commerce agentique — signée, portable, vérifiable hors ligne**
+**Couche de preuve côté marchand pour le commerce agentique : signée, portable, vérifiable hors ligne**
 
 [![Version](https://img.shields.io/badge/spec-v1.1-blue)](SPEC.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -15,11 +15,11 @@
 
 ## Ce que c'est
 
-TrustReceipt est un format de reçu ouvert, orienté marchand, pour la preuve de commerce agentique vérifiable hors ligne à travers des protocoles tels que ACP, AP2, x402, MCP, UCP et MCAP. Il est **compatible avec les protocoles, et non concurrent des protocoles** : plutôt que de remplacer les mandats AP2, les sessions de paiement ACP, les signatures Visa TAP, ou les règlements x402, il produit un enregistrement cryptographique portable de la décision de politique appliquée à ceux-ci.
+TrustReceipt est un format de reçu ouvert destiné aux marchands. Il consigne les preuves des transactions de commerce agentique sous une forme que n'importe qui peut vérifier hors ligne, à travers des protocoles tels que ACP, AP2, x402, MCP, UCP et MCAP. Il se place à côté de ces protocoles et ne les concurrence pas. Les mandats AP2, les sessions de paiement ACP, les signatures Visa TAP et les règlements x402 restent tels quels, et TrustReceipt ajoute pour chacun un enregistrement cryptographique portable de la décision de politique appliquée.
 
-Un TrustReceipt est une charge utile JSON signée par JWS, vérifiable hors ligne par rapport à un point de terminaison JWKS public. Chaque reçu enregistre qui était l'agent, quel protocole s'est exécuté, quels fournisseurs de confiance ont attesté la transaction, quelle politique a été appliquée, et quelle décision a été prise — dans un seul jeton autonome que n'importe quelle partie peut vérifier sans contacter l'émetteur.
+Un TrustReceipt est une charge utile JSON signée sous forme de JWS, que vous pouvez vérifier hors ligne à l'aide d'un point de terminaison JWKS public. Chaque reçu consigne qui était l'agent, quel protocole s'est exécuté, quels fournisseurs de confiance se sont portés garants de la transaction, quelle politique s'est appliquée et à quelle décision elle a abouti. Tout cela tient dans un seul jeton autonome que n'importe quelle partie peut vérifier sans contacter l'émetteur.
 
-Ce paquet est l'implémentation de **référence du vérificateur et de l'émetteur**. Il fait partie de la pile de contrôle marchand de Trusteed (instantanés de politique + points de contrôle des agents + reçus), mais le format de reçu lui-même est ouvert et portable entre les émetteurs.
+Ce paquet est l'implémentation de référence du vérificateur et de l'émetteur. Il fait partie de la pile de contrôle marchand de Trusteed (instantanés de politique + points de contrôle des agents + reçus), mais le format de reçu lui-même est ouvert et portable d'un émetteur à l'autre.
 
 ---
 
@@ -30,17 +30,17 @@ Ce paquet est l'implémentation de **référence du vérificateur et de l'émett
 | Vérification JWS (Ed25519)                                | ✅ Implémenté                          | CLI + bibliothèque, aucune cryptographie maison (utilise `jose` v6)                        |
 | Résolution de clé publique basée sur JWKS                 | ✅ Implémenté                          | Récupération mise en cache avec TTL ; un ensemble JWK inline est aussi pris en charge     |
 | Schéma v1.0                                                | ✅ Stable                              | 10 vecteurs de conformité validés                                                          |
-| Schéma v1.1 (champs alignés eIDAS)                        | 🟡 Code complet / expérimental          | 11 vecteurs supplémentaires validés ; l'ensemble de champs peut évoluer avant la v1.2      |
+| Schéma v1.1 (champs alignés eIDAS)                        | 🟡 Code complet / expérimental          | 12 vecteurs supplémentaires validés ; l'ensemble de champs peut évoluer avant la v1.2      |
 | JSON canonique RFC 8785                                    | ✅ Implémenté                          | Utilisé pour la signature + les hachages de la chaîne d'audit                             |
-| Chaîne d'audit (`hash_chain_prev`)                        | ✅ Implémenté                          | Chaînage inviolable par marchand                                                           |
+| Chaîne d'audit (`hash_chain_prev`)                        | ✅ Implémenté                          | Chaînage par marchand, toute altération est détectable                                     |
 | Posture de cachet électronique avancé eIDAS                | 🟡 Candidat                             | Support au niveau champ ; **pas** un Cachet Électronique Qualifié (sans QTSP)              |
 | Forme de preuve ESIGN / UETA                               | 🟡 Partiel                              | `esign_disclosure_hash` + contexte de consentement ; flux complet de divulgation en cours  |
 | Preuve d'horodatage de confiance RFC 3161                  | 🟡 Optionnel / dépendant de l'intégration | Point d'ancrage présent via `trust-receipt-tsa-client` ; dépend du fournisseur TSA         |
 | Signature côté émetteur avec AWS KMS                       | 🟡 Optionnel / côté émetteur            | Fourni par le paquet frère `trust-receipt-kms-signer` ; non requis pour la vérification    |
-| Ports de référence (TS) / portages vers d'autres langages (Python, Go, Java) | 🟡 TS uniquement à ce jour | Les portages sont les bienvenus — voir `CONTRIBUTING.md`                                  |
-| Export/vérification du proof-bundle AIVS (`aivs-export.ts`) | 🟡 Code complet                        | Projette un reçu v1.0 signé dans un bundle compatible AIVS `{ manifest_hash, session_sig, audit_log }` — vérifiable hors ligne sans aucun code Trusteed (spec-062 US1, alignement, pas de séquestre) |
-| Vérification d'artefact d'extension (`verify-extension-artifact.ts`) | 🟡 Code complet              | Vérifie les reçus d'effacement signés par le développeur et les manifestes d'extension de l'écosystème Trusteed Extension Marketplace |
-| Forme compacte v1.0-legacy du reçu (`verifier.ts`)         | ✅ Implémenté                          | `verifyTrustReceipt` accepte également la charge utile compacte de style JWT émise par l'émetteur de la plateforme depuis spec-040 ; exposée via `result.variant` / `result.legacyReceipt` |
+| Ports de référence (TS) / portages vers d'autres langages (Python, Go, Java) | 🟡 TS uniquement à ce jour | Les portages sont les bienvenus, voir `CONTRIBUTING.md`                                   |
+| Export/vérification du proof-bundle AIVS (`aivs-export.ts`) | 🟡 Code complet                        | Projette un reçu v1.0 signé dans un bundle compatible AIVS `{ manifest_hash, session_sig, audit_log }` . Vérifiable hors ligne sans code Trusteed (spec-062 US1 : alignement, pas de séquestre) |
+| Vérification d'artefact d'extension (`verify-extension-artifact.ts`) | 🟡 Code complet              | Vérifie les reçus d'effacement signés par le développeur et les manifestes d'extension du Trusteed Extension Marketplace |
+| Forme compacte v1.0-legacy du reçu (`verifier.ts`)         | ✅ Implémenté                          | `verifyTrustReceipt` accepte également la charge utile compacte de style JWT émise par l'émetteur de la plateforme depuis spec-040. Exposée via `result.variant` / `result.legacyReceipt` |
 
 > ✅ = implémentation de qualité production. 🟡 = présent et testé mais sujet à changement avant la GA de la v1.2, ou dépendant de l'intégration côté opérateur.
 
@@ -48,7 +48,7 @@ Ce paquet est l'implémentation de **référence du vérificateur et de l'émett
 
 ## Comment ça marche
 
-Un TrustReceipt traverse deux opérations indépendantes — **l'émission** et **la vérification** — qui peuvent s'exécuter sur des systèmes différents à des moments différents, sans qu'un secret partagé soit nécessaire.
+Deux opérations indépendantes traitent un TrustReceipt : l'émission et la vérification. Elles peuvent s'exécuter sur des systèmes différents, à des moments différents, et ni l'une ni l'autre n'a besoin d'un secret partagé.
 
 ### Émission d'un reçu
 
@@ -128,30 +128,30 @@ flowchart LR
 
 **Propriétés clés :**
 
-- **Capable hors ligne** — la vérification n'a besoin que de l'URL du JWKS (mise en cache publiquement) ; aucun appel de retour vers l'émetteur
-- **Agnostique au protocole** — un seul format de reçu couvre x402, AP2, ACP, MCP, UCP et MCAP via `protocol_artifacts`
-- **Chaînable pour audit** — `hash_chain_prev` relie les reçus dans une chaîne inviolable par marchand (RFC 8785)
-- **Sensible à la juridiction** — `legal_posture` suit la posture de conformité eIDAS / ESIGN / UK-DIATF par reçu
+- La vérification fonctionne hors ligne. Elle n'a besoin que de l'URL du JWKS (mise en cache publiquement) et n'appelle jamais l'émetteur
+- Un seul format de reçu couvre x402, AP2, ACP, MCP, UCP et MCAP via `protocol_artifacts`
+- `hash_chain_prev` relie les reçus en une chaîne propre à chaque marchand, dont toute altération est détectable (RFC 8785)
+- `legal_posture` suit la posture de conformité eIDAS, ESIGN et UK-DIATF de chaque reçu
 
 ---
 
-## Avertissement Juridique
+## Avertissement juridique
 
 > Cachet vérifiable pour le commerce agentique. Chaque TrustReceipt génère une preuve cryptographique portable d'origine, d'intégrité, de consentement, d'autorisation de l'agent et de rétention auditable.
-> Conçu pour être compatible avec ESIGN/UETA aux États-Unis, avec eIDAS dans l'UE en tant que preuve candidate de cachet électronique avancé, et avec le cadre britannique des Signatures Électroniques et Services de Confiance (UK Electronic Signatures and Trust Services).
+> Conçu pour être aligné sur ESIGN/UETA aux États-Unis et sur eIDAS dans l'UE en tant que preuve candidate de cachet électronique avancé, et compatible avec le cadre britannique des Signatures Électroniques et Services de Confiance (UK Electronic Signatures and Trust Services).
 > Les cachets/signatures qualifiés nécessitent une émission ou une validation par un QTSP applicable.
 
 > **Avertissement** : TrustReceipt est une preuve technique vérifiable cryptographiquement. Elle ne détermine pas en elle-même la responsabilité juridique. Le fait qu'un reçu donné soit admissible ou persuasif dans une juridiction ou une procédure spécifique dépend du droit local applicable, des accords entre les parties consentantes, et d'autres faits hors du champ de ce format d'enregistrement.
 
-_Voir [docs/legal/trust-receipt-claims-policy.md](../../docs/legal/trust-receipt-claims-policy.md) pour la politique complète de déclarations._
+_La politique complète de déclarations est la TrustReceipt Claims Policy (`docs/legal/trust-receipt-claims-policy.md` dans le monorepo Trusteed). Elle ne fait pas partie de ce dépôt._
 
-### État de Compatibilité Réglementaire
+### État de compatibilité réglementaire
 
 | Cadre réglementaire                            | Juridiction  | État                                                                                                                                                                                                                          | Champs v1.1                                                                                                  |
 | ------------------------------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **eIDAS** (Règlement 910/2014)                  | UE           | 🟡 Candidat — `legal_posture` progresse `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Le cachet qualifié (QeSeal) nécessite un QTSP.                                                       | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
-| **ESIGN / UETA**                                | États-Unis   | 🟡 Partiel — Cachet vérifiable avec preuve de consentement, attribution de l'agent, divulgation versionnée et rétention auditable, conçu pour prendre en charge ESIGN/UETA. Le flux complet de divulgation (URI de retrait, épinglage de version) est en cours. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
-| **Electronic Communications Act 2000 / DIATF**  | Royaume-Uni  | 🟡 Compatible au niveau schéma — la rétention sensible à la juridiction (Royaume-Uni : 7 ans par défaut) et le champ `legal_posture` transportent la preuve des services de confiance britanniques. L'alignement DIATF est vérifié au niveau schéma ; la certification opérationnelle est en attente. | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy`                     |
+| **eIDAS** (Règlement 910/2014)                  | UE           | 🟡 Candidat. `legal_posture` progresse `ades_candidate_no_tsa` → `ades_candidate_timestamped` → `ades_candidate_kms`. Le cachet qualifié (QeSeal) nécessite un QTSP.                                                       | `legal_posture`, `legal_posture_warnings`, `timestamp_evidence`, `esign_disclosure_hash`                     |
+| **ESIGN / UETA**                                | États-Unis   | 🟡 Partiel. Cachet vérifiable avec preuve de consentement, attribution de l'agent, divulgation versionnée et rétention auditable, conçu pour prendre en charge ESIGN/UETA. Le flux complet de divulgation (URI de retrait, épinglage de version) est en cours. | `esign_disclosure_hash`, `consent_context.consent_disclosure_version`, `consent_context.withdrawal_uri_hash` |
+| **Electronic Communications Act 2000 / DIATF**  | Royaume-Uni  | 🟡 Compatible au niveau schéma. La rétention sensible à la juridiction (Royaume-Uni : 7 ans par défaut) et le champ `legal_posture` transportent la preuve des services de confiance britanniques. L'alignement DIATF est vérifié au niveau schéma. La certification opérationnelle est en attente. | `legal_posture`, `privacy_classification.jurisdiction`, `export_bundle.retention_policy`                     |
 
 > ⚠️ Rien de ce qui précède ne constitue un conseil juridique. Le statut de qualification réglementaire peut évoluer avec l'implémentation. Consultez un conseil juridique qualifié pour les exigences spécifiques à chaque juridiction.
 
@@ -241,7 +241,7 @@ Une charge utile TrustReceipt contient 24 champs répartis en cinq groupes :
 
 | Champ                 | Type               | Description                                                                                |
 | --------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| `user_intent_hash`   | string (non vide)  | Hachage de l'intention originale de l'utilisateur — doit être non vide (SHA-256 hex recommandé) |
+| `user_intent_hash`   | string (non vide)  | Hachage de l'intention originale de l'utilisateur. Doit être non vide (SHA-256 hex recommandé)  |
 | `cart_hash`          | SHA-256 hex        | Hachage du contenu du panier au moment de la décision (optionnel)                                |
 | `order_hash`         | SHA-256 hex        | Hachage de l'objet de commande réglée (optionnel)                                                |
 | `transaction_id`     | string             | Référence de transaction de la plateforme (optionnel)                                            |
@@ -264,7 +264,7 @@ Une charge utile TrustReceipt contient 24 champs répartis en cinq groupes :
 | `liability_context`      | object      | Assertant et portée (optionnel)                                          |
 | `consent_context`        | object      | Hachage de consentement, portée, horodatage (optionnel)                  |
 | `privacy_classification` | object      | Indicateur PII, jours de rétention, juridiction (optionnel)              |
-| `verification_methods`   | array       | URL JWKS ou DID pour la résolution de clé — au moins une entrée requise  |
+| `verification_methods`   | array       | URL JWKS ou DID pour la résolution de clé. Au moins une entrée requise   |
 | `kid`                    | string      | ID de clé utilisé pour signer ce reçu                                    |
 | `hash_chain_prev`        | SHA-256 hex | Reçu précédent dans la chaîne d'audit (optionnel)                        |
 | `attachments`            | array       | Références de fichiers nommées et hachées (optionnel)                    |
@@ -288,7 +288,7 @@ Une charge utile TrustReceipt contient 24 champs répartis en cinq groupes :
 
 Une implémentation de vérificateur doit passer les 10 vecteurs de test (v1.0) pour revendiquer la conformité TrustReceipt. Trois niveaux sont définis :
 
-> **État v1.1 (2026-05-06)** — le durcissement eIDAS ajoute 11 vecteurs v1.1 sous `test-vectors/v11/`. Le schéma v1.1 supprime les champs legacy `mandate_hash` / `permit2` / `mcp` de rail et introduit `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, et `esign_disclosure_hash`. Suite combinée 58/58 validée.
+> **État v1.1 (2026-05-06).** Le durcissement eIDAS ajoute 12 vecteurs v1.1 sous `test-vectors/v11/`. Le schéma v1.1 supprime les champs legacy `mandate_hash` / `permit2` / `mcp` de rail et introduit `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, et `esign_disclosure_hash`. Suite combinée 58/58 validée.
 
 | Niveau | Nom       | Exigence                                                                        |
 | -------- | --------- | ------------------------------------------------------------------------------------ |
@@ -298,13 +298,13 @@ Une implémentation de vérificateur doit passer les 10 vecteurs de test (v1.0) 
 
 Cette implémentation de référence est conforme au Niveau 2. Il existe deux façons d'exécuter la suite de conformité :
 
-**(a) Tests unitaires** — vérifie les 10 vecteurs à l'aide de l'infrastructure de test préconstruite (10 tests) :
+**(a) Tests unitaires.** Vérifie les 10 vecteurs à l'aide de l'infrastructure de test préconstruite (10 tests) :
 
 ```bash
 pnpm test
 ```
 
-**(b) Conformité JWS de bout en bout** — génère une nouvelle paire de clés, signe les 10 vecteurs, appelle `verifyTrustReceipt`, et rapporte le succès/échec par vecteur :
+**(b) Conformité JWS de bout en bout.** Génère une nouvelle paire de clés, signe les 10 vecteurs, appelle `verifyTrustReceipt` et indique pour chaque vecteur s'il réussit ou échoue :
 
 ```bash
 # Via la CLI (nécessite que le paquet soit d'abord compilé)
@@ -385,11 +385,11 @@ const jws = await issueTrustReceipt({
 });
 ```
 
-> **Canonicalisation** : la charge utile est sérialisée avec RFC 8785 (clés triées, sans espaces) avant la signature, garantissant que `SHA-256(payload)` soit identique dans toute implémentation conforme.
+> **Canonicalisation** : la charge utile est sérialisée avec RFC 8785 (clés triées, sans espaces) avant la signature, si bien que `SHA-256(payload)` est identique dans toute implémentation conforme.
 
 ## Vérificateurs d'artefacts associés
 
-**Export du proof-bundle AIVS** — projette un reçu v1.0 signé dans un bundle compatible AIVS (`draft-stone-aivs-00`), vérifiable hors ligne avec seulement le JWS et le JWKS de l'émetteur :
+**Export du proof-bundle AIVS.** Projette un reçu v1.0 signé dans un bundle compatible AIVS (`draft-stone-aivs-00`). Vous pouvez le vérifier hors ligne avec le seul JWS et le JWKS de l'émetteur :
 
 ```typescript
 import { exportAivsProofBundle, verifyAivsProofBundle } from "trust-receipt-verifier";
@@ -398,7 +398,7 @@ const bundle = exportAivsProofBundle(receiptJws); // { manifest_hash, session_si
 const result = await verifyAivsProofBundle(bundle, { jwks: issuerJwks });
 ```
 
-**Artefacts du Extension Marketplace** — vérifie les reçus d'effacement signés par le développeur (preuve de destruction de données post-désinstallation) ou les manifestes d'extension :
+**Artefacts du Extension Marketplace.** Vérifiez les reçus d'effacement signés par le développeur (preuve de destruction des données après la désinstallation) ou les manifestes d'extension :
 
 ```typescript
 import { verifyExtensionArtifact } from "trust-receipt-verifier";
@@ -446,32 +446,32 @@ trust-receipt inspect receipt.jws
 trust-receipt conformance
 ```
 
-> **Autodétection de `--type`** : lorsque `--type` est omis, la CLI inspecte la forme de l'entrée. Un objet JSON possédant à la fois les clés `receipt` et `envelope_metadata` est automatiquement traité comme `receipt-v11` ; une chaîne compacte `header.payload.sig` est traitée comme `receipt` (v1.0). `--type` accepte également `erasure`, `manifest`, et `jwks-history` pour les vérificateurs d'artefacts décrits ci-dessus — à préciser explicitement lorsque l'autodétection est ambiguë (les charges utiles erasure et manifest sont toutes deux des JWS compacts sans clés `receipt`/`envelope_metadata`).
+> **Autodétection de `--type`** : lorsque `--type` est omis, la CLI inspecte la forme de l'entrée. Un objet JSON possédant à la fois les clés `receipt` et `envelope_metadata` est traité automatiquement comme `receipt-v11`. Une chaîne compacte `header.payload.sig` est traitée comme `receipt` (v1.0). `--type` accepte aussi `erasure`, `manifest` et `jwks-history` pour les vérificateurs d'artefacts décrits ci-dessus. Précisez-le explicitement lorsque l'autodétection est ambiguë (les charges utiles erasure et manifest sont toutes deux des JWS compacts sans clés `receipt`/`envelope_metadata`).
 
 ---
 
 ## Mode de vérification strict vs compat (v1.1)
 
-Le vérificateur v1.1 valide `verification_methods.trust_anchor_sha256` et
-`verification_methods.jwks_sha256` uniquement par **format regex** (64 caractères hex) au
-niveau du schéma. Cette seule vérification de format laisse passer une ancre
-**factice opaque** (tout à zéro / un seul nibble) — elle est structurellement bien formée
-mais ne porte aucune véritable liaison à la chaîne de confiance (les émetteurs émettent
-de telles ancres factices avant une cérémonie d'ancre de production). L'option `mode`
-(bibliothèque) / le flag `--strict` (CLI) ajoute la couche **sémantique** :
+Au niveau du schéma, le vérificateur v1.1 contrôle `verification_methods.trust_anchor_sha256`
+et `verification_methods.jwks_sha256` uniquement par leur format regex (64 caractères hex).
+Ce contrôle laisse passer une ancre factice opaque, c'est-à-dire une valeur entièrement à
+zéro ou d'un seul nibble. L'ancre factice est bien formée mais n'a aucune véritable liaison
+à la chaîne de confiance, et les émetteurs émettent de telles ancres avant une cérémonie
+d'ancre de production. L'option `mode` (bibliothèque) et le flag `--strict` (CLI) ajoutent
+une couche sémantique :
 
-| Condition                                                              | `compat` (par défaut — canary)         | `strict`                                     |
+| Condition                                                              | `compat` (par défaut, canary)          | `strict`                                     |
 | -------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
 | `trust_anchor_sha256` est une ancre factice opaque (tout à zéro / un seul nibble) | avertit `trust_anchor_sha256_stub`         | rejette `trust_anchor_stub_rejected`             |
 | `jwks_sha256` est une ancre factice opaque                                | avertit `jwks_sha256_stub`                 | rejette `jwks_sha256_stub_rejected`              |
 | `trust_anchor_sha256` ≠ `trustAnchorPemSha256` épinglé par l'opérateur    | avertit `trust_anchor_sha256_mismatch`     | rejette `trust_anchor_mismatch`                  |
 | reçu buyer_agent sans liaison d'identité d'agent                          | avertit `agent_identity_absent`            | rejette `agent_identity_required_strict`         |
-| horodatage RFC 3161 / LOTL dégradé (p. ex. TSA indisponible)              | avertit (`tsa_unavailable`)                | avertit (`tsa_unavailable`) — accepté dans LES DEUX |
+| horodatage RFC 3161 / LOTL dégradé (p. ex. TSA indisponible)              | avertit (`tsa_unavailable`)                | avertit (`tsa_unavailable`), accepté dans les deux modes |
 
-`compat` est la valeur par défaut afin que le déploiement soit non disruptif pendant
-que l'observabilité s'accumule ; basculez vers `strict` une fois que les émetteurs auront
-achevé la cérémonie d'ancre de production. Les quatre vecteurs de conformité négatifs nommés
-se trouvent dans `test-vectors/v11-strict/` et sont régénérés par
+`compat` est la valeur par défaut pour que le déploiement ne casse rien pendant que les
+données d'observabilité s'accumulent. Passez à `strict` une fois que les émetteurs ont
+terminé la cérémonie d'ancre de production. Les quatre vecteurs de conformité négatifs
+nommés se trouvent dans `test-vectors/v11-strict/` et sont régénérés par
 `scripts/generate-strict-mode-vectors.ts`.
 
 ```ts
@@ -492,10 +492,10 @@ const result = await verifyReceiptEnvelope(envelope, {
 
 | Document                                     | Description                                                                                              |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)                            | Spécification formelle — format wire, référence des champs, règles de conformité                                |
-| [docs/architecture.md](docs/architecture.md)  | Architecture interne — enveloppe de signature, résolution de clé, pipeline de vérification, propriétés de sécurité |
+| [SPEC.md](SPEC.md)                            | Spécification formelle : format wire, référence des champs, règles de conformité                                 |
+| [docs/architecture.md](docs/architecture.md)  | Architecture interne : enveloppe de signature, résolution de clé, pipeline de vérification, propriétés de sécurité  |
 | [CONTRIBUTING.md](CONTRIBUTING.md)            | Comment ajouter des vecteurs de conformité, des portages vers d'autres langages, ou des schémas de fournisseur de confiance |
-| [CHANGELOG.md](CHANGELOG.md)                  | Historique des versions et changements disruptifs                                                                |
+| [CHANGELOG.md](CHANGELOG.md)                  | Historique des versions et changements incompatibles                                                             |
 
 ---
 
@@ -514,9 +514,9 @@ Un reçu est une preuve technique, pas une preuve juridique ni une garantie opé
 - **La conformité KYC / KYA.** Un reçu enregistre qu'un fournisseur de confiance a affirmé un niveau (p. ex. `kya_status`) au moment de l'émission. Ce n'est pas un substitut à une vérification KYC/KYA indépendante.
 - **Le statut de Cachet Électronique Qualifié eIDAS.** Même avec `legal_posture` renseigné, un TrustReceipt est au mieux un candidat de Cachet Électronique **Avancé**. Les cachets qualifiés nécessitent une émission par un QTSP répertorié dans l'UE, ce qui est hors du champ de ce paquet.
 - **La responsabilité juridique ou l'admissibilité.** Un reçu est une preuve cryptographique. Son admissibilité ou son caractère persuasif dans une juridiction spécifique dépend du droit local, des accords des parties, et de faits hors du champ du format du reçu.
-- **Que l'utilisateur voulait réellement ce que l'agent a fait.** Le reçu enregistre `user_intent_hash` — c'est-à-dire qu'un texte d'intention a existé et a été haché — et non que le hachage correspond à une expression humaine vérifiée.
+- **Que l'utilisateur voulait réellement ce que l'agent a fait.** Le reçu enregistre `user_intent_hash`, ce qui montre qu'un texte d'intention existait et a été haché. Il ne montre pas que le hachage correspond à une expression humaine vérifiée.
 
-Si votre cas d'usage nécessite l'une des garanties ci-dessus, le reçu est un primitif d'audit utile _en complément de_ ces mécanismes, pas un substitut à ceux-ci.
+Si votre cas d'usage exige l'une des garanties ci-dessus, utilisez le reçu comme primitif d'audit à côté de ces mécanismes. Il ne les remplace pas.
 
 ---
 
@@ -531,13 +531,13 @@ Le vérificateur est conçu pour détecter les classes de falsification suivante
 | Reçu expiré                                | `expires_at` vérifié par rapport à l'horloge du vérificateur avec tolérance configurable (par défaut ±30 s)                          | `"expired"` / `"receipt_expired"`                                                                        |
 | Reçu émis dans le futur                    | `issued_at` vérifié par rapport à l'horloge du vérificateur avec la même tolérance                                                    | `"not_yet_valid"` / `"receipt_not_yet_valid"`                                                           |
 | Rétrogradation de schéma / champs inconnus | Validation de schéma Zod stricte sur les champs connus ; clés de premier niveau inconnues rejetées                                   | `"schema_invalid"` / `"schema_invalid"`                                                                 |
-| Historique JWKS falsifié / non signé       | `jwksHistory.signed_by_root_sha256` doit correspondre à une ancre de confiance embarquée ; échec dur si inconnu sauf `allowStagingRoot` | n/a (v1.0) / `"jwks_history_signature_invalid"`                                                          |
+| Historique JWKS falsifié / non signé       | `jwksHistory.signed_by_root_sha256` doit correspondre à une ancre de confiance embarquée ; échec dur si inconnu sauf `allowStagingRoots` | n/a (v1.0) / `"jwks_history_signature_invalid"`                                                          |
 | Assertion de fournisseur de confiance inconnu | Le vérificateur avertit mais ne rejette pas, préservant la compatibilité ascendante                                                   | n/a (v1.0) / avertissement `"unknown_trust_provider_present"`                                             |
-| Rejeu d'un ancien reçu                     | **Hors du champ du vérificateur seul.** Les consommateurs doivent imposer l'unicité via `receipt_id` + `issued_at` + règles métier    | n/a — le vérificateur renvoie `valid: true` / `outcome: "accepted"` pour les rejeux non encore expirés |
+| Rejeu d'un ancien reçu                     | **Hors du champ du vérificateur seul.** Les consommateurs doivent imposer l'unicité via `receipt_id` + `issued_at` + règles métier    | n/a. Le vérificateur renvoie `valid: true` / `outcome: "accepted"` pour les rejeux non encore expirés  |
 | Rotation JWKS pendant qu'un reçu est actif | La récupération JWKS se rafraîchit sur un manque de `kid` ; les anciennes clés peuvent être conservées dans l'ensemble JWKS pendant la fenêtre de grâce de rotation | Vérifie tant que le `kid` reste publié                                                                   |
 | Clé d'émetteur compromise                  | La révocation de clé est à la charge de l'opérateur : retirer le `kid` de l'ensemble JWKS ; les vérificateurs échoueront en mode fermé | `"kid_not_found"` / `"unknown_kid"` une fois retirée                                                     |
 | Dérive d'horloge entre émetteur/vérificateur | Option `toleranceSeconds` (par défaut 30 s)                                                                                          | Dans la tolérance : passe. En dehors : `"expired"` / `"receipt_expired"` ou `"receipt_not_yet_valid"`  |
-| MITM sur le point de terminaison JWKS      | Le TLS vers l'hôte JWKS est de la responsabilité de l'opérateur ; épingler l'URL JWKS hors bande protège contre une substitution malveillante | n/a — le vérificateur fait confiance à l'URL configurée                                                  |
+| MITM sur le point de terminaison JWKS      | Le TLS vers l'hôte JWKS est de la responsabilité de l'opérateur ; épingler l'URL JWKS hors bande protège contre une substitution malveillante | n/a. Le vérificateur fait confiance à l'URL configurée                                                   |
 
 **Non-objectifs.** Le vérificateur **ne** valide **pas** : (a) si le paiement sous-jacent a été réglé, (b) si la politique du marchand était correctement configurée, (c) l'admissibilité juridictionnelle, (d) les listes de révocation externes au point de terminaison JWKS, ou (e) la preuve spécifique au protocole à l'intérieur de `protocol_artifacts` (celles-ci sont validées par l'appelant par rapport à la spécification du protocole concerné).
 
@@ -550,14 +550,14 @@ Ce paquet suit le **Versionnage Sémantique** en ce qui concerne l'API publique 
 | Type de changement                                       | Bump   | Compatibilité                                                                                                |
 | ------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------ |
 | Ajout d'un champ optionnel à la charge utile                 | mineur | Les anciens vérificateurs ignorent les champs inconnus **seulement si** le champ est espacé de noms ou explicitement marqué optionnel |
-| Ajout d'un champ obligatoire à la charge utile                | majeur | Les anciens vérificateurs rejetteront — un basculement coordonné est requis                                        |
-| Suppression ou renommage d'un champ de la charge utile        | majeur | Disruptif — les émetteurs doivent continuer à émettre des reçus v1.x jusqu'à ce que la population de vérificateurs se mette à jour |
-| Ajout d'une nouvelle valeur d'énumération `protocol`          | mineur | Les anciens vérificateurs rejetteront les valeurs d'énumération inconnues ; n'émettre qu'après que l'écosystème de vérificateurs le prenne en charge |
-| Durcissement d'une contrainte Zod (p. ex. format, longueur)   | mineur | Rétrocompatible au moment de l'analyse ; la nouvelle contrainte est uniquement à effet futur                       |
+| Ajout d'un champ obligatoire à la charge utile                | majeur | Les anciens vérificateurs rejetteront. Un basculement coordonné est requis                                         |
+| Suppression ou renommage d'un champ de la charge utile        | majeur | Changement incompatible. Les émetteurs doivent continuer à émettre des reçus v1.x jusqu'à ce que les vérificateurs se soient mis à jour |
+| Ajout d'une nouvelle valeur d'énumération `protocol`          | mineur | Les anciens vérificateurs rejetteront les valeurs d'énumération inconnues. N'émettez la nouvelle valeur qu'une fois qu'elle est prise en charge par les vérificateurs |
+| Durcissement d'une contrainte Zod (p. ex. format, longueur)   | mineur | Rétrocompatible au moment de l'analyse. La nouvelle contrainte ne vaut que pour l'avenir                           |
 | Changement d'API de la bibliothèque du vérificateur (signature de fonction) | majeur | Le code appelant doit être mis à jour                                                                              |
 | Changement d'API de la bibliothèque du vérificateur (nouvel argument optionnel) | mineur | Les appelants existants ne sont pas affectés                                                                       |
 
-**Vérification entre versions.** Le vérificateur v1.1.x vérifie les reçus émis sous le schéma v1.0 _et_ le schéma v1.1. Les reçus v1.0 manqueront simplement des champs v1.1 (`legal_posture`, `consent_context`, etc.) et le vérificateur les traite comme optionnels. Il n'est pas prévu d'abandonner la vérification v1.0 dans aucune version v1.x — un abandon nécessite un bump majeur vers v2.0 et une fenêtre de dépréciation d'au moins 12 mois.
+**Vérification entre versions.** Le vérificateur v1.1.x vérifie les reçus émis sous le schéma v1.0 _et_ le schéma v1.1. Les reçus v1.0 n'auront simplement pas les champs v1.1 (`legal_posture`, `consent_context`, etc.) et le vérificateur les traite comme optionnels. Il n'est pas prévu d'abandonner la vérification v1.0 dans une version v1.x. L'abandonner exige un bump majeur vers v2.0 et une fenêtre de dépréciation d'au moins 12 mois.
 
 **Champ `schema_version`.** Les reçus portent `schema_version: "1.0"` ou `schema_version: "1.1"`. Le vérificateur aiguille la validation de schéma sur ce champ. Les reçus sans `schema_version` sont rejetés (`reason: "schema_invalid"`).
 
@@ -565,7 +565,7 @@ Ce paquet suit le **Versionnage Sémantique** en ce qui concerne l'API publique 
 
 ## Remerciements
 
-TrustReceipt est un format de preuve inter-protocoles. Les parties externes suivantes définissent des schémas, protocoles, ou infrastructures auxquels les reçus TrustReceipt peuvent faire référence ou attester. Aucune de ces organisations n'est un collaborateur formel de ce dépôt ; les relations sont des intégrations d'interopérabilité, pas des approbations.
+TrustReceipt est un format de preuve inter-protocoles. Les parties externes suivantes définissent des schémas, protocoles, ou infrastructures auxquels les reçus TrustReceipt peuvent faire référence ou attester. Aucune de ces organisations n'est un collaborateur formel de ce dépôt. Ces relations sont des intégrations d'interopérabilité. Ce ne sont pas des approbations.
 
 ### Auteurs de protocole (définissent les champs du schéma)
 
@@ -584,20 +584,20 @@ Ces fournisseurs produisent des assertions structurées que la logique `recomput
 
 | Fournisseur | Champ `provider` de l'assertion | Intégration |
 | ------------- | ---------------------------------- | -------------- |
-| [IETF RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) (HTTP Message Signatures) | `"rfc9421-native"` | Vérifie les signatures de messages HTTP de tout agent disposant d'un point de terminaison JWKS public ; l'émetteur le câble de manière optionnelle |
-| [HUMAN Security — AgenticTrust](https://www.humansecurity.com/agentictrust) | `"human"` | Intégration optionnelle d'identité d'agent ; aucun SDK HUMAN n'est importé dans ce paquet vérificateur |
+| [IETF RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) (HTTP Message Signatures) | `"rfc9421-native"` | Vérifie les signatures de messages HTTP de tout agent disposant d'un point de terminaison JWKS public. L'émetteur l'intègre de manière optionnelle |
+| [HUMAN Security — AgenticTrust](https://www.humansecurity.com/agentictrust) | `"human"` | Intégration optionnelle d'identité d'agent. Aucun SDK HUMAN n'est importé dans ce paquet vérificateur |
 | [Visa TAP](https://developer.visa.com/) (Trusted Agent Protocol) | `"visa"` | Validé lorsque le domaine du signataire est `*.visa.com` ou `*.visa.net` avec le tag `"agent-browser-auth"` ou `"agent-payer-auth"` |
 
 ### Infrastructure côté émetteur (non utilisée par ce paquet vérificateur)
 
 | Outil | Rôle |
 | ------- | ----- |
-| [freeTSA](https://freetsa.org/) | Autorité d'horodatage RFC 3161 par défaut de la Phase 1 ; l'URL est par reçu (champ `tsa_endpoint`) — non codée en dur ici |
+| [freeTSA](https://freetsa.org/) | Autorité d'horodatage RFC 3161 par défaut de la Phase 1. L'URL est propre à chaque reçu (champ `tsa_endpoint`) et n'est pas codée en dur ici |
 | [AWS KMS](https://aws.amazon.com/kms/) | Clés de signature Ed25519 de l'émetteur et CMK HMAC pour les hachages issus de PII ; géré par le paquet frère `trust-receipt-kms-signer` |
 
 ---
 
-## Avis de Marque Déposée
+## Avis de marque déposée
 
 TrustReceipt n'est affilié à, approuvé par, ni officiellement soutenu par Mastercard, Anthropic, Skyfire, Coinbase, HUMAN Security, Visa, ou toute autre entreprise ou propriétaire de protocole nommé référencé dans cette spécification. Les noms de protocole (AP2, MCAP, ACP, MCP, x402, UCP) sont utilisés de manière descriptive pour indiquer uniquement des cibles d'interopérabilité. Toutes les marques commerciales et marques déposées sont la propriété de leurs détenteurs respectifs.
 
@@ -605,4 +605,4 @@ TrustReceipt n'est affilié à, approuvé par, ni officiellement soutenu par Mas
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE). Copyright MCPWebStore (trusteed.xyz), 2026.
+MIT, voir [LICENSE](LICENSE). Copyright MCPWebStore (trusteed.xyz), 2026.

@@ -18,9 +18,9 @@ Three build-blocking gaps in `index.ts` re-exports — callers who imported the 
 
 **Breaking behaviour change** (opt-out via new flag): previously, when `jwksHistory.signed_by_root_sha256` did not match any embedded trust anchor, the verifier silently fell back to structural-only parsing and emitted a warning. This meant any caller with an unsigned/unknown history would pass without cryptographic verification.
 
-- **`allowStagingRoot?: boolean`** added to `VerifyOptions` (default `false`). When `false` (the new default), an unrecognised root SHA returns `rejected / jwks_history_signature_invalid` immediately. Set `allowStagingRoot: true` only in staging/test environments.
-- The warning `jwks_history_signature_unverifiable_staging_root` is now emitted **only** when `allowStagingRoot: true` and the root is unrecognised.
-- Conformance tests and signature tests updated to pass `allowStagingRoot: true` (they intentionally use the all-zeros staging SHA).
+- **`allowStagingRoots?: boolean`** added to `VerifyOptions` (default `false`). When `false` (the new default), an unrecognised root SHA returns `rejected / jwks_history_signature_invalid` immediately. Set `allowStagingRoots: true` only in staging/test environments.
+- The warning `jwks_history_signature_unverifiable_staging_root` is now emitted **only** when `allowStagingRoots: true` and the root is unrecognised.
+- Conformance tests and signature tests updated to pass `allowStagingRoots: true` (they intentionally use the all-zeros staging SHA).
 
 ### Temporal validation for v1.1 receipts
 
@@ -43,7 +43,7 @@ The CLI `trust-receipt verify` command previously routed all receipt-shaped inpu
   - `--jwks-history-file <path>` — path to a `SignedJwksHistory` JSON file (required for `receipt-v11`).
   - `--trust-anchor-sha256 <hex>` — expected `trustAnchorPemSha256` for root pinning (required for `receipt-v11`).
   - `--policy-oid <oid>` — may be repeated; builds `policyOidAllowlist` passed to `verifyReceiptEnvelope`.
-  - `--allow-staging-root` — passes `allowStagingRoot: true` (staging/CI use only).
+  - `--allow-staging-roots` — passes `allowStagingRoots: true` (staging/CI use only).
 - `cmdVerify()` dispatch switch now includes `case "receipt-v11"` routing to `cmdVerifyReceiptV11()`.
 
 ### Unknown trust-provider warning
@@ -54,7 +54,7 @@ The CLI `trust-receipt verify` command previously routed all receipt-shaped inpu
 
 ### Tests
 
-- `src/__tests__/conformance-1.1.test.ts`: added `allowStagingRoot: true` and `currentTimeSeconds: vector.verify_options.currentTime` to the v1.1 dispatch path so conformance vectors with static timestamps continue to pass after their `expires_at` elapses.
+- `src/__tests__/conformance-1.1.test.ts`: added `allowStagingRoots: true` and `currentTimeSeconds: vector.verify_options.currentTime` to the v1.1 dispatch path so conformance vectors with static timestamps continue to pass after their `expires_at` elapses.
 - `src/__tests__/verify-1.1.signature.test.ts`: same additions to `makeOptions()`.
 - `VerifyOptions.currentTimeSeconds?: number` — injectable clock for the `issued_at`/`expires_at` checks; defaults to `Math.floor(Date.now() / 1000)` in production. Conformance tests use this to pin time to the vector's `currentTime`, avoiding spurious `receipt_expired` failures as static vector timestamps age.
 

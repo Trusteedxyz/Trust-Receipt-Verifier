@@ -93,12 +93,12 @@ const jws = await new CompactSign(
   .sign(privKey);
 ```
 
-> **Nota sobre timestamps**: los archivos vectoriales contienen `issued_at` y `expires_at` estáticos (fecha de creación del vector). Para vectores válidos (TC-001 a TC-005), refresca los timestamps a la hora actual antes de firmar, o el verifier devolverá `expired`. Los vectores inválidos (TC-006 a TC-010) deben usarse con sus timestamps originales — TC-007 en particular requiere `expires_at` en el pasado para ejercitar el camino `expired`.
+> **Note on timestamps**: the vector files contain static `issued_at` and `expires_at` values (the vector's creation date). For valid vectors (TC-001 to TC-005), refresh the timestamps to the current time before signing, or the verifier will return `expired`. Use the invalid vectors (TC-006 to TC-010) with their original timestamps. TC-007 in particular needs `expires_at` in the past to exercise the `expired` path.
 
 ### Step 4 — Call the verifier
 
 ```typescript
-import { verifyTrustReceipt } from "@agenticmcpstores/trust-receipt-verifier";
+import { verifyTrustReceipt } from "trust-receipt-verifier";
 
 const result = await verifyTrustReceipt(jws, { jwks: testJwks });
 ```
@@ -118,7 +118,7 @@ expect(result.valid).toBe(vector.expected === "valid");
 
 ### TC-006, TC-009, TC-010 — schema_invalid
 
-Sign the malformed payload as-is (after stripping `_test_hint`). The verifier must detect the schema violation before or independently of the signature check. Expected result: `{ valid: false, error: 'schema_invalid' }`.
+Sign the malformed payload as-is (after stripping `_test_hint`). The signature is valid, so the verifier passes Step 3 (signature) and rejects the payload at Step 4 (schema validation). Expected result: `{ valid: false, error: 'schema_invalid' }`.
 
 ### TC-007 — expired
 
@@ -181,4 +181,4 @@ To propose additional vectors:
 
 ---
 
-> **Script integrado**: en lugar de implementar los pasos anteriores manualmente, ejecuta `npx tsx scripts/validate-vectors.ts` desde la raíz del paquete. El script genera un keypair fresco, refresca los timestamps de vectores válidos, firma todos los vectores, llama `verifyTrustReceipt` y reporta pass/fail por vector.
+> **Built-in script**: instead of following the steps above by hand, run `npx tsx scripts/validate-vectors.ts` from the package root. The script generates a fresh keypair, refreshes the timestamps of the valid vectors, signs all vectors, calls `verifyTrustReceipt` and reports pass or fail per vector.
