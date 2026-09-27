@@ -718,6 +718,16 @@ These providers produce structured assertions that the `recomputeLegalPosture` l
 
 ---
 
+## Security Acknowledgements
+
+We thank **MD Rabbi Hossain** ([LinkedIn](https://www.linkedin.com/in/csrrabbi/) · [X](https://x.com/csrrabbi)) for a responsible disclosure report against our identity provider, `auth.trusteed.xyz`.
+
+The report's central claim is accurate: our OAuth dynamic client registration endpoint (`/oidc/register`, RFC 7591) accepts requests without a credential. That is deliberate — our MCP connectors, including Claude's, self-register through this endpoint before they can authorize at all, and requiring a credential there would break them. The access it enables is consent phishing, a property of any open dynamic-registration flow rather than unauthenticated access, and it does not reach checkout: our payment path requires a verified agent-identity claim that a token obtained this way does not carry.
+
+Investigating the report surfaced something it did not flag: an OAuth scope (`mcp:admin`) was published across our discovery documents and offered on the consent screen, but no code enforced it — a token holding it carried the exact same privileges as `mcp:read`. That scope has been retired platform-wide. The fix lives in our private API and dashboard, not in this package, but we record the credit here as agreed with the reporter.
+
+---
+
 ## Trademark Notice
 
 TrustReceipt is not affiliated with, endorsed by, or officially supported by Mastercard, Anthropic, Skyfire, Coinbase, HUMAN Security, Visa, or any other named protocol owner or company referenced in this specification. Protocol names (AP2, MCAP, ACP, MCP, x402, UCP) are used descriptively to indicate interoperability targets only. All trademarks and registered marks are the property of their respective owners.
