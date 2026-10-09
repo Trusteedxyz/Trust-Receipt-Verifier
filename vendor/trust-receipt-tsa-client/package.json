@@ -1,0 +1,35 @@
+{
+  "name": "@agenticmcpstores/trust-receipt-tsa-client",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "RFC 3161 + RFC 5816 Time-Stamp Protocol client for TrustReceipt v1.1 envelopes (spec-049). Builds TST requests + offline TimeStampResp/TimeStampToken verification.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@peculiar/asn1-x509": "^2.3.0",
+    "@peculiar/asn1-cms": "^2.3.0",
+    "@peculiar/asn1-schema": "^2.3.0",
+    "asn1js": "^3.0.5",
+    "pkijs": "^3.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "@vitest/coverage-v8": "^2.1.0"
+  }
+}
