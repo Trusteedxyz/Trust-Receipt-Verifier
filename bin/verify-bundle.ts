@@ -42,7 +42,7 @@
  * documented contract stable for scripts that only test for zero.
  */
 
-import { readFile, stat } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { parseArgs } from "node:util";
 // NOTE: `verifyExportBundle` is loaded via dynamic import inside `main()`
 // so that `--help` and arg-validation paths work even if the verifier module cannot be loaded.
@@ -390,16 +390,39 @@ async function main(): Promise<void> {
   let zipBuffer: Buffer;
   try {
     // Refuse to even read an absurdly large file into memory (the library
-    // enforces the same ceiling again on the bytes it receives).
-    const { size } = await stat(opts.zipPath);
-    if (size > MAX_BUNDLE_FILE_BYTES) {
-      err(
-        `verify-bundle: "${opts.zipPath}" is ${size} bytes; limit is ${MAX_BUNDLE_FILE_BYTES}`
-      );
-      process.exit(2);
-      return;
+    // enforces the same ceiling again on the bytes it receives). The file is
+    // opened once and the size is taken from that open handle, so the check and
+    // the read refer to the same file: a stat() by path followed by a read()
+    // by path would let the file be swapped or grown in between.
+    const handle = await open(opts.zipPath, "r");
+    try {
+      const info = await handle.stat();
+      const size = info.size;
+      if (!info.isFile()) {
+        err(`verify-bundle: "${opts.zipPath}" is not a regular file`);
+        process.exit(2);
+        return;
+      }
+      if (size > MAX_BUNDLE_FILE_BYTES) {
+        err(
+          `verify-bundle: "${opts.zipPath}" is ${size} bytes; limit is ${MAX_BUNDLE_FILE_BYTES}`
+        );
+        process.exit(2);
+        return;
+      }
+      // Read at most one byte more than the size seen on the handle: if the
+      // file grew while we were reading, say so instead of loading it.
+      const buffer = Buffer.alloc(size + 1);
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+      if (bytesRead !== size) {
+        err(`verify-bundle: "${opts.zipPath}" changed while it was being read`);
+        process.exit(2);
+        return;
+      }
+      zipBuffer = buffer.subarray(0, bytesRead);
+    } finally {
+      await handle.close();
     }
-    zipBuffer = await readFile(opts.zipPath);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     err(`verify-bundle: cannot read ZIP at "${opts.zipPath}": ${msg}`);

@@ -75,7 +75,9 @@ for (const f of ["README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE"]) {
 
 // --- rewrite the workspace package name to a relative path ------------------
 const vendorEntry = path.join(VENDOR_DEST, "index.js");
-const quoted = new RegExp(`(["'])${VENDOR_NAME.replace(/[/]/g, "\\/")}\\1`, "g");
+// Exact quoted specifiers, replaced as plain strings (no regular expression is
+// built from the package name).
+const SPECIFIERS = [`"${VENDOR_NAME}"`, `'${VENDOR_NAME}'`];
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
@@ -93,7 +95,12 @@ for (const file of walk(path.join(OUT, "dist"))) {
   if (!text.includes(VENDOR_NAME)) continue;
   let rel = path.relative(path.dirname(file), vendorEntry).split(path.sep).join("/");
   if (!rel.startsWith(".")) rel = `./${rel}`;
-  writeFileSync(file, text.replace(quoted, (_m, q) => `${q}${rel}${q}`));
+  let next = text;
+  for (const spec of SPECIFIERS) {
+    const q = spec[0];
+    next = next.split(spec).join(`${q}${rel}${q}`);
+  }
+  writeFileSync(file, next);
   rewritten += 1;
 }
 

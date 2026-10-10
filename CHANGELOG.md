@@ -44,6 +44,10 @@ All notable changes to the verifier package are documented here.
   are followed and an https to http downgrade is refused. Tune it with `jwksFetch` in
   `VerifyOptions` and in the extension verifier options. Fetching an extension artifact had no
   timeout before.
+- **`verify-bundle` opens the ZIP once and checks its size on the open handle.** It used to
+  `stat` the file by path and then read it by path, so the file could change in between. A
+  file that is not a regular file, is over 16 MiB, or changes while it is being read is now
+  refused with exit code 2. (Reported by CodeQL.)
 
 ### Changed
 
