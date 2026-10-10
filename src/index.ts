@@ -95,6 +95,16 @@ export {
   type ExtensionArtifactFailureReason,
 } from "./verify-extension-artifact.js";
 
+// Offline verification of export bundles (the same code the `verify-bundle` CLI runs).
+export {
+  verifyExportBundle,
+  DEFAULT_BUNDLE_LIMITS,
+  type BundleLimits,
+  type BundleVerifyOptions,
+  type BundleVerifyResult,
+  type BundleVerifyErrorCode,
+} from "./verify-export-bundle.js";
+
 // Bounded fetch used for every remote document the verifier reads.
 export {
   safeFetch,

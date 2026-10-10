@@ -50,7 +50,9 @@ import { parseArgs } from "node:util";
 import type { BundleVerifyResult } from "../src/verify-export-bundle.js";
 import { safeFetchText, SafeFetchError } from "../src/safe-fetch.js";
 
-const VERSION = "0.1.0";
+import { readPackageVersion } from "../src/package-version.js";
+
+const VERSION = readPackageVersion();
 /** Matches DEFAULT_BUNDLE_LIMITS.maxCompressedBytes in the library. */
 const MAX_BUNDLE_FILE_BYTES = 16 * 1024 * 1024;
 const VALID_SUBJECTS = ["buyer_agent", "merchant_admin"] as const;

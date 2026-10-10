@@ -40,7 +40,9 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 // ─── Version ──────────────────────────────────────────────────────────────────
 
-const VERSION = "0.1.0";
+import { readPackageVersion } from "../src/package-version.js";
+
+const VERSION = readPackageVersion();
 
 // ─── Output helpers (no console.log per coding-style rules) ──────────────────
 

@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@agenticmcpstores/trust-receipt-tsa-client": "workspace:*",
+    "adm-zip": "^0.5.12",
     "canonicalize": "2.0.0",
     "jose": "^6",
     "zod": "^3.24.0"
@@ -46,7 +47,6 @@
     "vitest": "^2.1.0",
     "tsx": "^4.0.0",
     "@vitest/coverage-v8": "^2.1.0",
-    "adm-zip": "^0.5.12",
     "@types/adm-zip": "^0.5.7"
   }
 }
