@@ -4,8 +4,10 @@
  *
  * Commands:
  *   verify <file>        Verify a .jws file
- *     --jwks-url <url>   JWKS URL (default: from receipt's verification_methods)
+ *     --jwks-url <url>   JWKS URL you trust (http/https only, 1 MiB cap, 5 s timeout)
  *     --jwks-file <path> Local JWKS JSON file
+ *     One of the two is REQUIRED for receipt/erasure/manifest: the CLI never
+ *     fetches keys from a URL declared inside the artifact being verified.
  *   inspect <file>       Decode without verifying (show receipt fields)
  *   generate-key         Generate an Ed25519 keypair in JWK format
  *   conformance          Run all 10 conformance test vectors end-to-end
@@ -72,8 +74,12 @@ function help(): void {
       "Options for verify:",
       "  --type <kind>       auto (default) | receipt | erasure | manifest | jwks-history",
       "                      Bundle (.zip) verification is deferred to v1.2.",
-      "  --jwks-url <url>    Remote JWKS URL (used by receipt | erasure | manifest)",
+      "  --jwks-url <url>    Remote JWKS URL you trust (used by receipt | erasure | manifest).",
+      "                      http/https only; 1 MiB body cap; 5 s total timeout.",
       "  --jwks-file <path>  Path to local JWKS JSON file",
+      "                      One of --jwks-url / --jwks-file is REQUIRED for receipt |",
+      "                      erasure | manifest. The CLI never fetches keys from a URL",
+      "                      declared inside the artifact being verified.",
       "  --strict            (v1.1 receipts) Reject opaque-stub trust_anchor_sha256 /",
       "                      jwks_sha256 pins, anchors that do not match",
       "                      --trust-anchor-sha256, and receipts with no agent",
@@ -263,21 +269,26 @@ async function cmdVerifyReceipt(
   } else if (jwksUrl) {
     resolvedJwksUrl = jwksUrl;
   } else {
+    // A verifier must never take key material, or the LOCATION of key
+    // material, from the artifact it is verifying: whoever forges a receipt
+    // also controls the URL inside it and would be "verified" against their
+    // own key. A plain JWKS carries no signature that could be checked against
+    // a built-in trust anchor first, so there is no safe implicit fetch. We
+    // refuse and print the declared URL purely as information.
     const unsafe = await parseTrustReceiptUnsafe(jws);
-    if (unsafe) {
-      const jwksMethod = unsafe.verification_methods.find(
-        (m) => m.type === "jwks"
+    const declared = unsafe?.verification_methods.find((m) => m.type === "jwks");
+    printError(
+      "No JWKS source. Pass --jwks-file <path> or --jwks-url <url> pointing at " +
+        "keys you obtained from a source you trust. This tool does not fetch " +
+        "keys from the URL declared inside the receipt being verified."
+    );
+    if (declared) {
+      process.stderr.write(
+        `[trust-receipt] Info: the receipt declares a JWKS at ${declared.value} ` +
+          "(NOT fetched; the receipt is untrusted until verified).\n"
       );
-      if (jwksMethod) {
-        resolvedJwksUrl = jwksMethod.value;
-      }
     }
-    if (!resolvedJwksUrl) {
-      printError(
-        "No JWKS source. Provide --jwks-url or --jwks-file, or embed verification_methods[type=jwks] in the receipt."
-      );
-      return 2;
-    }
+    return 2;
   }
 
   const result = await verifyTrustReceipt(jws, {

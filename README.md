@@ -557,7 +557,9 @@ const cart = verifyCartDigest(presentedDigest, cartContents, canonicalizeJSON);
 # Generate an Ed25519 key pair
 trust-receipt generate-key
 
-# Verify a v1.0 receipt (compact JWS)
+# Verify a v1.0 receipt (compact JWS). The keys source is always explicit:
+# --jwks-url (http/https, 1 MiB cap, 5 s timeout) or --jwks-file. The CLI never
+# fetches keys from the URL declared inside the receipt being verified.
 trust-receipt verify receipt.jws --jwks-url https://trusteed.xyz/.well-known/jwks.json
 
 # Verify a v1.1 envelope (JSON object with `receipt` + `envelope_metadata`)

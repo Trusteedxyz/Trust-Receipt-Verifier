@@ -45,14 +45,17 @@
  * documented contract stable for scripts that only test for zero.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { parseArgs } from "node:util";
 // NOTE: `verifyExportBundle` (T153) is loaded via dynamic import inside `main()`
 // so that `--help` and arg-validation paths work even before T153 ships.
 // Type-only import keeps strict typing without forcing eager module resolution.
 import type { BundleVerifyResult } from "../src/verify-export-bundle.js";
+import { safeFetchText, SafeFetchError } from "../src/safe-fetch.js";
 
 const VERSION = "0.1.0";
+/** Matches DEFAULT_BUNDLE_LIMITS.maxCompressedBytes in the library. */
+const MAX_BUNDLE_FILE_BYTES = 16 * 1024 * 1024;
 const VALID_SUBJECTS = ["buyer_agent", "merchant_admin"] as const;
 type ExpectedSubject = (typeof VALID_SUBJECTS)[number];
 
@@ -322,32 +325,23 @@ interface ManifestFetchResult {
 async function fetchManifestBundleSha256(
   url: string
 ): Promise<ManifestFetchResult> {
-  let response: Response;
+  // Bounded read: http(s) only, 5 s deadline, 1 MiB cap, no https->http hop.
+  let jwsCompact: string;
   try {
-    response = await fetch(url, {
-      headers: { Accept: "application/jose" },
-    });
+    jwsCompact = (
+      await safeFetchText(url, { headers: { Accept: "application/jose" } })
+    ).trim();
   } catch (e) {
+    if (e instanceof SafeFetchError && e.code === "http_error") {
+      return {
+        bundleSha256: undefined,
+        warning: `manifest_fetch_http_${e.status ?? 0}`,
+      };
+    }
     const msg = e instanceof Error ? e.message : String(e);
     return {
       bundleSha256: undefined,
       warning: `manifest_fetch_failed:${msg}`,
-    };
-  }
-  if (!response.ok) {
-    return {
-      bundleSha256: undefined,
-      warning: `manifest_fetch_http_${response.status}`,
-    };
-  }
-  let jwsCompact: string;
-  try {
-    jwsCompact = (await response.text()).trim();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return {
-      bundleSha256: undefined,
-      warning: `manifest_body_read_failed:${msg}`,
     };
   }
   const parts = jwsCompact.split(".");
@@ -396,6 +390,16 @@ async function main(): Promise<void> {
 
   let zipBuffer: Buffer;
   try {
+    // Refuse to even read an absurdly large file into memory (the library
+    // enforces the same ceiling again on the bytes it receives).
+    const { size } = await stat(opts.zipPath);
+    if (size > MAX_BUNDLE_FILE_BYTES) {
+      err(
+        `verify-bundle: "${opts.zipPath}" is ${size} bytes; limit is ${MAX_BUNDLE_FILE_BYTES}`
+      );
+      process.exit(2);
+      return;
+    }
     zipBuffer = await readFile(opts.zipPath);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -427,29 +431,28 @@ async function main(): Promise<void> {
   // TODO(T423 / Phase 9): replace --trust-anchor-sha256 flag with the
   // embedded issuer root from `src/embedded-issuer-root.ts`. Until then,
   // the CLI relies on the operator pinning the anchor explicitly.
-  const mod = (await import("../src/verify-export-bundle.js")) as {
-    verifyExportBundle: (
-      zip: Buffer,
-      opts: {
-        trustAnchorSha256?: string;
-        expectedBundleSha256?: string;
-        expectedPolicyOids?: readonly string[];
-        expectedSubject?: ExpectedSubject;
-        allowStagingRoots?: boolean;
-        tsaRootCertSha256Allowlist?: readonly string[];
-      }
-    ) => Promise<BundleVerifyResult>;
-  };
-  const verifyResult = await mod.verifyExportBundle(zipBuffer, {
-    trustAnchorSha256: opts.trustAnchorSha256,
-    expectedBundleSha256: effectiveExpectedSha256,
-    expectedPolicyOids:
-      opts.policyOids.length > 0 ? opts.policyOids : undefined,
-    expectedSubject: opts.expectedSubject,
-    allowStagingRoots: opts.allowStagingRoots,
-    tsaRootCertSha256Allowlist:
-      opts.tsaRootAllowlist.length > 0 ? opts.tsaRootAllowlist : undefined,
-  });
+  const mod = await import("../src/verify-export-bundle.js");
+  const verifyResult: BundleVerifyResult = await mod.verifyExportBundle(
+    zipBuffer,
+    {
+      // Empty pin = "no caller pin": the bundle's anchor must then match an
+      // embedded issuer root (the library lower-cases and compares this).
+      trustAnchorPemSha256: opts.trustAnchorSha256 ?? "",
+      ...(effectiveExpectedSha256 !== undefined
+        ? { expectedBundleSha256: effectiveExpectedSha256 }
+        : {}),
+      ...(opts.policyOids.length > 0
+        ? { policyOidAllowlist: opts.policyOids }
+        : {}),
+      ...(opts.expectedSubject !== undefined
+        ? { expectedSubject: opts.expectedSubject }
+        : {}),
+      allowStagingRoots: opts.allowStagingRoots,
+      ...(opts.tsaRootAllowlist.length > 0
+        ? { tsaRootCertSha256Allowlist: opts.tsaRootAllowlist }
+        : {}),
+    }
+  );
 
   if (opts.json) {
     out(JSON.stringify(verifyResult, null, 2));

@@ -19,6 +19,7 @@
  *    throws.
  */
 
+import { safeFetchJson, type SafeFetchOptions } from "./safe-fetch.js";
 import {
   compactVerify,
   decodeProtectedHeader,
@@ -38,6 +39,8 @@ export interface VerifyExtensionArtifactOptions {
   readonly kind: ExtensionArtifactKind;
   readonly jwks?: readonly PublicJwk[];
   readonly jwksUrl?: string;
+  /** Limits for the `jwksUrl` fetch (timeout, max body bytes, max redirects). */
+  readonly jwksFetch?: SafeFetchOptions;
 }
 
 export type ExtensionArtifactFailureReason =
@@ -87,13 +90,10 @@ async function resolveJwks(
     };
   }
   try {
-    const res = await fetch(options.jwksUrl, {
+    const body = (await safeFetchJson(options.jwksUrl, {
       headers: { accept: "application/json" },
-    });
-    if (!res.ok) {
-      return { ok: false, detail: `JWKS HTTP ${res.status}` };
-    }
-    const body = (await res.json()) as { keys?: unknown };
+      ...options.jwksFetch,
+    })) as { keys?: unknown };
     if (!body || !Array.isArray(body.keys)) {
       return { ok: false, detail: "JWKS missing keys[] array" };
     }

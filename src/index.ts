@@ -95,6 +95,17 @@ export {
   type ExtensionArtifactFailureReason,
 } from "./verify-extension-artifact.js";
 
+// Bounded fetch used for every remote document the verifier reads.
+export {
+  safeFetch,
+  safeFetchText,
+  safeFetchJson,
+  SafeFetchError,
+  type SafeFetchOptions,
+  type SafeFetchResult,
+  type SafeFetchErrorCode,
+} from "./safe-fetch.js";
+
 // T-CR-007: re-export so downstream consumers (api, dashboard) can plumb
 // per-merchant TSA policy through `verifyTimestampEvidence` /
 // `verifyReceiptEnvelope` without taking a direct dep on the TSA client.

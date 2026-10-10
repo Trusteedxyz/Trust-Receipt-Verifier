@@ -27,6 +27,7 @@
 
 import AdmZip from "adm-zip";
 import { createHash } from "node:crypto";
+import { inflateRawSync } from "node:zlib";
 import { verifyReceiptEnvelope } from "./verify-1.1.js";
 import { verifyJwksHistorySignature } from "./verify-jwks-history.js";
 import {
@@ -84,6 +85,7 @@ const KNOWN_ARTIFACTS: readonly BundleArtifactName[] = [
 export type BundleVerifyErrorCode =
   | "bundle_integrity_mismatch"
   | "bundle_zip_invalid"
+  | "bundle_limits_exceeded"
   | "required_artifact_missing"
   | "missing_trust_anchor"
   | "missing_jwks_history"
@@ -136,7 +138,46 @@ export interface BundleVerifyOptions {
    * may explicitly pass `"compat"` to opt out.
    */
   mode?: "strict" | "compat";
+  /**
+   * Resource ceilings applied while unpacking the ZIP (zip-bomb defence).
+   * Every field is optional; see {@link DEFAULT_BUNDLE_LIMITS}. Exceeding any
+   * of them rejects the bundle with `bundle_limits_exceeded` BEFORE the
+   * offending data is inflated.
+   */
+  limits?: Partial<BundleLimits>;
 }
+
+export interface BundleLimits {
+  /** Maximum size of the ZIP file itself, in bytes. */
+  maxCompressedBytes: number;
+  /** Maximum number of entries in the archive (files + directories). */
+  maxEntries: number;
+  /** Maximum uncompressed size of any single entry, in bytes. */
+  maxEntryBytes: number;
+  /** Maximum summed uncompressed size of all entries, in bytes. */
+  maxTotalBytes: number;
+  /**
+   * Maximum uncompressed:compressed ratio of an entry. Only enforced for
+   * entries larger than {@link BUNDLE_RATIO_CHECK_MIN_BYTES} (tiny files can
+   * legitimately compress very well and are bounded by the absolute caps).
+   */
+  maxCompressionRatio: number;
+}
+
+/**
+ * Defaults are generous for real bundles (a handful of JSON/PEM files, a few
+ * KiB each; a CRL for TSA revocation evidence is the largest realistic
+ * member) and small enough to make memory exhaustion impractical.
+ */
+export const DEFAULT_BUNDLE_LIMITS: BundleLimits = Object.freeze({
+  maxCompressedBytes: 16 * 1024 * 1024,
+  maxEntries: 64,
+  maxEntryBytes: 8 * 1024 * 1024,
+  maxTotalBytes: 32 * 1024 * 1024,
+  maxCompressionRatio: 100,
+});
+
+export const BUNDLE_RATIO_CHECK_MIN_BYTES = 256 * 1024;
 
 export interface BundleRetentionMetadata {
   retention_period_years?: number;
@@ -217,32 +258,128 @@ function parseHistoryPayload(jwsCompact: string): { entries?: unknown } | null {
   }
 }
 
-function unzipInMemory(zipBuffer: Buffer): {
-  files: Map<BundleArtifactName, Uint8Array>;
-  unknownNames: string[];
-} | null {
+type UnzipResult =
+  | {
+      ok: true;
+      files: Map<BundleArtifactName, Uint8Array>;
+      unknownNames: string[];
+    }
+  | { ok: false; kind: "invalid" }
+  | { ok: false; kind: "limits"; detail: string };
+
+const limitsExceeded = (detail: string): UnzipResult => ({
+  ok: false,
+  kind: "limits",
+  detail,
+});
+
+/**
+ * Unpacks the ZIP in memory under {@link BundleLimits}.
+ *
+ * Declared sizes (central directory) are checked before anything is inflated.
+ * They are attacker-controlled, so they are NOT trusted as a bound: each known
+ * entry is inflated here with `maxOutputLength` set to its declared size, and
+ * the real length must equal the declared one. (adm-zip's own `getData()` is
+ * not relied on: it only bounds the output when the declared size is > 0, and
+ * only on newer Node versions, so a header declaring 0 inflates unbounded.)
+ */
+function unzipInMemory(zipBuffer: Buffer, limits: BundleLimits): UnzipResult {
+  if (zipBuffer.length > limits.maxCompressedBytes) {
+    return limitsExceeded(
+      `ZIP is ${zipBuffer.length} bytes, limit is ${limits.maxCompressedBytes}`
+    );
+  }
   let zip: AdmZip;
   try {
     zip = new AdmZip(zipBuffer);
   } catch {
-    return null;
+    return { ok: false, kind: "invalid" };
   }
+  const entries = zip.getEntries();
+  if (entries.length > limits.maxEntries) {
+    return limitsExceeded(
+      `ZIP has ${entries.length} entries, limit is ${limits.maxEntries}`
+    );
+  }
+
+  // Pass 1: declared sizes only (nothing inflated yet).
+  let declaredTotal = 0;
+  for (const entry of entries) {
+    if (entry.isDirectory) continue;
+    const { size, compressedSize } = entry.header;
+    if (size > limits.maxEntryBytes) {
+      return limitsExceeded(
+        `entry "${entry.entryName}" declares ${size} bytes, limit is ${limits.maxEntryBytes}`
+      );
+    }
+    declaredTotal += size;
+    if (declaredTotal > limits.maxTotalBytes) {
+      return limitsExceeded(
+        `declared total exceeds ${limits.maxTotalBytes} bytes`
+      );
+    }
+    if (
+      size > BUNDLE_RATIO_CHECK_MIN_BYTES &&
+      size / Math.max(compressedSize, 1) > limits.maxCompressionRatio
+    ) {
+      return limitsExceeded(
+        `entry "${entry.entryName}" compression ratio exceeds ${limits.maxCompressionRatio}:1`
+      );
+    }
+  }
+
+  // Pass 2: inflate the entries we use, bounded by the declared size.
   const files = new Map<BundleArtifactName, Uint8Array>();
   const unknownNames: string[] = [];
   const knownSet = new Set<string>(KNOWN_ARTIFACTS);
-  for (const entry of zip.getEntries()) {
+  let actualTotal = 0;
+  for (const entry of entries) {
     if (entry.isDirectory) continue;
     const name = entry.entryName;
     // Reject path traversal — only plain top-level names allowed.
     if (name.includes("..") || name.includes("/") || name.includes("\\"))
       continue;
-    if (knownSet.has(name)) {
-      files.set(name as BundleArtifactName, new Uint8Array(entry.getData()));
-    } else {
+    if (!knownSet.has(name)) {
       unknownNames.push(name);
+      continue;
     }
+    const { size, method } = entry.header;
+    if (entry.header.encripted) return { ok: false, kind: "invalid" };
+    let raw: Buffer;
+    try {
+      raw = entry.getCompressedData();
+    } catch {
+      return { ok: false, kind: "invalid" };
+    }
+    let data: Buffer;
+    if (method === 0) {
+      data = raw;
+    } else if (method === 8) {
+      try {
+        data = inflateRawSync(raw, { maxOutputLength: Math.max(size, 1) });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") {
+          return limitsExceeded(
+            `entry "${name}" inflates beyond its declared size of ${size} bytes`
+          );
+        }
+        return { ok: false, kind: "invalid" };
+      }
+    } else {
+      return { ok: false, kind: "invalid" };
+    }
+    if (data.length !== size) {
+      return limitsExceeded(
+        `entry "${name}" inflated to ${data.length} bytes but declares ${size}`
+      );
+    }
+    actualTotal += data.length;
+    if (actualTotal > limits.maxTotalBytes) {
+      return limitsExceeded(`total exceeds ${limits.maxTotalBytes} bytes`);
+    }
+    files.set(name as BundleArtifactName, new Uint8Array(data));
   }
-  return { files, unknownNames };
+  return { ok: true, files, unknownNames };
 }
 
 // ---------------------------------------------------------------------------
@@ -272,9 +409,14 @@ export async function verifyExportBundle(
   }
 
   // 2. Unzip in memory -----------------------------------------------------
-  const unzipped = unzipInMemory(zipBuffer);
-  if (!unzipped) {
-    return reject("bundle_zip_invalid", "ZIP buffer could not be parsed");
+  const unzipped = unzipInMemory(zipBuffer, {
+    ...DEFAULT_BUNDLE_LIMITS,
+    ...options.limits,
+  });
+  if (!unzipped.ok) {
+    return unzipped.kind === "limits"
+      ? reject("bundle_limits_exceeded", unzipped.detail)
+      : reject("bundle_zip_invalid", "ZIP buffer could not be parsed");
   }
   const { files, unknownNames } = unzipped;
   for (const name of unknownNames) {

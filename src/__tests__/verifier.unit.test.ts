@@ -357,20 +357,22 @@ describe("verifyTrustReceipt — windowed key history (rotation-gap closure)", (
   it("test 14: jwksUrl honors per-key valid_from/valid_to windows on the fetched JWKS document", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          keys: [
-            {
-              ...publicJwk,
-              // Retired before this receipt's issued_at — same rotation
-              // gap as jwksHistory, but sourced from a remote document.
-              valid_from: 0,
-              valid_to: Math.floor(Date.now() / 1000) - 100,
-            },
-          ],
-        }),
-      })
+      // A real Response: the fetch helper reads the body as a bounded stream.
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            keys: [
+              {
+                ...publicJwk,
+                // Retired before this receipt's issued_at — same rotation
+                // gap as jwksHistory, but sourced from a remote document.
+                valid_from: 0,
+                valid_to: Math.floor(Date.now() / 1000) - 100,
+              },
+            ],
+          })
+        )
+      )
     );
 
     try {
@@ -387,10 +389,9 @@ describe("verifyTrustReceipt — windowed key history (rotation-gap closure)", (
   it("test 15: jwksUrl keys without valid_from/valid_to remain unbounded (back-compat)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ keys: [publicJwk] }),
-      })
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ keys: [publicJwk] }))
+      )
     );
 
     try {

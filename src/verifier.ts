@@ -23,6 +23,7 @@ import type { TrustReceiptLegacyCompact } from "./schema/trust-receipt-legacy.sc
 // `types-1.1.ts` JwksHistoryEntry for the field docs. Already re-exported
 // from the package barrel (`index.ts`), so no additional export needed here.
 import type { JwksHistoryEntry } from "./types-1.1.js";
+import { safeFetchJson, type SafeFetchOptions } from "./safe-fetch.js";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -38,6 +39,8 @@ export interface VerifyOptions {
    * valid (back-compat with plain RFC 7517 JWKS documents).
    */
   jwksUrl?: string;
+  /** Limits for the `jwksUrl` fetch (timeout, max body bytes, max redirects). */
+  jwksFetch?: SafeFetchOptions;
   /**
    * Inline public JWK set (used when neither `jwksHistory` nor `jwksUrl` is
    * provided). No validity-window enforcement — kept for back-compat with
@@ -266,18 +269,22 @@ function toHistoryEntries(keys: readonly PublicJwk[]): JwksHistoryEntry[] {
   return entries;
 }
 
-/** Fetches a plain RFC 7517 JWKS document and maps it to windowed entries. */
+/**
+ * Fetches a plain RFC 7517 JWKS document and maps it to windowed entries.
+ * Bounded: http(s) only, 5 s total deadline, 1 MiB body cap, 3 redirects
+ * (overridable through `VerifyOptions.jwksFetch`). The document is untrusted
+ * transport output; it is only used as key material because the caller chose
+ * the URL explicitly.
+ */
 async function fetchJwksAsHistory(
-  jwksUrl: string
+  jwksUrl: string,
+  fetchOptions?: SafeFetchOptions
 ): Promise<{ ok: true; entries: JwksHistoryEntry[] } | { ok: false }> {
   try {
-    const res = await fetch(jwksUrl, {
+    const body = (await safeFetchJson(jwksUrl, {
       headers: { accept: "application/json" },
-      // Mirrors jose's RemoteJWKSet default timeout (5s) previously used here.
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return { ok: false };
-    const body = (await res.json()) as { keys?: unknown };
+      ...fetchOptions,
+    })) as { keys?: unknown };
     if (!body || !Array.isArray(body.keys)) return { ok: false };
     return { ok: true, entries: toHistoryEntries(body.keys as PublicJwk[]) };
   } catch {
@@ -336,7 +343,10 @@ export async function verifyTrustReceipt(
     }
     windowEntry = entry;
   } else if (options.jwksUrl) {
-    const fetched = await fetchJwksAsHistory(options.jwksUrl);
+    const fetched = await fetchJwksAsHistory(
+      options.jwksUrl,
+      options.jwksFetch
+    );
     if (!fetched.ok) {
       return { valid: false, reason: "jwks_fetch_failed" };
     }

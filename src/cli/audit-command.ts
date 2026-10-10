@@ -32,6 +32,7 @@
 
 import { readFile } from "node:fs/promises";
 
+import { safeFetchJson } from "../safe-fetch.js";
 import {
   recomputeBindingHash,
   type BindingHashRecomputeInput,
@@ -140,11 +141,13 @@ async function loadJwks(args: ParsedArgs): Promise<MerchantJwksDocument> {
     return readJsonFile<MerchantJwksDocument>(args.jwksFile);
   }
   if (args.jwksUrl !== undefined) {
-    const res = await fetch(args.jwksUrl);
-    if (!res.ok) {
-      throw new Error(`fetch ${args.jwksUrl} failed: HTTP ${res.status}`);
+    try {
+      return (await safeFetchJson(args.jwksUrl)) as MerchantJwksDocument;
+    } catch (err) {
+      throw new Error(
+        `fetch ${args.jwksUrl} failed: ${(err as Error).message}`
+      );
     }
-    return (await res.json()) as MerchantJwksDocument;
   }
   throw new Error("missing required arg: one of --jwks-url or --jwks-file");
 }
