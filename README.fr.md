@@ -64,7 +64,7 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.
 | Forme compacte v1.0-legacy du reçu (`verifier.ts`)                           | ✅ Implémenté                             | `verifyTrustReceipt` accepte également la charge utile compacte de style JWT émise par l'émetteur de la plateforme depuis spec-040 ; exposée via `result.variant` / `result.legacyReceipt`           |
 
 | Dégradation déclarée de l'ancre de confiance (`accepted_degraded`) | ✅ Implémenté | Verdict à trois valeurs pour les enveloppes v1.1 ; voir [Verdicts de vérification](#verdicts-de-vérification) et SPEC.md §4.1 (NORMATIF) |
-| Révocation côté consommateur (`revocation.ts`) | ✅ Implémenté | `checkRevocation()` face à la liste d'état publiée par le marchand. Pur et hors ligne : vous récupérez, il décide. Tout échec se résout en `unknown`, jamais en `not_revoked` |
+| Révocation côté consommateur (`revocation.ts`) | ✅ Implémenté | `verifyStatusList()` authentifie la liste d'état publiée par le marchand (JWS, ancres de confiance, `manifest_hash` signé) ; `checkRevocation()` décide ensuite. Pur et hors ligne : vous récupérez, il décide. Tout échec, et toute liste non authentifiée, se résout en `unknown`, jamais en `not_revoked` |
 | Canonicalisation rapportée (`result.canonicalization`) | ✅ Implémenté | `"jcs"` contre `"json-stringify-legacy"` sur le chemin legacy-compact, axe indépendant de `variant`, qui décrit la FORME de la charge utile |
 
 > ✅ = implémentation de qualité production. 🟡 = présent et testé mais sujet à changement avant la GA de la v1.2, ou dépendant de l'intégration côté opérateur.

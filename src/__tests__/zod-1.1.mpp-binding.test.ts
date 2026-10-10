@@ -322,3 +322,84 @@ describe("TrustReceiptV11BodySchema — mpp_binding wiring (additive + backward-
     expect(errors).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// `header` condicional y su correspondencia con el perfil
+// ---------------------------------------------------------------------------
+
+describe("MppBindingExtensionSchema — slot de `header`", () => {
+  const conHeader = {
+    ...baseConfirmed,
+    binding_profile_version: "mpp-binding/1.1" as const,
+    header: "Payment-Authorization",
+  };
+
+  it("acepta `header` cuando el perfil es mpp-binding/1.1", () => {
+    expect(MppBindingExtensionSchema.safeParse(conHeader).success).toBe(true);
+  });
+
+  it("sigue aceptando mpp-binding/1.0 SIN `header` (byte-identidad)", () => {
+    expect(MppBindingExtensionSchema.safeParse(baseConfirmed).success).toBe(
+      true
+    );
+  });
+
+  it("rechaza `header` con perfil 1.0: la clave está en el material hasheado", () => {
+    const parsed = MppBindingExtensionSchema.safeParse({
+      ...baseConfirmed,
+      header: "Payment-Authorization",
+    });
+    expect(parsed.success).toBe(false);
+    expect(JSON.stringify(parsed.error?.issues)).toMatch(/mpp-binding\/1\.1/);
+  });
+
+  it("rechaza perfil 1.1 SIN `header`: 1.1 sólo existe para representarlo", () => {
+    const parsed = MppBindingExtensionSchema.safeParse({
+      ...baseConfirmed,
+      binding_profile_version: "mpp-binding/1.1",
+    });
+    expect(parsed.success).toBe(false);
+    expect(JSON.stringify(parsed.error?.issues)).toMatch(/REQUIRES `header`/);
+  });
+
+  it("rechaza un `header` que no es un token de campo HTTP", () => {
+    expect(
+      MppBindingExtensionSchema.safeParse({
+        ...conHeader,
+        header: "Bad Header",
+      }).success
+    ).toBe(false);
+  });
+
+  it("un perfil desconocido se rechaza (el enum no se abre)", () => {
+    expect(
+      MppBindingExtensionSchema.safeParse({
+        ...baseConfirmed,
+        binding_profile_version: "mpp-binding/2.0",
+      }).success
+    ).toBe(false);
+  });
+
+  it("`.strict()` sigue cerrado: una clave nueva no entra por la puerta de 1.1", () => {
+    expect(
+      MppBindingExtensionSchema.safeParse({
+        ...conHeader,
+        opaque: "eyJhIjoxfQ",
+      }).success
+    ).toBe(false);
+  });
+
+  it("el body v1.1 completo acepta un mpp_binding en perfil 1.1", () => {
+    // El `mpp_binding` entra por el body, así que la correspondencia tiene que
+    // viajar hasta ahí: si sólo la validara el schema suelto, el emisor real
+    // podría firmar un cuerpo incoherente.
+    const shape = TrustReceiptV11BodySchema.innerType().shape;
+    expect(shape.mpp_binding).toBeDefined();
+    const inner = (
+      shape.mpp_binding as unknown as {
+        unwrap: () => { safeParse: (v: unknown) => { success: boolean } };
+      }
+    ).unwrap();
+    expect(inner.safeParse(conHeader).success).toBe(true);
+  });
+});

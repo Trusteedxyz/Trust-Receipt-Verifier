@@ -22,7 +22,12 @@ import {
   MandateEvidenceFields,
 } from "./schema/mandate-evidence.js";
 import { OperationLinkFields } from "./schema/operation-link.js";
+import { SettlementEvidenceFields } from "./schema/settlement-evidence.js";
 import { SignerFields } from "./schema/signers.js";
+import {
+  PlatformMandateEvidenceFields,
+  platformMandateEvidenceIssues,
+} from "./schema/platform-mandate-evidence.js";
 import { StateWitnessEvidenceFields } from "./schema/state-witness-evidence.js";
 
 // ---------------------------------------------------------------------------
@@ -508,7 +513,7 @@ export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
 /**
  * spec-056 — top-level `mpp_binding` extension carried inside the v1.1 body.
  *
- * MPP (Machine Payment Protocol — draft-ryan-httpauth-payment-01) binding
+ * MPP (Machine Payments Protocol — draft-ryan-httpauth-payment-01) binding
  * profile. Isomorfico a `x402_binding` (spec-054) pero adaptado al flujo
  * HTTP 402 `WWW-Authenticate: Payment` → 200 OK + `Payment-Receipt` header.
  *
@@ -543,7 +548,7 @@ export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
  * Status: ✅ SSOT activo (2026-06-02). Exportado del barrel del paquete y
  * consumido por `MppReceiptIssuerService` (emisión) y `MppBindingVerifier`
  * (auditoría). Runtime parser + settlement service + 5 rutas cableados
- * (dormant hasta ops gate). Ver `wiki/protocol-notes/spec-056-trustreceipt-mpp-binding.md`.
+ * (dormant hasta ops gate).
  */
 const Rfc3339StrictUtc = z
   .string()
@@ -561,7 +566,13 @@ const MppWarningCode = z.enum([
 
 export const MppBindingExtensionSchema = z
   .object({
-    binding_profile_version: z.literal("mpp-binding/1.0"),
+    /**
+     * Perfil del binding. `1.1` existe SOLO para los retos que traen `header=`
+     * (perfil `mpp-binding/1.1`): sin ese parámetro el material es byte a byte el de `1.0`. El
+     * `.strict()` de abajo es lo que hace que un verificador que sólo entienda
+     * `1.0` RECHACE un `1.1` en vez de ignorar la clave que no conoce.
+     */
+    binding_profile_version: z.enum(["mpp-binding/1.0", "mpp-binding/1.1"]),
     /** ULID Crockford base32 — identificador unique del receipt. NO es la replay cache key. */
     binding_id: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/),
     /** Payment method ("stripe" | "tempo" | "lightning" | "solana" | "visa" | "bnpl" | ...). Draft MPP §Method Identifier Format: lowercase ASCII only. */
@@ -585,6 +596,18 @@ export const MppBindingExtensionSchema = z
     timestamp: Rfc3339StrictUtc,
     /** sha256(JCS(challenge.request_decoded)) — ata amount/currency/recipient sin replicar PII. */
     request_hash: Sha256Tagged,
+    /**
+     * Campo HTTP alterno para la credencial (`Payment-Authorization`), core
+     * `draft-httpauth-payment-01` §Credential Header. Presente SOLO en
+     * `mpp-binding/1.1`, y la correspondencia la impone el `superRefine`.
+     */
+    header: z
+      .string()
+      .regex(
+        /^[A-Za-z][A-Za-z0-9-]{0,63}$/,
+        "must be a valid HTTP field name token"
+      )
+      .optional(),
     /** RFC 9530 Content-Digest del request body (opcional, recomendado POST/PUT). */
     digest: z.string().optional(),
     /** Expiración del challenge (RFC 3339 strict). */
@@ -597,6 +620,22 @@ export const MppBindingExtensionSchema = z
   // Strict: rechaza unknown keys (alinea con X402BindingExtensionSchema M-1).
   .strict()
   .superRefine((binding, ctx) => {
+    // Correspondencia EN LOS DOS SENTIDOS entre `header` y el perfil.
+    // Sin esto, un emisor podría publicar `1.1` sin la clave (y un verificador
+    // recomputaría un hash distinto) o la clave con `1.0` (y el hash publicado
+    // no correspondería al material que el perfil declara).
+    const hasHeader = binding.header !== undefined;
+    const isV11 = binding.binding_profile_version === "mpp-binding/1.1";
+    if (hasHeader !== isV11) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["header"],
+        message: hasHeader
+          ? '`header` present REQUIRES binding_profile_version="mpp-binding/1.1": the key is part of the hashed material.'
+          : '`binding_profile_version="mpp-binding/1.1"` REQUIRES `header`: 1.1 exists only to represent a challenge that carries it.',
+      });
+    }
+
     // ADR-056 §Degradation Matrix — solo `unverified` (NO evidencia de pago)
     // REQUIRES warnings[]. `confirmed` (evidencia válida) y `recovered`
     // (evidencia pago previo válida) NO fuerzan warnings.
@@ -722,6 +761,11 @@ export const TrustReceiptV11BodySchema = z
     // rechazado entero como clave desconocida.
     ...MandateEvidenceFields,
     ...ApprovalEvidenceFields,
+    ...PlatformMandateEvidenceFields,
+    // Evidencia de LIQUIDACIÓN — SSOT en `schema/settlement-evidence.ts`. El
+    // root es `.strict()`: sin declararlos, un body que los llevara sería
+    // rechazado entero como clave desconocida.
+    ...SettlementEvidenceFields,
     // Declaración de firmantes (R-03) — SSOT en `schema/signers.ts`. Va DENTRO
     // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
     // y subirse la clase de verificación.
@@ -735,6 +779,10 @@ export const TrustReceiptV11BodySchema = z
   // must precede `.superRefine` (which returns a ZodEffects, not a ZodObject).
   .strict()
   .superRefine((receipt, ctx) => {
+    // Coherencia de la evidencia del mandato de plataforma.
+    for (const message of platformMandateEvidenceIssues(receipt)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [], message });
+    }
     const hasBuyer = receipt.buyer_agent_consent_context !== undefined;
     const hasAdmin = receipt.merchant_admin_authorization_context !== undefined;
 

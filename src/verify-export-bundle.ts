@@ -39,6 +39,7 @@ import type {
   V11VerifyErrorCode,
   VerifyOptions as V11VerifyOptions,
 } from "./verify-1.1.js";
+import { verifyJwksSnapshot } from "./verify-jwks-snapshot.js";
 import type {
   ReceiptEnvelope,
   SignedJwksHistory,
@@ -92,6 +93,8 @@ export type BundleVerifyErrorCode =
   | "jwks_history_payload_invalid"
   | "jwks_history_signature_invalid"
   | "retention_policy_invalid"
+  | "jwks_snapshot_invalid"
+  | "jwks_snapshot_mismatch"
   | "envelope_invalid_json"
   | V11VerifyErrorCode;
 
@@ -351,7 +354,12 @@ export async function verifyExportBundle(
   // embedded issuer-root cert (Codex F1 finding). Staging stub root → fall
   // back to structural-only with a warning. T420 ceremony makes this a hard
   // requirement.
-  const rootEntry = getActiveIssuerRoot();
+  // The root is the one FOUND BY FINGERPRINT of the bundle's
+  // own trust-anchor.pem (already matched against pin/embedded above), not
+  // "whichever root is active today" — after a rotation an archived bundle is
+  // signed by a RETIRED root. Only a pin-only match (root not embedded) keeps
+  // the previous fallback to the active root.
+  const rootEntry = embeddedMatch ?? getActiveIssuerRoot();
   const historyVerify = await verifyJwksHistorySignature(
     signedJwksHistory,
     rootEntry
@@ -443,6 +451,33 @@ export async function verifyExportBundle(
       envelopeVerifyResult: envelopeResult,
     };
   }
+
+  // 7b. jwks-snapshot.json bound to signed evidence ----------
+  const signedBody = envelopeResult.receipt;
+  const snapshotKid = signedBody?.verification_methods?.jwks?.kid;
+  const committed = signedBody?.verification_methods?.jwks_sha256;
+  if (typeof snapshotKid !== "string" || typeof committed !== "string") {
+    return reject(
+      "jwks_snapshot_invalid",
+      "verified receipt body carries no verification_methods.jwks.kid / jwks_sha256 to bind the snapshot to",
+      warnings,
+      { filesPresent, retentionMetadata, envelopeVerifyResult: envelopeResult }
+    );
+  }
+  const snapshotCheck = verifyJwksSnapshot({
+    snapshotBytes: mustGet("jwks-snapshot.json"),
+    kid: snapshotKid,
+    committedJwksSha256: committed,
+    historyEntries: historyPayload.entries as unknown[],
+  });
+  if ("code" in snapshotCheck) {
+    return reject(snapshotCheck.code, snapshotCheck.detail, warnings, {
+      filesPresent,
+      retentionMetadata,
+      envelopeVerifyResult: envelopeResult,
+    });
+  }
+  for (const w of snapshotCheck.warnings) warnings.push(w);
 
   // 8. Accepted -----------------------------------------------------------
   // Carry the inner verifier's degradation through verbatim. Branching on

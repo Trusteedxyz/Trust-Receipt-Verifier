@@ -64,7 +64,7 @@ Siehe [CHANGELOG.md](CHANGELOG.md) für die vollständige Versionshistorie.
 | Kompakte v1.0-Legacy-Belegform (`verifier.ts`)                           | ✅ Implementiert                   | `verifyTrustReceipt` akzeptiert auch die kompakte JWT-artige Nutzlast, die der Plattform-Aussteller seit spec-040 ausgibt; verfügbar als `result.variant` / `result.legacyReceipt`                                         |
 
 | Erklärte Degradierung des Vertrauensankers (`accepted_degraded`) | ✅ Implementiert | Dreiwertiges Urteil für v1.1-Umschläge; siehe [Verifikationsurteile](#verifikationsurteile) und SPEC.md §4.1 (NORMATIV) |
-| Verbraucherseitiger Widerruf (`revocation.ts`) | ✅ Implementiert | `checkRevocation()` gegen die vom Händler veröffentlichte Statusliste. Rein und offline: Sie holen ab, es entscheidet. Jeder Fehlerfall endet in `unknown`, nie in `not_revoked` |
+| Verbraucherseitiger Widerruf (`revocation.ts`) | ✅ Implementiert | `verifyStatusList()` authentifiziert die vom Händler veröffentlichte Statusliste (JWS, Vertrauensanker, signierter `manifest_hash`); danach entscheidet `checkRevocation()`. Rein und offline: Sie holen ab, es entscheidet. Jeder Fehlerfall und jede nicht authentifizierte Liste endet in `unknown`, nie in `not_revoked` |
 | Gemeldete Kanonisierung (`result.canonicalization`) | ✅ Implementiert | `"jcs"` gegenüber `"json-stringify-legacy"` auf dem Legacy-Compact-Pfad, unabhängige Achse von `variant`, das die FORM der Nutzlast beschreibt |
 
 > ✅ = produktionsreife Implementierung. 🟡 = vorhanden und getestet, aber vor der GA von v1.2 änderbar, oder von betreiberseitiger Integration abhängig.

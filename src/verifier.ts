@@ -16,6 +16,7 @@ import {
 import { TrustReceiptSchema } from "./schema/trust-receipt.schema.js";
 import type { TrustReceipt } from "./schema/trust-receipt.schema.js";
 import { TrustReceiptLegacyCompactSchema } from "./schema/trust-receipt-legacy.schema.js";
+import { platformMandateEvidenceIssues } from "./schema/platform-mandate-evidence.js";
 import type { TrustReceiptLegacyCompact } from "./schema/trust-receipt-legacy.schema.js";
 // Reuses the v1.1 envelope verifier's windowed-key-history shape (same
 // rotation model) instead of redefining an equivalent type here — see
@@ -427,6 +428,17 @@ export async function verifyTrustReceipt(
 
   const receipt = schemaResult.data;
 
+  // La evidencia del mandato de plataforma tiene que ser coherente
+  // (presencia humana solo con passkey; signature_verified nombra a quien firmo).
+  const mandateEvidenceIssues = platformMandateEvidenceIssues(receipt);
+  if (mandateEvidenceIssues.length > 0) {
+    return {
+      valid: false,
+      reason: "schema_invalid",
+      errors: [...mandateEvidenceIssues],
+    };
+  }
+
   // SPEC §5.2: kid MUST match in both JWS protected header and receipt payload.
   if (receipt.kid !== verifiedKid) {
     return {
@@ -518,6 +530,14 @@ function verifyLegacyCompact(
     canonicalization: "jcs" | "json-stringify-legacy";
   }
 ): VerifyResult {
+  const mandateEvidenceIssues = platformMandateEvidenceIssues(legacy);
+  if (mandateEvidenceIssues.length > 0) {
+    return {
+      valid: false,
+      reason: "schema_invalid",
+      errors: [...mandateEvidenceIssues],
+    };
+  }
   if (legacy.kid !== verifiedKid) {
     return {
       valid: false,

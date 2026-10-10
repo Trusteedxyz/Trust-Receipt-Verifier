@@ -39,8 +39,10 @@ import {
   MandateEvidenceFields,
 } from "./mandate-evidence.js";
 import { OperationLinkFields } from "./operation-link.js";
+import { SettlementEvidenceFields } from "./settlement-evidence.js";
 import { PolicyEvidenceFields } from "./policy-evidence.js";
 import { SignerFields } from "./signers.js";
+import { PlatformMandateEvidenceFields } from "./platform-mandate-evidence.js";
 import { StateWitnessEvidenceFields } from "./state-witness-evidence.js";
 
 // ─── Legacy compact schema ───────────────────────────────────────────────────
@@ -126,6 +128,12 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   // línea, el emisor firmaría el mandato y Zod lo descartaría del parseado.
   ...MandateEvidenceFields,
   ...ApprovalEvidenceFields,
+  ...PlatformMandateEvidenceFields,
+  // Evidencia de LIQUIDACIÓN — SSOT en `schema/settlement-evidence.ts`.
+  // Declarada aquí porque ÉSTA es la forma que valida el corpus real: sin la
+  // línea, el emisor firmaría la referencia del rail y Zod la descartaría del
+  // objeto parseado, dejando la prueba del cobro firmada e invisible.
+  ...SettlementEvidenceFields,
 });
 
 export type TrustReceiptLegacyCompact = z.infer<

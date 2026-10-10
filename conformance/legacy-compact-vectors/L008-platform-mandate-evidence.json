@@ -1,0 +1,20 @@
+{
+  "name": "L008-platform-mandate-evidence",
+  "description": "Compact payload carrying the platform-mandate evidence: `mandate_verification: signature_verified` plus the five sibling fields (`mandate_issuer`, `mandate_kid`, `mandate_approval_method`, `mandate_human_presence_verified`, `mandate_cart_hash`). Both ports MUST verify it. It EXERCISES the forward-compat commitment (unknown fields are tolerated) and pins that the fields survive verification; it adds no conformance requirement and leaves the frozen v1.0-FINAL schema, EMBEDDED_SCHEMA_SHA256 and every existing vector untouched. `mandate_claims_hash` was computed by hand over the canonical string {aud,currency,exp,mandate_id,max_amount_cents,sub}.",
+  "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImxlZ2FjeS1jb21wYWN0LXZlY3Rvci1rZXkiLCJ0eXAiOiJ0cnVzdC1yZWNlaXB0K2p3dCJ9.eyJpc3MiOiJtZXJjaGFudDpzdG9yZV92ZWN0b3JfMSIsInN1YiI6ImNhbGxfdmVjdG9yXzEiLCJpYXQiOjE3NjAwMDAwMDAsImNhbGxJZCI6ImNhbGxfdmVjdG9yXzEiLCJtZXJjaGFudElkIjoic3RvcmVfdmVjdG9yXzEiLCJhZ2VudElkIjoiZGlkOmFnZW50OnZlY3RvciIsImJ1Y2tldCI6ImNoZWNrb3V0IiwidG9vbCI6ImNvbXBsZXRlX2NoZWNrb3V0IiwiaW5wdXRIYXNoIjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm91dHB1dEhhc2giOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwib3V0cHV0SGFzaFN0YXR1cyI6ImNhcHR1cmVkIiwidHJ1c3RfcHJvdmlkZXJfYXNzZXJ0aW9ucyI6W10sImtpZCI6ImxlZ2FjeS1jb21wYWN0LXZlY3Rvci1rZXkiLCJzY2hlbWFfdmVyc2lvbiI6IjEuMCIsImNhbm9uIjoiamNzIiwiZXhwaXJlc19hdCI6MTk4MDc1MjAwMCwicHJvdG9jb2wiOiJNQ1AiLCJwb2xpY3lfZGVjaXNpb24iOiJhbGxvdyIsIm1hbmRhdGVfaWQiOiJqdGktdmVjdG9yLTEiLCJtYW5kYXRlX2NsYWltc19oYXNoIjoiMWY2OTE0ZWZiYzlkNzU0ZTRhNzUyZTFjOWQyNzk4NTdkY2ZkMjdmMTRhMGUyZTNmY2EwOWUyMjNkNjJkZjdkNyIsIm1hbmRhdGVfbWF4X2Ftb3VudF9jZW50cyI6NDk5OSwibWFuZGF0ZV9jdXJyZW5jeSI6IkVVUiIsIm1hbmRhdGVfc3ViamVjdCI6ImRlbW8tc2FuZGJveDprZXktdmVjdG9yIiwibWFuZGF0ZV9hdWRpZW5jZSI6ImRlbW8tc3RvcmUiLCJtYW5kYXRlX2V4cGlyZXNfYXQiOjE3NjAwMDA5MDAsIm1hbmRhdGVfdmVyaWZpY2F0aW9uIjoic2lnbmF0dXJlX3ZlcmlmaWVkIiwibWFuZGF0ZV9pc3N1ZXIiOiJodHRwczovL3ZlY3Rvci5leGFtcGxlIiwibWFuZGF0ZV9raWQiOiJwYXltZW50LW1hbmRhdGUta2V5LXZlY3RvciIsIm1hbmRhdGVfYXBwcm92YWxfbWV0aG9kIjoiYWdlbnRfYm91bmQiLCJtYW5kYXRlX2h1bWFuX3ByZXNlbmNlX3ZlcmlmaWVkIjpmYWxzZSwibWFuZGF0ZV9jYXJ0X2hhc2giOiJjYXJ0LWhhc2gtdmVjdG9yLTEiLCJhcHByb3ZhbF9yZWYiOiJhcHByb3ZhbC12ZWN0b3ItMSIsImFwcHJvdmFsX2NoYW5uZWwiOiJwbGF0Zm9ybV9tYW5kYXRlX2FwcHJvdmFsIiwiYXBwcm92YWxfYXQiOjE3NTk5OTk5NDB9.HFNxgEOI2eJ20FDa8GYtPd3Xfv2VHjisPD4WQm6fjtTHe-ZvGyEOGN4-mobSqiFnIjLv3jfjfXZl4aXGOkNLCQ",
+  "jwks": [
+    {
+      "crv": "Ed25519",
+      "x": "arXaeZ42JSvIubOFpE9tKtDCbwCZDCgo5F2ioXuvEAQ",
+      "kty": "OKP",
+      "kid": "legacy-compact-vector-key",
+      "alg": "EdDSA"
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "variant": "legacy_compact",
+    "canonicalization": "jcs",
+    "freshnessExpired": false
+  }
+}

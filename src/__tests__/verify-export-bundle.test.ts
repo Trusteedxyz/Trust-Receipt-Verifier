@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AdmZip from "adm-zip";
 import { createHash } from "node:crypto";
+import canonicalize from "canonicalize";
 
 // Mock the inner v1.1 verifier so we can drive its outcome deterministically.
 const verifyReceiptEnvelope = vi.fn();
@@ -44,7 +45,20 @@ const RECEIPT_ENVELOPE = {
 // JWS Compact with payload {"entries":[]} — verifier requires entries[] array
 const JWKS_HISTORY_JWS = "eyJhbGciOiJFZERTQSJ9.eyJlbnRyaWVzIjpbXX0.fakesig";
 
-const JWKS_SNAPSHOT = { keys: [] };
+// The snapshot is now bound to the signed body, so the fixture carries a
+// real key and the mocked inner verifier returns a body committing to its digest.
+const JWKS_SNAPSHOT = {
+  keys: [{ kty: "OKP", crv: "Ed25519", x: "AAAA", kid: "k1" }],
+};
+const RECEIPT_BODY = {
+  verification_methods: {
+    jwks: { uri: "https://x/jwks.json", kid: "k1" },
+    jwks_sha256: createHash("sha256")
+      .update(canonicalize({ keys: JWKS_SNAPSHOT.keys }) as string, "utf8")
+      .digest("hex"),
+    trust_anchor_sha256: "a".repeat(64),
+  },
+};
 
 const RETENTION_METADATA = {
   jurisdiction: "US",
@@ -118,6 +132,7 @@ describe("verifyExportBundle", () => {
       schema_version: "1.1",
       warnings: [],
       envelope: RECEIPT_ENVELOPE,
+      receipt: RECEIPT_BODY,
       recomputedLegalPosture: "ades_candidate_no_tsa",
     });
 
@@ -147,6 +162,7 @@ describe("verifyExportBundle", () => {
       schema_version: "1.1",
       warnings: ["trust_anchor_staging"],
       envelope: RECEIPT_ENVELOPE,
+      receipt: RECEIPT_BODY,
       recomputedLegalPosture: "simple_electronic_seal",
     });
 
@@ -172,6 +188,7 @@ describe("verifyExportBundle", () => {
       schema_version: "1.1",
       warnings: [],
       envelope: RECEIPT_ENVELOPE,
+      receipt: RECEIPT_BODY,
       recomputedLegalPosture: "ades_candidate_no_tsa",
     });
 
@@ -190,6 +207,7 @@ describe("verifyExportBundle", () => {
       schema_version: "1.1",
       warnings: [],
       envelope: RECEIPT_ENVELOPE,
+      receipt: RECEIPT_BODY,
     });
 
     const zip = buildFixtureZip();
@@ -209,6 +227,7 @@ describe("verifyExportBundle", () => {
       schema_version: "1.1",
       warnings: [],
       envelope: RECEIPT_ENVELOPE,
+      receipt: RECEIPT_BODY,
     });
 
     const zip = buildFixtureZip();

@@ -16,8 +16,10 @@ import {
   MandateEvidenceFields,
 } from "./mandate-evidence.js";
 import { OperationLinkFields } from "./operation-link.js";
+import { SettlementEvidenceFields } from "./settlement-evidence.js";
 import { PolicyEvidenceFields } from "./policy-evidence.js";
 import { SignerFields } from "./signers.js";
+import { PlatformMandateEvidenceFields } from "./platform-mandate-evidence.js";
 import { StateWitnessEvidenceFields } from "./state-witness-evidence.js";
 
 // ─── Sub-schemas ─────────────────────────────────────────────────────────────
@@ -149,6 +151,11 @@ export const TrustReceiptSchema = z.object({
   // lo autorizaba, que es justo lo que un tercero necesita para comprobarlo.
   ...MandateEvidenceFields,
   ...ApprovalEvidenceFields,
+  ...PlatformMandateEvidenceFields,
+  // Evidencia de LIQUIDACIÓN — SSOT en `schema/settlement-evidence.ts`. Sin
+  // estos campos el recibo publica un desenlace y ninguna referencia al rail
+  // que cobró, así que comprobar el cobro por cuenta propia era imposible.
+  ...SettlementEvidenceFields,
 
   // Attachments
   attachments: z.array(AttachmentSchema).default([]),

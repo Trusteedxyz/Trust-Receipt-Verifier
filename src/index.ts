@@ -342,6 +342,12 @@ export {
 export {
   checkRevocation,
   hashReceiptId,
+  verifyStatusList,
+  STATUS_LIST_JWS_SUBJECT,
+  type AuthenticatedStatusList,
+  type StatusListRejection,
+  type VerifyStatusListContext,
+  type VerifyStatusListResult,
   type CheckRevocationInput,
   type RevocationResult,
   type RevocationStatus,
@@ -414,6 +420,16 @@ export {
   type MandateVerification,
 } from "./schema/mandate-evidence.js";
 
+// Evidencia del mandato EMITIDO POR LA PLATAFORMA (`platform_mandate`): campos
+// hermanos opcionales + invariantes entre campos. No toca el esquema congelado.
+export {
+  PlatformMandateEvidenceFields,
+  PLATFORM_MANDATE_EVIDENCE_KEYS,
+  MandateApprovalMethodSchema,
+  platformMandateEvidenceIssues,
+  type PlatformMandateEvidenceView,
+} from "./schema/platform-mandate-evidence.js";
+
 // Evidencia de STATE WITNESS (2026-09-14) — qué resolvió el comparador de
 // spec-063 antes de mover dinero, y contra qué estado autoritativo. Cierra el
 // hueco de `reconfirmed_state_hash`: un checkout que se ejecutó porque el
@@ -424,3 +440,19 @@ export {
   StateWitnessResolutionSchema,
   StateWitnessReasonSchema,
 } from "./schema/state-witness-evidence.js";
+
+// Evidencia de LIQUIDACIÓN — la referencia del rail que
+// cobró, la fuente de los fondos y el hash del carrito cobrado. Presentes ⇒ el
+// emisor vio al rail capturar; ausentes ⇒ el recibo no afirma liquidación, que
+// NO es lo mismo que afirmar que no se pagó.
+export {
+  SettlementEvidenceFields,
+  SETTLEMENT_EVIDENCE_KEYS,
+  SETTLEMENT_CART_HASH_ALG,
+  SettlementEvidenceSchema,
+  SettlementPspSchema,
+  SettlementFundingSourceSchema,
+  type SettlementEvidence,
+  type SettlementPsp,
+  type SettlementFundingSource,
+} from "./schema/settlement-evidence.js";

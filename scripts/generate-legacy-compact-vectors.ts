@@ -188,6 +188,50 @@ const SPECS: readonly VectorSpec[] = [
     },
   },
   {
+    name: "L008-platform-mandate-evidence",
+    description:
+      "Compact payload carrying the platform-mandate evidence: " +
+      "`mandate_verification: signature_verified` plus the five sibling fields " +
+      "(`mandate_issuer`, `mandate_kid`, `mandate_approval_method`, " +
+      "`mandate_human_presence_verified`, `mandate_cart_hash`). Both ports MUST " +
+      "verify it. It EXERCISES the forward-compat commitment (unknown fields are " +
+      "tolerated) and pins that the fields survive verification; it adds no " +
+      "conformance requirement and leaves the frozen v1.0-FINAL schema, " +
+      "EMBEDDED_SCHEMA_SHA256 and every existing vector untouched. " +
+      "`mandate_claims_hash` was computed by hand over the canonical string " +
+      "{aud,currency,exp,mandate_id,max_amount_cents,sub}.",
+    payload: base({
+      schema_version: "1.0",
+      canon: "jcs",
+      expires_at: ISSUED_AT + 7 * 365 * 24 * 60 * 60,
+      protocol: "MCP",
+      policy_decision: "allow",
+      mandate_id: "jti-vector-1",
+      mandate_claims_hash:
+        "1f6914efbc9d754e4a752e1c9d279857dcfd27f14a0e2e3fca09e223d62df7d7",
+      mandate_max_amount_cents: 4999,
+      mandate_currency: "EUR",
+      mandate_subject: "demo-sandbox:key-vector",
+      mandate_audience: "demo-store",
+      mandate_expires_at: ISSUED_AT + 900,
+      mandate_verification: "signature_verified",
+      mandate_issuer: "https://vector.example",
+      mandate_kid: "payment-mandate-key-vector",
+      mandate_approval_method: "agent_bound",
+      mandate_human_presence_verified: false,
+      mandate_cart_hash: "cart-hash-vector-1",
+      approval_ref: "approval-vector-1",
+      approval_channel: "platform_mandate_approval",
+      approval_at: ISSUED_AT - 60,
+    }),
+    expected: {
+      valid: true,
+      variant: "legacy_compact",
+      canonicalization: "jcs",
+      freshnessExpired: false,
+    },
+  },
+  {
     name: "L004-tampered-payload",
     description:
       "Signed bytes altered after signing. Must fail identically in both ports " +
@@ -215,7 +259,16 @@ async function main(): Promise<void> {
 
   mkdirSync(OUT_DIR, { recursive: true });
 
-  for (const spec of SPECS) {
+  // `--only <name>` escribe SOLO ese vector y no toca el README: cada ejecucion
+  // genera una clave nueva, y regenerar el resto cambiaria las firmas de los
+  // vectores ya publicados. Asi se anade un vector sin tocar los existentes.
+  const only = process.argv[2] === "--only" ? process.argv[3] : undefined;
+  const selected = SPECS.filter((s) => only === undefined || s.name === only);
+  if (only !== undefined && selected.length !== 1) {
+    throw new Error(`--only ${only}: no such vector`);
+  }
+
+  for (const spec of selected) {
     let jws = await new CompactSign(
       new TextEncoder().encode(JSON.stringify(spec.payload))
     )
@@ -251,6 +304,13 @@ async function main(): Promise<void> {
       )}\n`,
       "utf8"
     );
+  }
+
+  if (only !== undefined) {
+    process.stdout.write(
+      `Wrote vector ${only} to ${OUT_DIR} (README untouched)\n`
+    );
+    return;
   }
 
   writeFileSync(

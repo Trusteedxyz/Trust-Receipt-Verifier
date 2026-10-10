@@ -18,11 +18,11 @@
  * ## Qué NO afirma: la firma del mandato
  *
  * `mandate_verification` existe justamente para no mentir aquí. Hoy el mandato
- * se PARSEA, no se verifica: la verificación criptográfica está diferida a los
- * specs de binding AP2/MPP (044/056/058) — ver `payment-mandate-claims.ts`, que
- * lo dice en su primera línea. Por eso el único valor que hoy puede emitirse es
- * `structure_only`, y `signature_verified` está declarado para el día que
- * exista, no para usarlo antes. Un recibo con `structure_only` prueba «el
+ * se PARSEA, no se verifica: un mandato autodeclarado no tiene firma que verificar (ver
+ * `payment-mandate-claims.ts`) y el emitido por la plataforma sí.
+ * Por eso `structure_only` es el valor de un mandato autodeclarado y
+ * `signature_verified` sólo lo respalda un veredicto positivo del verificador
+ * de plataforma, con emisor y clase de aprobación en los campos hermanos. Un recibo con `structure_only` prueba «el
  * agente se ató a este límite y lo respetamos», NO «alguien le concedió ese
  * límite».
  *
@@ -95,10 +95,10 @@ export type MandateVerification = z.infer<typeof MandateVerificationSchema>;
 /**
  * Las seis claims del mandato que entran en el material hasheado.
  *
- * Es EXACTAMENTE el `PaymentMandateClaims` de `packages/shared`. Se redeclara
- * aquí —en vez de importarlo— porque este paquete es el que consume un
- * verificador de tercero y no puede depender del monorepo; la equivalencia la
- * fija un test de forma en el emisor.
+ * Es EXACTAMENTE el `PaymentMandateClaims` del emisor. Se redeclara aquí
+ * porque este paquete es el que consume un verificador de tercero y no puede
+ * depender de código del emisor; la equivalencia la fija un test de forma de
+ * su lado.
  */
 export interface MandateClaimsForHash {
   readonly mandate_id: string;
@@ -127,9 +127,8 @@ export interface MandateClaimsForHash {
  *      probase un artefacto distinto del que gobernó la decisión.
  *
  * ⚠️ Este material es ESTABLE por contrato. Ampliarlo cambia todos los hashes
- * ya emitidos y rompe la comparación de cualquier tercero que los guardara —
- * ver `wiki/gotchas/ampliar-un-material-hasheado-2026-09-08.md`. Una claim
- * nueva exige campo nuevo, no una séptima clave aquí.
+ * ya emitidos y rompe la comparación de cualquier tercero que los guardara.
+ * Una claim nueva exige un campo nuevo, no una séptima clave aquí.
  *
  * Se exporta aparte del hash para que un tercero pueda inspeccionar la cadena
  * y no sólo aceptar un digest opaco.
@@ -203,9 +202,18 @@ export const MANDATE_EVIDENCE_KEYS = Object.keys(
  * La aprobación fuera de banda, cuando la hubo.
  *
  * Va aparte del mandato porque responde a otra pregunta: el mandato dice
- * «cuánto podía gastar el agente», la aprobación dice «una persona dijo que sí
- * a ESTA compra». Colapsarlas haría que el recibo no pudiera distinguir un
- * checkout dentro de mandato SIN aprobación humana de uno con las dos cosas.
+ * «cuánto podía gastar el agente», la aprobación dice «alguien registró un sí
+ * explícito a ESTA compra, por este canal». Colapsarlas haría que el recibo no
+ * pudiera distinguir un checkout dentro de mandato SIN aprobación de uno con
+ * las dos cosas.
+ *
+ * Lo que la aprobación NO acredita: presencia
+ * humana ni identidad. En el canal `demo_playground_confirmation` basta la
+ * credencial del propio agente, y un monitor sintético la registra en cada
+ * pasada. Quién la dio lo cualifica el sufijo del canal cuando el emisor lo
+ * publica (`demo_playground_confirmation:agent_credential_holder`,
+ * `:synthetic_monitor`, …); un canal sin sufijo NO debe leerse como «una
+ * persona aprobó».
  *
  * El origen del dato es la sesión (server-authoritative), NUNCA los argumentos
  * de la tool: si el agente pudiera declarar «un humano aprobó esto», el recibo

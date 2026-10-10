@@ -15,4 +15,10 @@ Regenerate deliberately (a new key means new vectors):
 pnpm --filter trust-receipt-verifier exec tsx scripts/generate-legacy-compact-vectors.ts
 ```
 
-Generated 7 vectors.
+Generated 8 vectors. `L008-platform-mandate-evidence` was added on its
+own with `--only L008-platform-mandate-evidence`, so the other seven keep their
+original signatures:
+
+```
+pnpm --filter trust-receipt-verifier exec tsx scripts/generate-legacy-compact-vectors.ts --only L008-platform-mandate-evidence
+```

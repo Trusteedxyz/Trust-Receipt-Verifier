@@ -24,6 +24,8 @@
  */
 
 import { createHash } from "node:crypto";
+import { compactVerify, decodeProtectedHeader, importJWK } from "jose";
+import type { JWK } from "jose";
 
 /** Entry as published by the status endpoint. */
 export interface StatusListEntry {
@@ -56,7 +58,14 @@ export interface RevocationResult {
     | "merchant_mismatch"
     | "unsupported_hash_alg"
     | "unsupported_list_version"
-    | "malformed_status_list";
+    | "malformed_status_list"
+    | "list_not_authenticated";
+  /**
+   * Set only with `unknownReason === "list_not_authenticated"`: the
+   * UNAUTHENTICATED list names this receipt. Not evidence of revocation (anyone
+   * can write that JSON) but a reason to obtain an authenticated list.
+   */
+  readonly unauthenticatedListNamesReceipt?: boolean;
   /**
    * `true` when the list carried no cryptographic authorship. The result is
    * still reported — an unsigned list naming your receipt is a reason to
@@ -81,13 +90,170 @@ export function hashReceiptId(receiptId: string): string {
   return createHash("sha256").update(receiptId, "utf8").digest("hex");
 }
 
+declare const authenticatedBrand: unique symbol;
+
+/**
+ * A status list whose JWS was verified by {@link verifyStatusList}. Membership
+ * is tracked in a module-private WeakSet, so the type cannot be produced by a
+ * cast, a spread or `JSON.parse`: only `verifyStatusList` mints one.
+ */
+export type AuthenticatedStatusList = TrustReceiptStatusList & {
+  readonly [authenticatedBrand]: true;
+};
+
+const AUTHENTICATED = new WeakSet<object>();
+
+export type StatusListRejection =
+  | "not_signed"
+  | "malformed_jws"
+  | "unsupported_alg"
+  | "unknown_kid"
+  | "bad_anchor_key"
+  | "signature_invalid"
+  | "payload_invalid"
+  | "subject_mismatch"
+  | "issuer_mismatch"
+  | "kid_mismatch"
+  | "expired"
+  | "not_yet_valid"
+  | "issued_at_invalid"
+  | "issued_at_in_future"
+  | "manifest_hash_mismatch";
+
+export type VerifyStatusListResult =
+  | { readonly ok: true; readonly list: AuthenticatedStatusList }
+  | { readonly ok: false; readonly reason: StatusListRejection };
+
+export interface VerifyStatusListContext {
+  /** e.g. `merchant:store_1` — the JWS `iss` the caller expects. Required. */
+  readonly expectedIssuer: string;
+  /** Unix seconds. Injected: this library reads no clock. */
+  readonly now: number;
+  /** Tolerated clock skew in seconds (default 60). */
+  readonly skewSeconds?: number;
+}
+
+/** JWS `sub` the platform signs status lists with. */
+export const STATUS_LIST_JWS_SUBJECT = "catalog:trust-receipt-status-list";
+
+/**
+ * Canonical form of the producer's `manifest_hash` (sorted keys, JSON scalars).
+ * Kept local: this package has no dependency on the issuer's code at runtime.
+ */
+function canonicalStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalStringify).join(",")}]`;
+  const o = value as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${canonicalStringify(o[k])}`)
+    .join(",")}}`;
+}
+
+function statusListManifestHash(list: TrustReceiptStatusList): string {
+  const body: Record<string, unknown> = {
+    status_list_version: list.status_list_version,
+    merchant_id: list.merchant_id,
+    issued_at: (list as { issued_at?: unknown }).issued_at,
+    hash_alg: list.hash_alg,
+    revoked_count: (list as { revoked_count?: unknown }).revoked_count,
+    revoked: list.revoked,
+  };
+  return `sha256:${createHash("sha256").update(canonicalStringify(body)).digest("hex")}`;
+}
+
+/**
+ * Authenticates a fetched status list against trust anchors (the platform JWKS).
+ *
+ * Checks, in order: a JWS is present; alg EdDSA; the header `kid` is one of the
+ * anchors; the signature; payload `sub`/`iss`/`kid`; `iat`/`exp` against the
+ * injected clock; the list's own `issued_at`; and that the JWS `manifest_hash`
+ * equals the hash of the list body actually received (the JWS commits only to a
+ * hash, so a list edited after signing fails here). `signed: true` on the input
+ * means nothing.
+ */
+export async function verifyStatusList(
+  list: TrustReceiptStatusList,
+  trustAnchors: { readonly keys: readonly JWK[] },
+  ctx: VerifyStatusListContext
+): Promise<VerifyStatusListResult> {
+  const fail = (reason: StatusListRejection): VerifyStatusListResult => ({
+    ok: false,
+    reason,
+  });
+  const jws = list.signature;
+  if (typeof jws !== "string" || jws.length === 0) return fail("not_signed");
+
+  let header;
+  try {
+    header = decodeProtectedHeader(jws);
+  } catch {
+    return fail("malformed_jws");
+  }
+  if (header.alg !== "EdDSA") return fail("unsupported_alg");
+  const anchor = trustAnchors.keys.find(
+    (k) => typeof header.kid === "string" && k.kid === header.kid
+  );
+  if (!anchor) return fail("unknown_kid");
+
+  let payloadBytes: Uint8Array;
+  try {
+    const key = await importJWK(anchor, "EdDSA");
+    payloadBytes = (await compactVerify(jws, key)).payload;
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "";
+    return fail(name === "JWSSignatureVerificationFailed" ? "signature_invalid" : "bad_anchor_key");
+  }
+
+  let p: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(payloadBytes));
+    if (typeof parsed !== "object" || parsed === null) return fail("payload_invalid");
+    p = parsed as Record<string, unknown>;
+  } catch {
+    return fail("payload_invalid");
+  }
+  if (p["sub"] !== STATUS_LIST_JWS_SUBJECT) return fail("subject_mismatch");
+  if (p["iss"] !== ctx.expectedIssuer) return fail("issuer_mismatch");
+  if (p["kid"] !== header.kid) return fail("kid_mismatch");
+  const { iat, exp } = p;
+  if (typeof iat !== "number" || typeof exp !== "number") return fail("payload_invalid");
+  const skew = ctx.skewSeconds ?? 60;
+  if (exp <= ctx.now) return fail("expired");
+  if (iat > ctx.now + skew) return fail("not_yet_valid");
+
+  const issuedAtMs = Date.parse(
+    String((list as { issued_at?: unknown }).issued_at ?? "")
+  );
+  if (Number.isNaN(issuedAtMs)) return fail("issued_at_invalid");
+  if (issuedAtMs / 1000 > ctx.now + skew) return fail("issued_at_in_future");
+
+  if (p["manifest_hash"] !== statusListManifestHash(list)) {
+    return fail("manifest_hash_mismatch");
+  }
+
+  const authenticated = { ...list } as AuthenticatedStatusList;
+  AUTHENTICATED.add(authenticated);
+  return { ok: true, list: authenticated };
+}
+
 export interface CheckRevocationInput {
   /** `receipt_id` from the receipt body. */
   readonly receiptId: string;
   /** `merchant_id` from the receipt body, to catch a list fetched for the wrong issuer. */
   readonly merchantId?: string;
-  /** The parsed status list, or `null`/`undefined` when it could not be obtained. */
-  readonly statusList?: TrustReceiptStatusList | null;
+  /**
+   * The list, or `null`/`undefined` when it could not be obtained. Pass the
+   * result of {@link verifyStatusList}. A plain `TrustReceiptStatusList` is
+   * accepted for source compatibility only and always yields `unknown`
+   * (`list_not_authenticated`): `signed: true` in fetched JSON proves nothing.
+   *
+   * @deprecated passing an unauthenticated `TrustReceiptStatusList`.
+   */
+  readonly statusList?:
+    | AuthenticatedStatusList
+    | TrustReceiptStatusList
+    | null;
 }
 
 /**
@@ -108,7 +274,8 @@ export function checkRevocation(input: CheckRevocationInput): RevocationResult {
     };
   }
 
-  const listUnsigned = list.signed !== true;
+  const authenticated = AUTHENTICATED.has(list);
+  const listUnsigned = !authenticated;
 
   if (
     list.status_list_version !== undefined &&
@@ -155,6 +322,17 @@ export function checkRevocation(input: CheckRevocationInput): RevocationResult {
 
   const target = hashReceiptId(input.receiptId);
   const hit = list.revoked.find((entry) => entry?.receipt_id_hash === target);
+
+  if (!authenticated) {
+    // The list's own `signed` flag is data an attacker controls. Without a
+    // verified JWS neither "revoked" nor "not_revoked" is an answer.
+    return {
+      status: "unknown",
+      unknownReason: "list_not_authenticated",
+      unauthenticatedListNamesReceipt: hit !== undefined,
+      listUnsigned: true,
+    };
+  }
 
   if (hit) {
     return {
