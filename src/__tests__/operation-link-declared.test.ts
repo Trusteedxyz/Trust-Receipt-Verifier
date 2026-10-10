@@ -3,7 +3,7 @@
  *
  * Los `z.object` no estrictos aceptan una clave no declarada y la DESCARTAN del
  * objeto parseado: declararlo en uno solo verifica bien y no llega nunca al
- * tipo público. Ese fallo ya mordió dos veces aquí (enriquecimiento T1.3 y el
+ * tipo público. Ese fallo ya mordió dos veces aquí (enriquecimiento de campos del esquema legacy compacto y el
  * propio `hash_chain_prev`), y este test es lo que impide la tercera.
  */
 import { describe, expect, it } from "vitest";

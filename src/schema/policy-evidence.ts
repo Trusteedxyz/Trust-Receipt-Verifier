@@ -33,7 +33,7 @@
  * No estricto significa que Zod ACEPTA claves no declaradas, pero las DESCARTA
  * del objeto parseado. Sin estas declaraciones los campos verificarían bien y
  * jamás llegarían al tipo público — el mismo fallo que ya mordió con el
- * enriquecimiento T1.3 (ver `trust-receipt-legacy.schema.ts:68-77`).
+ * enriquecimiento de campos del esquema legacy compacto (ver `trust-receipt-legacy.schema.ts:68-77`).
  */
 
 import { z } from "zod";

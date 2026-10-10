@@ -23,7 +23,7 @@
  *   - `null`       — este recibo declara que NO tiene predecesor: es el génesis
  *                    de la cadena de ese comerciante.
  *   - AUSENTE      — este recibo no dice nada sobre cadena alguna. Es el estado
- *                    de todo el corpus anterior a la ola 5 y el de cualquier
+ *                    de todo el corpus anterior a la cadena y el de cualquier
  *                    recibo emitido con la cadena apagada.
  *
  * Colapsar `null` y ausente convertiría el génesis —una afirmación fuerte, "aquí

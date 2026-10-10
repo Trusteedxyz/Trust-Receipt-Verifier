@@ -1,6 +1,6 @@
 # ATEP Passport Reference Verifier (zero-dependency)
 
-A **standalone** verifier for an ATEP passport (spec-062 SC-001). It proves the
+A **standalone** verifier for an ATEP passport. It proves the
 ATEP thesis: **you can verify a merchant's portable trust attestation offline,
 without contacting Trusteed and without trusting any Trusteed code.**
 
@@ -72,7 +72,7 @@ own signature independently attests the score/tier subset.
 
 ## What it does NOT prove
 
-Scope limit recorded after the 2026-07-26 architecture audit (§F2). A passing
+Scope limit. A passing
 verdict means the passport is **internally consistent and issuer-signed**. It
 does not mean the aggregates are independently reproducible:
 

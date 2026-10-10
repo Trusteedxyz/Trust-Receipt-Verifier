@@ -1,9 +1,9 @@
 /**
  * Integration tests verifying that `verifyReceiptEnvelope` cryptographically
  * verifies the bundled `SignedJwksHistory` against the embedded issuer root,
- * closing Codex F1 finding.
+ * closing the gap where a forged JWKS history was accepted unverified.
  *
- * Today's runtime ships the T420 staging-stub root, whose PEM body bytes do
+ * Today's runtime ships the staging-stub root, whose PEM body bytes do
  * not decode to a verifying-capable Ed25519 key. Under that root the
  * verifier falls back to structural-only history parsing AND emits warning
  * `jwks_history_signature_unverifiable_staging_root`. These tests pin that
@@ -79,12 +79,12 @@ function makeOptions(vector: VectorFile): VerifyOptions {
       "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
     policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
     expectedSubject: vector.verify_options.expectedSubject,
-    // T-CR-001: explicitly opt into the staging-stub fallback so these
-    // pre-T420 ceremony fixtures continue to exercise the structural-fallback
+    // Explicitly opt into the staging-stub fallback so these
+    // pre-ceremony fixtures continue to exercise the structural-fallback
     // path. Production callers MUST omit this flag (default false ⇒
     // fail-closed with `root_not_in_trust_anchor`).
     allowStagingRoots: true,
-    // GAP H1a: pin the verification clock to the vector's `currentTime` so the
+    // pin the verification clock to the vector's `currentTime` so the
     // temporal check evaluates the fixture at mint time (deterministic).
     currentTimeSeconds: vector.verify_options.currentTime,
   };
@@ -94,7 +94,7 @@ function makeOptions(vector: VectorFile): VerifyOptions {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("verifyReceiptEnvelope — JWKS history signature wiring (Codex F1)", () => {
+describe("verifyReceiptEnvelope — JWKS history signature wiring", () => {
   it("emits jwks_history_signature_unverifiable_staging_root warning under staging stub", async () => {
     const vector = loadHappyVector();
     const opts = makeOptions(vector);
@@ -147,8 +147,8 @@ describe("verifyReceiptEnvelope — JWKS history signature wiring (Codex F1)", (
     expect(result.errorCode).toBe("jwks_history_signature_invalid");
   });
 
-  // ─── T-CR-001 / Codex round 2 D2/D3 — staging fallback is opt-in ─────────
-  it("[T-CR-001] default (allowStagingRoots omitted) rejects with root_not_in_trust_anchor under staging stub", async () => {
+  // ─── staging fallback is opt-in ─────────
+  it("default (allowStagingRoots omitted) rejects with root_not_in_trust_anchor under staging stub", async () => {
     const vector = loadHappyVector();
     const opts: VerifyOptions = {
       ...makeOptions(vector),
@@ -167,7 +167,7 @@ describe("verifyReceiptEnvelope — JWKS history signature wiring (Codex F1)", (
     );
   });
 
-  it("[T-CR-001] default (no allowStagingRoots) is fail-closed even when option key is omitted entirely", async () => {
+  it("default (no allowStagingRoots) is fail-closed even when option key is omitted entirely", async () => {
     const vector = loadHappyVector();
     const baseOpts = makeOptions(vector);
     // Strip the opt-in to mimic a production caller — `delete` on a typed
@@ -184,7 +184,7 @@ describe("verifyReceiptEnvelope — JWKS history signature wiring (Codex F1)", (
     expect(result.errorDetail).toBe("root_not_in_trust_anchor");
   });
 
-  it("[T-CR-001] allowStagingRoots:true preserves staging warning fallback", async () => {
+  it("allowStagingRoots:true preserves staging warning fallback", async () => {
     const vector = loadHappyVector();
     const result = await verifyReceiptEnvelope(
       vector.envelope as unknown as Parameters<typeof verifyReceiptEnvelope>[0],

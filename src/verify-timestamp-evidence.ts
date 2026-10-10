@@ -9,7 +9,7 @@ import type { ReceiptEnvelope, TrustReceiptV11Body } from "./types-1.1.js";
 /**
  * Options accepted by {@link verifyTimestampEvidence}.
  *
- * SECURITY (T-CR-002): `tsaRootCertSha256Allowlist` is the operator-controlled
+ * SECURITY: `tsaRootCertSha256Allowlist` is the operator-controlled
  * pre-approved list of TSA root cert SHA-256 hashes (64-hex, lowercase). The
  * envelope-supplied `evidence.tsa_root_cert_sha256` is attacker-controlled and
  * MUST NOT be used as a trust pin on its own — a malicious bundle could
@@ -19,7 +19,7 @@ import type { ReceiptEnvelope, TrustReceiptV11Body } from "./types-1.1.js";
  *
  * Default `[]` ⇒ fail-closed: any TST is rejected with `tsa_root_not_trusted`.
  *
- * `trustAnchorPemSha256` is the issuer trust anchor (R16). It is reused as a
+ * `trustAnchorPemSha256` is the issuer trust anchor. It is reused as a
  * fallback pin ONLY when `tsaRootCertSha256Allowlist` is empty AND the trust
  * anchor is supplied — for the rare deployment where the issuer root is also
  * the TSA root. New deployments SHOULD configure the allowlist explicitly.
@@ -32,7 +32,7 @@ export interface VerifyTimestampEvidenceOptions {
   readonly tsaRootCertSha256Allowlist?: readonly string[];
   readonly toleranceSeconds?: number;
   /**
-   * T-CR-007: per-merchant TSA policy (fail-open default per FR-024,
+   * Per-merchant TSA policy (fail-open default,
    * fail-closed override). Plumbed through to the underlying
    * {@link verifyTimestamp}; when absent the TSA client default applies.
    */
@@ -75,7 +75,7 @@ export async function verifyTimestampEvidence(
     };
   }
 
-  // ── T-CR-002 fix: never trust envelope-supplied root as a pin. ─────────
+  // ── Never trust envelope-supplied root as a pin. ─────────
   // Build the effective pin set from operator-controlled inputs only:
   //   1. `tsaRootCertSha256Allowlist` if non-empty (preferred path).
   //   2. Fallback to `[trustAnchorPemSha256]` ONLY when the allowlist is

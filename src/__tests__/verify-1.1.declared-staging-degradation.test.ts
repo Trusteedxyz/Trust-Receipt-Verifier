@@ -1,8 +1,8 @@
 /**
- * Declared trust-anchor degradation (audit 2026-07-26 §B1 / P0-1).
+ * Declared trust-anchor degradation.
  *
  * PROBLEM
- *   The T420 key ceremony has never run, so the only embedded issuer root is a
+ *   The production key ceremony has not run, so the only embedded issuer root is a
  *   structural placeholder. With `allowStagingRoots:false` (the production
  *   default) EVERY v1.1 receipt is rejected with
  *   `jwks_history_signature_invalid / root_not_in_trust_anchor`. The absence of
@@ -18,8 +18,6 @@
  *   `outcome === "accepted"` keeps refusing it. A receipt that does NOT declare
  *   the degradation is still rejected exactly as before: the operator flag is
  *   not weakened, and silence is never read as consent.
- *
- * @see docs/analisis/trust-receipts-auditoria-arquitectura-2026-07-26.md §B1
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
@@ -106,7 +104,7 @@ function jwksHistory(currentTime: number): SignedJwksHistory {
 /**
  * Build an envelope from the happy-path vector, optionally making the receipt
  * DECLARE the staging degradation in its signed body (and mirroring it in
- * `envelope_metadata` per the D22 mirror discipline).
+ * `envelope_metadata` per the mirror discipline).
  */
 async function buildEnvelope(options: {
   declareDegradation: boolean;
@@ -214,7 +212,7 @@ describe("verifyReceiptEnvelope — declared trust-anchor degradation", () => {
     expect(result.receipt?.legal_posture).toBe("simple_electronic_seal");
   });
 
-  // A2 contract, point 4: the staging declaration DOMINATES the whole FR-019
+  // A2 contract, point 4: the staging declaration DOMINATES the whole
   // truth table — buyer_agent and merchant_admin alike, with or without TSA,
   // with or without agent identity. `merchant_admin_action` is a subject label,
   // not a strength claim, so it must not shadow an unverifiable anchor.
@@ -276,7 +274,7 @@ describe("verifyReceiptEnvelope — declared trust-anchor degradation", () => {
     });
 
     // Simulate a resolvable root by opting into the staging path: the point is
-    // that `pendingStagingDowngrade` is NOT armed, exactly as after T420.
+    // that `pendingStagingDowngrade` is NOT armed, exactly as after the ceremony.
     const result = await verifyReceiptEnvelope(
       envelope as unknown as Parameters<typeof verifyReceiptEnvelope>[0],
       { ...makeOptions(currentTime, envelope), allowStagingRoots: true }

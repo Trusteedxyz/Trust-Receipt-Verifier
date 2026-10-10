@@ -1,5 +1,5 @@
 /**
- * Spec 058 T157 — conformance vector loader/runner (FR-024, SC-002).
+ * conformance vector loader/runner.
  *
  * `test-vectors/v11-x402-binding/README.md` documents 11 required vectors and
  * an intended `test:vectors:x402-binding` script — neither existed as an
@@ -9,7 +9,7 @@
  * gap honestly, in three tiers matched to what each vector actually contains:
  *
  * 1. **Drift check** (all 11): every file the README lists exists on disk and
- *    vice versa — mirrors the discipline spec-054's own vector corpus uses
+ *    vice versa — mirrors the discipline the main vector corpus uses
  *    (`lint-vectors.sh`), applied here for the first time to this corpus.
  * 2. **Structural check** (all 11): required top-level fields present per the
  *    vector's own `test_kind` convention (there are two distinct shapes in
@@ -30,7 +30,6 @@
  * (format + determinism, not literal-value match — same reason) lives in
  * `binding-hash-recompute.test.ts` and is not duplicated here.
  *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T157
  * @see packages/trust-receipt-verifier/test-vectors/v11-x402-binding/README.md
  */
 
@@ -56,7 +55,7 @@ const VECTORS_DIR = resolve(
   "v11-x402-binding"
 );
 
-// README's own "Required vectors (FR-024, post-Codex round 2)" list —
+// README's own "Required vectors" list —
 // duplicated here deliberately (not parsed from the .md) so this test fails
 // loudly if either side drifts, rather than silently trusting prose.
 const REQUIRED_VECTOR_FILES = [
@@ -99,7 +98,7 @@ function listVectorFilesOnDisk(): string[] {
 // Tier 1 — drift check
 // ---------------------------------------------------------------------------
 
-describe("conformance vectors — README/disk parity (FR-024)", () => {
+describe("conformance vectors — README/disk parity", () => {
   test("every README-listed vector exists on disk", () => {
     const onDisk = new Set(listVectorFilesOnDisk());
     for (const filename of REQUIRED_VECTOR_FILES) {
@@ -121,7 +120,7 @@ describe("conformance vectors — README/disk parity (FR-024)", () => {
     }
   });
 
-  test("FR-024 minimum vector count (>=10) is satisfied", () => {
+  test("minimum vector count (>=10) is satisfied", () => {
     expect(REQUIRED_VECTOR_FILES.length).toBeGreaterThanOrEqual(10);
   });
 });

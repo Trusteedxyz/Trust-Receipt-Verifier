@@ -1,7 +1,7 @@
 /**
- * Spec 054 T101 — Portable VerifierX402Extension (FR-005/006/008a/020/022/023).
+ * Portable VerifierX402Extension.
  *
- * Wraps the spec-049 verifier baseline with the spec-054 x402_binding
+ * Wraps the baseline v1.1 verifier with the x402_binding
  * verification pipeline. Stateless — receives JWKS document + envelope +
  * optional `componentsForBinding` for binding_hash recomputation.
  *
@@ -10,17 +10,14 @@
  *   2. Decode payload → TrustReceiptV11BodySchema.
  *   3. Assert `x402_binding` is present.
  *   4. Optional binding_profile_version match.
- *   5. Resolve signing key via `validateDelegation` (FR-008a, branch A/B).
+ *   5. Resolve signing key via `validateDelegation` (branch A/B).
  *   6. Verify Ed25519 receipt signature over JWS signing input bytes.
- *   7. expires_at check → warning only (audit reconstruction).
- *   8. FR-020 authorization_scheme allowlist.
- *   9. FR-022 inferred-identity guard.
- *  10. FR-005/006 binding_hash recompute (if components provided).
+ *   7. expires_at check → warning only.
+ *   8. authorization_scheme allowlist.
+ *   9. inferred-identity guard.
+ *  10. binding_hash recompute (if components provided).
  *  11. Optional mismatched-component localization via `declaredComponentsForLocalization`.
  *  12. Envelope structural checks (timestamp_evidence/envelope_metadata).
- *
- * @see specs/058-trustreceipt-x402-binding/spec.md FR-005/FR-006/FR-008a/FR-020/FR-022/FR-023
- * @see specs/058-trustreceipt-x402-binding/tasks.md T101
  */
 
 import { createPublicKey, verify as cryptoVerify } from "node:crypto";
@@ -124,11 +121,11 @@ export interface VerifierX402ExtensionArgs {
   /** OPTIONAL — when given, must match envelope's binding_profile_version. */
   readonly expectedBindingProfileVersion?: string;
   /**
-   * F9 fix (Codex audit 2026-05-18) — when supplied, the verifier invokes the
-   * canonical spec-049 `verifyReceiptEnvelope(...)` after spec-054 binding
+   * when supplied, the verifier invokes the
+   * canonical `verifyReceiptEnvelope(...)` after the binding
    * checks pass. This adds TSA RFC 3161 verification, JWKS history validation,
    * legal-posture recomputation, and envelope metadata mismatch detection
-   * (all OUTSIDE the scope of the spec-054 binding-only pipeline).
+   * (all OUTSIDE the scope of the binding-only pipeline).
    *
    * Callers that have the canonical inputs (jwksHistory + trustAnchor) SHOULD
    * supply this. The hosted `/verify` endpoint MUST supply this in production
@@ -339,13 +336,13 @@ export class VerifierX402Extension {
   }
 
   /**
-   * F9 fix (Codex audit 2026-05-18) — full-chain verification.
+   * full-chain verification.
    *
-   * Combines the spec-054 binding-only pipeline (sync `verify()`) with the
-   * canonical spec-049 `verifyReceiptEnvelope(...)` for TSA RFC 3161 + JWKS
+   * Combines the binding-only pipeline (sync `verify()`) with the
+   * canonical `verifyReceiptEnvelope(...)` for TSA RFC 3161 + JWKS
    * history + legal-posture recomputation + envelope metadata mismatch.
    *
-   * Returns the spec-054 result IF binding checks failed (canonical check
+   * Returns the binding result IF binding checks failed (canonical check
    * never runs in that case). When binding checks pass AND
    * `envelopeVerificationOptions` is supplied, the canonical check runs and
    * its failure reason wins (we surface the strictest gate).
@@ -429,7 +426,7 @@ export class VerifierX402Extension {
       };
     }
 
-    // (5) Delegation resolution (FR-008a).
+    // (5) Delegation resolution.
     const delegation = validateDelegation({
       jwks: args.jwks,
       receiptKid: header.kid,
@@ -500,7 +497,7 @@ export class VerifierX402Extension {
       warnings.push("receipt_expired_but_signature_valid");
     }
 
-    // (8) FR-020 authorization_scheme allowlist for v1.0 binding.
+    // (8) authorization_scheme allowlist for v1.0 binding.
     if (
       !SUPPORTED_BINDING_AUTHORIZATION_SCHEMES.has(x402.authorization_scheme)
     ) {
@@ -512,7 +509,7 @@ export class VerifierX402Extension {
       };
     }
 
-    // (9) FR-022 — verification_posture="unverified" cannot carry chain.
+    // (9) verification_posture="unverified" cannot carry chain.
     if (
       x402.verification_posture === "unverified" &&
       x402.agent_authorization_chain !== null
@@ -524,7 +521,7 @@ export class VerifierX402Extension {
       };
     }
 
-    // (10) Binding hash recomputation (FR-005/006).
+    // (10) Binding hash recomputation.
     let bindingHashMatch = false;
     if (args.componentsForBinding) {
       let recomputed: BindingHashRecomputeResult;

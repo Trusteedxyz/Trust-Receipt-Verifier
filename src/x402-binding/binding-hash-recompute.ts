@@ -1,15 +1,15 @@
 /**
- * Spec 054 T100 — Portable Binding Hash Recompute Service (FR-004).
+ * Portable Binding Hash Recompute Service.
  *
  * Stateless mirror of the server-side `BindingHashBuilderService`
- * (`apps/api/src/services/trust/x402-binding/binding-hash-builder.service.ts`).
+ * (the issuing service's binding-hash builder).
  *
  * External auditors use this to RECOMPUTE the 5-component binding hash from
  * archived receipt components and verify it matches the `binding_hash`
  * declared inside the receipt's `x402_binding` extension. Same recipe,
  * different intent (builder constructs; recompute verifies).
  *
- * Recipe (FR-004 + research.md §R2 + manifest v1.0.0):
+ * Recipe (research.md §R2 + manifest v1.0.0):
  *
  *   binding_hash = sha256(
  *     "trtx402:v1:"                              // domain separator (ASCII)
@@ -26,14 +26,10 @@
  *   )
  *
  * The manifest v1.0.0 (server-side
- * `apps/api/src/services/trust/x402-binding/manifests/v1.0.0.json`) is embedded
+ * the v1.0.0 manifest) is embedded
  * inline as constants below — the portable verifier MUST be free of filesystem
  * and runtime config dependencies. Bumping the manifest version is a SemVer
  * breaking change: add a new constant table and ship a new verifier release.
- *
- * @see specs/058-trustreceipt-x402-binding/spec.md FR-004/FR-005/FR-020
- * @see specs/058-trustreceipt-x402-binding/research.md §R2
- * @see specs/058-trustreceipt-x402-binding/tasks.md T100
  */
 
 import { createHash } from "node:crypto";
@@ -47,12 +43,12 @@ import type { OutputCommitment } from "../zod-1.1.js";
 // ---------------------------------------------------------------------------
 
 /**
- * Authorization schemes that participate in the spec-054 v1.0 binding hash.
+ * Authorization schemes that participate in the x402 binding v1.0 hash.
  *
  * Only `evm_permit2` and `svm_token_authorization` are LIVE in v1.0. The other
  * three (`zk_authorization`, `gasless_relay`, `account_abstraction_session_key`)
  * are RESERVED for v1.1 and rejected by this service with
- * `unsupported_authorization_scheme` — matching server-side FR-020 fail-fast.
+ * `unsupported_authorization_scheme` — matching server-side fail-fast.
  */
 export type RecomputeAuthorizationScheme =
   | "evm_permit2"
@@ -72,7 +68,7 @@ export interface BindingHashRecomputeInput {
   readonly resourceUri: string;
   /** Settlement evidence. ONLY {txHash, network, amount, asset, payTo, payer} enters the hash. */
   readonly settlementEvidence: SettlementEvidenceInput;
-  /** Output commitment object (component e of FR-004). Hashed as sha256(jcs(object)). */
+  /** Output commitment object (component e). Hashed as sha256(jcs(object)). */
   readonly outputCommitment: OutputCommitment;
 }
 
@@ -267,7 +263,7 @@ function buildPaymentPayloadSubset(
 ): Record<string, JsonSafe> {
   const subset: Record<string, JsonSafe> = {};
   for (const field of fields) {
-    // FR-004: strict projection. Missing fields project to `null` (JCS
+    // strict projection. Missing fields project to `null` (JCS
     // preserves `null`), preserving determinism regardless of whether the
     // payload omits the field or explicitly nulls it.
     const raw = (payload as Record<string, unknown>)[field];
@@ -301,11 +297,11 @@ function validateOutputCommitmentShape(commitment: OutputCommitment): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Recompute the FR-004 binding hash from its 5 components.
+ * Recompute the binding hash from its 5 components.
  *
  * Fail-fast order (matches server-side BindingHashBuilderService):
- *   1. Authorization scheme is LIVE in v1.0 (FR-020).
- *   2. Resource URI well-formed (FR-005).
+ *   1. Authorization scheme is LIVE in v1.0.
+ *   2. Resource URI well-formed.
  *   3. Settlement evidence subset complete (6 nominated fields).
  *   4. Output commitment shape sane.
  *
@@ -316,7 +312,7 @@ function validateOutputCommitmentShape(commitment: OutputCommitment): void {
 export function recomputeBindingHash(
   input: BindingHashRecomputeInput
 ): BindingHashRecomputeResult {
-  // (1) FR-020 — scheme allowlist BEFORE any hashing.
+  // (1) scheme allowlist BEFORE any hashing.
   const payloadFields = SCHEME_SUBSET_FIELDS[input.authorizationScheme];
   if (!payloadFields) {
     throw new BindingHashRecomputeError(
@@ -325,7 +321,7 @@ export function recomputeBindingHash(
     );
   }
 
-  // (2) FR-005 — URI sanity BEFORE hashing.
+  // (2) URI sanity BEFORE hashing.
   validateResourceUri(input.resourceUri);
 
   // (3) Output commitment shape — also surface obvious malformations early.

@@ -14,8 +14,8 @@
  *
  * COVERAGE GOAL — every member of `VerifierExtensionRejectReason` that the
  * verifier can actually emit for a binding-mismatch-by-component scenario, plus
- * the 5 `MismatchedComponent` localizations (FR-005/006), delegation-branch
- * outcomes (FR-008a), and accept-path warnings. This is offline & stateless:
+ * the 5 `MismatchedComponent` localizations, delegation-branch
+ * outcomes, and accept-path warnings. This is offline & stateless:
  * the portable verifier has NO nonce/replay state (that lives server-side in
  * `PrismaMppReplayCacheService`), so NO replay vector is asserted here — doing
  * so would assert an outcome the verifier cannot produce.
@@ -34,7 +34,6 @@
  * well-formed adversarial input — both are documented below as "not reachable
  * by black-box vector" rather than silently omitted.
  *
- * @see specs/058-trustreceipt-x402-binding/spec.md FR-005/FR-006/FR-008a/FR-020/FR-022
  * @see packages/trust-receipt-verifier/src/x402-binding/verifier-x402-extension.ts
  */
 

@@ -1,12 +1,12 @@
 /**
- * Security-audit hardening tests (2026-07-03).
+ * Security hardening tests.
  *
- *  - A1: `TrustReceiptV11BodySchema` is `.strict()` at the ROOT — unknown keys
+ *  - `TrustReceiptV11BodySchema` is `.strict()` at the ROOT — unknown keys
  *        injected into the signed body are rejected (anti signed-bytes drift).
- *  - M8: `verifyReceiptEnvelope` honors `history_chain_sha256` — a committed
+ *  - `verifyReceiptEnvelope` honors `history_chain_sha256` — a committed
  *        (non-stub) chain that disagrees with the presented entries is rejected
  *        with `jwks_history_chain_mismatch`; a correct chain passes through.
- *  - C3: the standalone `verifyTrustReceipt` accepts the v1.0-legacy compact
+ *  - the standalone `verifyTrustReceipt` accepts the v1.0-legacy compact
  *        payload the platform issuer actually emits (`legacy_compact` variant).
  */
 
@@ -73,7 +73,7 @@ describe("A1 — TrustReceiptV11BodySchema strict root", () => {
 });
 
 // ---------------------------------------------------------------------------
-// M8 — verifier honors history_chain_sha256
+// verifier honors history_chain_sha256
 // ---------------------------------------------------------------------------
 
 interface VectorFile {
@@ -148,7 +148,7 @@ function baseOptions(
   };
 }
 
-describe("M8 — verifier honors history_chain_sha256", () => {
+describe("verifier honors history_chain_sha256", () => {
   it("rejects a non-stub committed chain that disagrees with entries", async () => {
     const vector = loadHappyVector();
     // A valid-looking but WRONG chain (64 hex, non-stub).
@@ -188,10 +188,10 @@ describe("M8 — verifier honors history_chain_sha256", () => {
 });
 
 // ---------------------------------------------------------------------------
-// C3 — package verifier accepts the legacy compact payload
+// package verifier accepts the legacy compact payload
 // ---------------------------------------------------------------------------
 
-describe("C3 — verifyTrustReceipt legacy-compact recognition", () => {
+describe("verifyTrustReceipt legacy-compact recognition", () => {
   const KID = "legacy-kid-001";
 
   async function makeKeys(): Promise<{ pub: PublicJwk; priv: JWK }> {

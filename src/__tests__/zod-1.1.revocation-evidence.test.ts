@@ -1,5 +1,5 @@
 /**
- * T-CR-008 — `revocation_evidence` discriminated-union schema tests.
+ * `revocation_evidence` discriminated-union schema tests.
  *
  * Validates that {@link TimestampEvidenceSchema} accepts:
  *  - `kind: "ocsp"` with `data_b64`.
@@ -29,7 +29,7 @@ const BASE_RFC3161 = {
   tolerance_seconds: 60,
 };
 
-describe("TimestampEvidenceSchema.revocation_evidence — T-CR-008", () => {
+describe("TimestampEvidenceSchema.revocation_evidence", () => {
   it("accepts kind=ocsp with data_b64", () => {
     const parsed = TimestampEvidenceSchema.safeParse({
       ...BASE_RFC3161,

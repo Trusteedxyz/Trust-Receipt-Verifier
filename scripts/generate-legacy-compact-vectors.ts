@@ -4,7 +4,7 @@
  *
  * ## Why these have to exist
  *
- * The v1.1 envelope path has had 53 shared spec-054 vectors since 2026-06-02 and
+ * The v1.1 envelope path has had 53 shared conformance vectors since 2026-06-02 and
  * both ports run all of them. The v0.9-legacy compact path — which is what 100%
  * of production actually emits — had none. Each port built its fixtures in code
  * and asserted its own expectations, so nothing forced them to agree. The Python

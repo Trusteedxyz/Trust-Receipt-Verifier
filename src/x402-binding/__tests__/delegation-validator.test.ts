@@ -1,5 +1,5 @@
 /**
- * Spec 054 T075 — Unit tests for the portable Delegation Validator (FR-008a).
+ * Unit tests for the portable Delegation Validator.
  *
  * Covers the full decision tree of `validateDelegation`:
  *
@@ -8,8 +8,6 @@
  *     bound to {kid, role, valid_from, valid_until, merchant_root_kid}.
  *   - All typed failure outcomes.
  *   - Cross-merchant replay defense (tampering merchant_root_kid breaks sig).
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T074 T075
  */
 
 import { describe, expect, test } from "vitest";

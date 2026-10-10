@@ -1,5 +1,5 @@
 /**
- * AIVS proof-bundle export tests (spec-062 US1).
+ * AIVS proof-bundle export tests.
  *
  * Projects a signed TrustReceipt (v1.0 JWS Compact) into an AIVS-compatible
  * proof bundle { manifest_hash, session_sig, audit_log } per draft-stone-aivs-00.
@@ -214,7 +214,7 @@ describe("exportAivsProofBundle — audit_log (hash_chain_prev projection)", () 
   });
 });
 
-// ─── Honest chain declaration (audit F2 remediation) ──────────────────────────
+// ─── Honest chain declaration ──────────────────────────
 //
 // No issuer in this repository writes `hash_chain_prev` (verified by exhaustive
 // grep: zero write sites). The projected audit_log is therefore an unlinked

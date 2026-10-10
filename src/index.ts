@@ -1,5 +1,5 @@
 /**
- * @agenticmcpstores/trust-receipt-verifier
+ * trust-receipt-verifier
  *
  * TrustReceipt open standard — cross-protocol agentic commerce evidence receipts.
  * Standalone package: no Prisma/DB dependency.
@@ -17,7 +17,7 @@ export {
   type Attachment,
 } from "./schema/trust-receipt.schema.js";
 
-// v1.0-legacy compact recognizer (C3 closure) — the JWT-style payload the
+// v1.0-legacy compact recognizer — the JWT-style payload the
 // platform issuer actually emits. Exported so downstream consumers can type the
 // `legacyReceipt` field surfaced by `verifyTrustReceipt`.
 export {
@@ -38,9 +38,9 @@ export {
 // Issuer
 export { issueTrustReceipt, type IssueOptions } from "./issuer.js";
 
-// AIVS proof-bundle export (spec-062 US1) — projects a signed TrustReceipt
+// AIVS proof-bundle export — projects a signed TrustReceipt
 // into an AIVS-compatible { manifest_hash, session_sig, audit_log } bundle,
-// offline-verifiable with no Trusteed code. See ADR-078 (alignment-not-escrow).
+// offline-verifiable with no Trusteed code.
 export {
   exportAivsProofBundle,
   verifyAivsProofBundle,
@@ -53,7 +53,7 @@ export {
   type AivsVerifyFailureReason,
 } from "./aivs-export.js";
 
-// v1.0 verifier (spec-049 T050) — schema-version-routed entry for the T052 dispatcher.
+// v1.0 verifier — schema-version-routed entry for the dispatcher.
 // Pre-existing `verifyTrustReceipt` above remains the canonical v1.0 alias for
 // backward compatibility.
 export {
@@ -63,7 +63,7 @@ export {
   type TrustReceiptV10,
 } from "./verify-1.0.js";
 
-// v1.1 envelope verifier (spec-049 T051).
+// v1.1 envelope verifier.
 // Re-exported with a v1.1-namespaced `VerifyOptions` alias to avoid colliding
 // with the v1.0 `VerifyOptions` already exported above from `./verifier.js`.
 export {
@@ -86,7 +86,7 @@ export {
   type VerifyTimestampEvidenceResult,
 } from "./verify-timestamp-evidence.js";
 
-// Spec-052 extension artifacts (erasure receipts + signed manifests).
+// Extension artifacts (erasure receipts + signed manifests).
 export {
   verifyExtensionArtifact,
   type ExtensionArtifactKind,
@@ -106,7 +106,7 @@ export {
   type SafeFetchErrorCode,
 } from "./safe-fetch.js";
 
-// T-CR-007: re-export so downstream consumers (api, dashboard) can plumb
+// Re-export so downstream consumers can plumb
 // per-merchant TSA policy through `verifyTimestampEvidence` /
 // `verifyReceiptEnvelope` without taking a direct dep on the TSA client.
 export type { MerchantTsaPolicy } from "@agenticmcpstores/trust-receipt-tsa-client";
@@ -121,7 +121,7 @@ export type {
   JwksHistoryEntry,
 } from "./types-1.1.js";
 
-// F2+F3 fix (Codex audit 2026-05-18): expose the canonical Zod schema so api
+// Expose the canonical Zod schema so api
 // callers can validate v1.1 bodies BEFORE handing them to KMS for signing.
 // Without runtime validation, hand-rolled bodies with stub evidence or
 // missing buyer_agent fields would silently land in signed receipts and
@@ -143,24 +143,22 @@ export {
   type ValidateChainResult,
 } from "./embedded-issuer-root.js";
 
-// ─── T052 dispatcher ──────────────────────────────────────────────────────────
+// ─── dispatcher ──────────────────────────────────────────────────────────
 //
 // Routes a verification request to the v1.0 or v1.1 verifier.
 //
-// Cutover semantics (spec-049 FR-018, research.md R8):
+// Cutover semantics:
 //   - v1.0 receipts MUST continue to verify ≥ 7 years post-cutover.
 //   - v1.1 envelopes are the new default emission format.
 //   - The dispatcher tags v1.0 results with `legacy_pre_eidas_hardening` so
 //     callers can surface a soft-deprecation signal without breaking interop.
 //
-// Wire-format discrimination (post-Codex round 1 D11 + round 2 D29):
+// Wire-format discrimination:
 //   - v1.0 = bare JWS Compact (3 dot-separated base64url segments).
 //   - v1.1 = JSON envelope object with required keys `receipt` (string JWS) and
 //     `envelope_metadata` (object). The envelope is the media-typed wrapper;
 //     the inner JWS is the signed body.
 //
-// @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
-// @see specs/049-trust-receipt-eidas-hardening/research.md R8
 
 import { verifyReceiptV10 as _verifyV10 } from "./verify-1.0.js";
 import type { V10VerifyResult } from "./verify-1.0.js";
@@ -193,11 +191,9 @@ export type DispatcherResult =
 /**
  * Verify a TrustReceipt by explicit `kind` discrimination.
  *
- * - `kind: "v10_jws"` → calls {@link verifyReceiptV10} (T050) and appends the
- *   `legacy_pre_eidas_hardening` warning per FR-018 cutover semantics.
- * - `kind: "v11_envelope"` → calls {@link verifyReceiptEnvelope} (T051).
- *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
+ * - `kind: "v10_jws"` → calls {@link verifyReceiptV10} and appends the
+ *   `legacy_pre_eidas_hardening` warning per the cutover semantics.
+ * - `kind: "v11_envelope"` → calls {@link verifyReceiptEnvelope}.
  */
 export async function verifyReceiptAuto(
   input: VerifyInput
@@ -217,7 +213,7 @@ export async function verifyReceiptAuto(
 /**
  * Auto-detect the receipt format from a string blob.
  *
- * Detection rules (post-Codex round 2 D29):
+ * Detection rules:
  *  - JSON-parseable object with both `receipt` (string) and `envelope_metadata`
  *    (object) → `"v1.1"`.
  *  - JWS Compact (3 dot-separated base64url segments) → `"v1.0"`.
@@ -252,7 +248,7 @@ export function detectReceiptFormat(blob: string): "v1.0" | "v1.1" | "unknown" {
   return "unknown";
 }
 
-// ─── T557 — AdES claims gate (post-Codex round 2 D27) ─────────────────────────
+// ─── AdES claims gate ─────────────────────────
 //
 // AdES-conformance claims are only legitimate when the receipt:
 //   1. Has `legal_posture === "ades_candidate_timestamped"` AND
@@ -262,12 +258,10 @@ export function detectReceiptFormat(blob: string): "v1.0" | "v1.1" | "unknown" {
 // `consent_evidence_redacted_partial`) downgrades the receipt out of AdES
 // candidacy regardless of base posture.
 //
-// @see specs/049-trust-receipt-eidas-hardening/spec.md FR-019 (legal_posture)
-// @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md D27
 
 /**
  * Returns true iff the receipt body+envelope qualifies for AdES candidacy
- * claims under post-Codex round 2 D27. Callers MUST gate any "AdES-aligned"
+ * claims per the structured degradation reasons. Callers MUST gate any "AdES-aligned"
  * marketing/legal claim on this helper — never on `legal_posture` alone.
  *
  * Accepts either a `TrustReceiptV11Body` directly or a `ReceiptEnvelope`. The
@@ -286,7 +280,7 @@ export function isAdesClaimEligible(input: {
   );
 }
 
-// ─── T559 — Media types (post-Codex round 2 D29) ──────────────────────────────
+// ─── Media types ──────────────────────────────
 //
 // v1.1 envelope responses MUST advertise their media type explicitly so
 // clients (dashboards, agents, export bundles) can discriminate from v1.0
@@ -308,7 +302,7 @@ export const MEDIA_TYPE_RECEIPT_ENVELOPE_V11 =
  */
 export const MEDIA_TYPE_RECEIPT_JWS_V10 = "application/jose";
 
-// ─── Spec 054 — x402_binding portable verifier (Wave 3-A + 3-B) ──────────────
+// ─── x402_binding portable verifier ──────────────
 export {
   recomputeBindingHash,
   BindingHashRecomputeError,
@@ -346,7 +340,7 @@ export {
   type VerifyPiiAttestationArgs,
 } from "./x402-binding/attestation-verifier.js";
 
-// Trust-receipts audit §R1 Wave C — consumer-side revocation check against a
+// consumer-side revocation check against a
 // merchant's `/.well-known/trust-receipt-status/{merchantId}` list. Pure and
 // offline: the caller fetches, this decides. Every failure mode resolves to
 // `unknown`, never to `not_revoked`.
@@ -366,7 +360,7 @@ export {
   type TrustReceiptStatusList,
 } from "./revocation.js";
 
-// M-01 (plan de evolución 2026-08-21, §3) — verificador de Merchant Identity
+// Verificador de Merchant Identity
 // Assertions de terceros, `draft-anders-merchant-identity-assertions-01`.
 // Verificar la MIA de otro no exige ser QTSP ni depende de InfoCert ni de EUDI,
 // y conserva valor aunque el draft muera.
@@ -388,7 +382,7 @@ export {
 // Se exporta lo que el draft declara verificable SIN hablar AGTP: la Intent
 // Assertion (§5.3 la diseña explícitamente para que la reenvíe y verifique un
 // tercero), la validación del Agent Identity Document con rol de comerciante
-// (§3, §4) como función pura, y el Cart-Digest (§6, §9.4). NO hay cliente AGTP:
+// como función pura, y el Cart-Digest. NO hay cliente AGTP:
 // eso es un transporte propio (puerto 4480, framing propio, TLS 1.3), no un
 // verificador. Ver `src/agtp-merchant/types.ts` y el extracto normativo en
 // `docs/referencias/drafts-mia/NORMATIVE-EXTRACT-agtp-merchant-02.md`.
@@ -442,7 +436,7 @@ export {
 } from "./schema/platform-mandate-evidence.js";
 
 // Evidencia de STATE WITNESS (2026-09-14) — qué resolvió el comparador de
-// spec-063 antes de mover dinero, y contra qué estado autoritativo. Cierra el
+// el comparador de estado antes de mover dinero, y contra qué estado autoritativo. Cierra el
 // hueco de `reconfirmed_state_hash`: un checkout que se ejecutó porque el
 // estado NO había cambiado no dejaba constancia firmada de esa comprobación.
 export {

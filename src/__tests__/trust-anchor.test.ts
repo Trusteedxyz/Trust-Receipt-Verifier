@@ -1,7 +1,7 @@
 /**
- * Unit tests for embedded-issuer-root.ts + trust-anchor pinning (spec-049 T424).
+ * Unit tests for embedded-issuer-root.ts + trust-anchor pinning.
  *
- * Covers FR-032b + post-Codex round 2 D3.
+ * Covers pinning of the JWKS-bundle trust anchor.
  *
  * @see ../embedded-issuer-root.ts
  */

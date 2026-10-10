@@ -16,7 +16,7 @@
  *   - any OTHER declared version (1.1, v1.0-FINAL, future) ⇒ NEVER downgraded;
  *   - `canon: "jcs"` ⇒ `canonicalization: "jcs"`, absence ⇒ "json-stringify-legacy";
  *   - `expires_at` on a compact receipt is INFORMATIVE — never a validity gate
- *     (FR-018: v1.0 must keep verifying for ≥ 7 years).
+ *     (v1.0 must keep verifying for ≥ 7 years).
  */
 
 import { describe, it, expect } from "vitest";
@@ -152,7 +152,7 @@ describe("legacy-compact branch — canonicalization regime", () => {
 });
 
 describe("legacy-compact branch — expires_at is informative, not a gate", () => {
-  it("does NOT expire a compact receipt whose expires_at is long past (FR-018)", async () => {
+  it("does NOT expire a compact receipt whose expires_at is long past", async () => {
     const { pub, priv } = await makeKeys();
     const now = Math.floor(Date.now() / 1000);
     const jws = await sign(

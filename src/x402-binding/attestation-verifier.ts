@@ -1,9 +1,9 @@
 /**
- * Spec 054 T121 — Portable PII attestation verifier (FR-013a).
+ * Portable PII attestation verifier.
  *
  * Verifies an attestation JWS Compact returned by the merchant's PII
  * challenge endpoint (`PiiAttestationService.attest()` server-side; route
- * surface lands with T118 post Wave 3-B).
+ * surface lands later).
  *
  * The attestation is signed by the merchant root key (Ed25519) and carries a
  * JCS-canonicalized payload:
@@ -24,8 +24,6 @@
  * merchant root signature on the attestation envelope.
  *
  * Module is PORTABLE: only `node:crypto`. No filesystem, no env, no Prisma.
- *
- * @see specs/058-trustreceipt-x402-binding/spec.md FR-013a
  */
 
 import { createPublicKey, verify as cryptoVerify } from "node:crypto";

@@ -1,9 +1,8 @@
 /**
- * M-01 (plan de evolución 2026-08-21, §3) — Merchant Identity Assertions.
+ * Merchant Identity Assertions.
  *
  * Implementa `draft-anders-merchant-identity-assertions-01` (R. Anders,
- * RegisteredBrands.AI; Informational; 4-jul-2026; expira 5-ene-2027). El texto
- * normativo está en `docs/referencias/drafts-mia/`.
+ * RegisteredBrands.AI; Informational; 4-jul-2026; expira 5-ene-2027).
  *
  * ## Qué es esto y qué no
  *

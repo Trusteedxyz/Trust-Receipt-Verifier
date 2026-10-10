@@ -1,5 +1,5 @@
 /**
- * ATEP passport reference verifier — ZERO-DEPENDENCY (spec-062 SC-001).
+ * ATEP passport reference verifier — ZERO-DEPENDENCY.
  *
  * A STANDALONE artifact that verifies an ATEP passport OFFLINE using ONLY
  * Node.js built-ins (`node:crypto`, `node:fs`, `node:url`). It imports NO
@@ -17,7 +17,7 @@
  *      attests the issuer-computed aggregates (execution_count / success_rate /
  *      badges) that are NOT present in the snapshot.
  *
- *      SCOPE LIMIT (audit 2026-07-26 §F2): these aggregates are ATTESTED by the
+ *      SCOPE LIMIT: these aggregates are ATTESTED by the
  *      issuer's signature, NOT independently recomputable by a third party. The
  *      underlying TrustReceipt corpus is not hash-chained (no issuer writes
  *      `hash_chain_prev`) and is not externally readable, so a verifier can
@@ -59,7 +59,6 @@
  *   node verify-atep-passport.mjs <passport.json> <jwks.json>
  * Prints the verdict as JSON to stdout and exits 0 when valid, 1 otherwise.
  *
- * @see specs/062-vcap-verified-commerce-alignment (SC-001)
  * @see Trusteed's issuer-side implementation (parity reference, not part of this package)
  */
 

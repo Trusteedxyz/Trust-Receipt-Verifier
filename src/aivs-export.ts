@@ -1,5 +1,5 @@
 /**
- * AIVS proof-bundle export (spec-062 US1).
+ * AIVS proof-bundle export.
  *
  * Projects a signed TrustReceipt (v1.0 JWS Compact, EdDSA) into an
  * AIVS-compatible proof bundle { manifest_hash, session_sig } per
@@ -10,8 +10,8 @@
  * `session_sig` is the existing EdDSA signature. A consumer needs only the
  * JWS and the issuer JWKS — no Trusteed code — to verify integrity.
  *
- * SCOPE LIMIT — no hash chain exists (audit 2026-07-26 §F2).
- * No issuer in this repository writes `hash_chain_prev` onto a TrustReceipt
+ * SCOPE LIMIT — no hash chain exists.
+ * No issuer known to this package writes `hash_chain_prev` onto a TrustReceipt
  * (verified by exhaustive grep: zero write sites). The receipt corpus is a
  * plain table, NOT an append-only hash-linked log; the RFC 8785 prev-hash chain
  * that does exist in the product covers `OAuthAuditLog` and the enforcement
@@ -20,9 +20,6 @@
  * {@link AivsProofBundle.chain_status}. This module MUST NOT imply otherwise:
  * the guarantee it provides is per-receipt integrity + signature, never
  * chain-of-custody across receipts.
- *
- * @see specs/062-vcap-verified-commerce-alignment/data-model.md §T062-01
- * @see docs/analisis/trust-receipts-auditoria-arquitectura-2026-07-26.md §F2
  */
 
 import { createHash } from "node:crypto";

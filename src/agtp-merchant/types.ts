@@ -1,5 +1,5 @@
 /**
- * M-01, segundo draft (plan de evolución 2026-08-21, §3) — identidad de
+ * Identidad de
  * comerciante en AGTP: `draft-hood-agtp-merchant-identity-02` (C. Hood,
  * Nomotic; Informational; expira 27-nov-2026), sobre la base
  * `draft-hood-independent-agtp-09`.

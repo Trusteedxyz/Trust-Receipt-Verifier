@@ -1,5 +1,5 @@
 /**
- * Evidencia del mandato emitido por la plataforma 
+ * Evidencia del mandato emitido por la plataforma
  * campos hermanos opcionales + invariantes. No toca el esquema congelado.
  */
 import { readFileSync } from "node:fs";

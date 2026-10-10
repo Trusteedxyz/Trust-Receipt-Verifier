@@ -1,6 +1,6 @@
 /**
- * Spec 054 T012/T013 — Schema-extension tests for `TrustReceiptV11BodySchema`
- * with optional `x402_binding` extension (ADR-054-001).
+ * Schema-extension tests for `TrustReceiptV11BodySchema`
+ * with optional `x402_binding` extension.
  *
  * These tests verify the additive, backward-compatible extension:
  *
@@ -8,14 +8,11 @@
  *  2. Receipts WITH a well-formed `x402_binding` (kind=static_sha256) parse,
  *     and the field is preserved (not stripped).
  *  3. `x402_binding.posture === "pending_settlement"` is REJECTED per
- *     ADR-054-001 (receipts are only issued after settlement outcome is known).
+ *     the binding rules (receipts are only issued after settlement outcome is known).
  *  4. Malformed `output_commitment` (e.g. merkle_manifest missing
  *     `manifest_hash`) is REJECTED at parse time.
  *  5. The cross-field `buyer_agent` super-refinement still passes when
  *     `x402_binding` is present alongside all required buyer-agent fields.
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T012 T013
- * @see specs/058-trustreceipt-x402-binding/contracts/x402-binding-receipt-payload.schema.json
  */
 
 import { describe, expect, test } from "vitest";
@@ -135,7 +132,7 @@ function buildValidX402Binding(): Record<string, unknown> {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("Spec-054 T012/T013 — TrustReceiptV11BodySchema x402_binding extension", () => {
+describe("TrustReceiptV11BodySchema x402_binding extension", () => {
   describe("backward compatibility", () => {
     test("v1.1 receipt WITHOUT x402_binding still parses (additive extension)", () => {
       const body = buildMinimalBuyerAgentBody();
@@ -179,7 +176,7 @@ describe("Spec-054 T012/T013 — TrustReceiptV11BodySchema x402_binding extensio
     });
   });
 
-  describe("strict posture (ADR-054-001)", () => {
+  describe("strict posture", () => {
     test("REJECTS x402_binding.posture === 'pending_settlement'", () => {
       const binding = buildValidX402Binding() as Record<string, unknown>;
       binding.posture = "pending_settlement";

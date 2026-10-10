@@ -32,7 +32,7 @@ Consequences:
   where it expected a compact JWS. Dispatch on the media type, or use
   `detectReceiptFormat()` / `verifyReceiptAuto()` from this package.
 - **A v1.1 verifier MUST keep accepting v1.0 receipts** for at least 10 years
-  past the issuance cutover (SPEC.md §11.8, FR-018). Results carry the
+  past the issuance cutover (SPEC.md §11.8). Results carry the
   `legacy_pre_eidas_hardening` warning; that warning is a deprecation signal,
   not a failure.
 - `envelope_metadata` is **not signed**. Anything you rely on for a trust
