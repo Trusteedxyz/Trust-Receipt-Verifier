@@ -635,7 +635,7 @@ export const MppBindingExtensionSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["warnings"],
-          message: `posture="unverified" REQUIRES warnings[] with ≥1 entry (ADR-056 §Degradation Matrix — NO payment evidence). Consumers MUST inspect warnings.`,
+          message: `posture="unverified" REQUIRES warnings[] with ≥1 entry (the degraded posture carries NO payment evidence). Consumers MUST inspect warnings.`,
         });
       }
     }
@@ -783,7 +783,7 @@ export const TrustReceiptV11BodySchema = z
           code: z.ZodIssueCode.custom,
           path: ["buyer_agent_consent_context"],
           message:
-            "buyer_agent receipts MUST carry buyer_agent_consent_context only (post-Codex round 2 D22)",
+            "buyer_agent receipts MUST carry buyer_agent_consent_context only",
         });
       }
       if (
@@ -794,7 +794,7 @@ export const TrustReceiptV11BodySchema = z
           code: z.ZodIssueCode.custom,
           path: ["payment_authorization_hash"],
           message:
-            "buyer_agent receipts MUST carry payment_authorization_hash AND authorization_scheme (post-Codex round 2 D24)",
+            "buyer_agent receipts MUST carry payment_authorization_hash AND authorization_scheme",
         });
       }
       const esignFields = [
@@ -807,7 +807,7 @@ export const TrustReceiptV11BodySchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: [f],
-            message: `${f} is required for buyer_agent receipts (post-Codex round 2 D28)`,
+            message: `${f} is required for buyer_agent receipts`,
           });
         }
       }
@@ -819,7 +819,7 @@ export const TrustReceiptV11BodySchema = z
           code: z.ZodIssueCode.custom,
           path: ["merchant_admin_authorization_context"],
           message:
-            "merchant_admin receipts MUST carry merchant_admin_authorization_context only (post-Codex round 2 D22)",
+            "merchant_admin receipts MUST carry merchant_admin_authorization_context only",
         });
       }
     }
