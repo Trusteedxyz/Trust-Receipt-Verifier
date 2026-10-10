@@ -1,5 +1,5 @@
 /**
- * Deterministic seeded byte generator for v1.1 conformance vectors (T065).
+ * Deterministic seeded byte generator for v1.1 conformance vectors.
  *
  * Uses an HKDF-Expand-style construction over SHA-256: emits a stream of bytes
  * by hashing `seed || counter || label` with a 32-bit big-endian counter. Same

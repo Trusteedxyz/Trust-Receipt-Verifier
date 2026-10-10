@@ -32,7 +32,7 @@
  * El corpus vivo tiene EXACTAMENTE un firmante: nosotros, con la clave en
  * nuestra custodia. Declararlo no es una concesión, es el dato. El camino que
  * cambiaría la clase (claves en poder del comerciante) está descrito en
- * `docs/analisis/informe-estrategico-v3-contraplan-2026-07-29.md` §R-03.
+ * un documento de diseño interno.
  */
 
 import { z } from "zod";
@@ -97,7 +97,7 @@ export const SignerSchema = z.object({
  * Listo para esparcir dentro de un `z.object`, igual que `PolicyEvidenceFields`.
  *
  * Opcional: los recibos emitidos antes de 2026-07-30 no lo llevan y tienen que
- * seguir verificando durante toda la ventana de retención (FR-018). Ausente NO
+ * seguir verificando durante toda la ventana de retención. Ausente NO
  * significa "sin firmantes" — significa que ese recibo no lo declara.
  */
 export const SignerFields = {

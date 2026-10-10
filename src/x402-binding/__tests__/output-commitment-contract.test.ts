@@ -1,25 +1,22 @@
 /**
- * Spec 054 T006g — Contract tests for `OutputCommitment` discriminated union.
+ * Contract tests for `OutputCommitment` discriminated union.
  *
- * Enforces ADR-054-001 rules:
+ * Enforces these rules:
  *  - `merkle_manifest` MUST carry `manifest_hash` (mutable URL is not anchor).
  *  - `static_sha256` MUST carry tagged `value` digest.
  *  - Unknown `kind` values are rejected as `unsupported_output_commitment_kind`.
  *  - `external_attestation` is parseable as a JSON shape but rejected by the
- *    Slice-1 acceptance gate (reserved for v1.1+).
+ *    acceptance gate (reserved for v1.1+).
  *
- * These tests will FAIL until the Zod schemas (T006a wiring + T012 schema
- * extension) are implemented. Per TDD they are written first.
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T006g
- * @see specs/058-trustreceipt-x402-binding/contracts/output-commitment.schema.json
+ * These tests will FAIL until the Zod schemas are implemented. Per TDD they
+ * are written first.
  */
 
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 
 // Mirror of contracts/output-commitment.schema.json discriminated union.
-// Once T006a types land + T012 schema extension wires through, the verifier
+// Once the types land and the schema extension is wired through, the verifier
 // package will export this Zod schema and this test imports it directly.
 // For now we define the expected Zod shape inline as a TDD specification.
 
@@ -65,7 +62,7 @@ const SPEC054_V10_SUPPORTED_KINDS = new Set([
 
 const HEX64 = "a".repeat(64);
 
-describe("Spec-054 T006g — OutputCommitment contract", () => {
+describe("OutputCommitment contract", () => {
   describe("static_sha256 kind", () => {
     test("accepts a well-formed static commitment", () => {
       const result = OutputCommitmentSchema.safeParse({
@@ -111,7 +108,7 @@ describe("Spec-054 T006g — OutputCommitment contract", () => {
       expect(result.success).toBe(true);
     });
 
-    test("REJECTS manifest_url without manifest_hash (ADR-054-001 §FR-007a)", () => {
+    test("REJECTS manifest_url without manifest_hash", () => {
       const result = OutputCommitmentSchema.safeParse({
         kind: "merkle_manifest",
         algorithm: "merkle-sha256-v1",
@@ -163,7 +160,7 @@ describe("Spec-054 T006g — OutputCommitment contract", () => {
       expect(result.success).toBe(true);
     });
 
-    test("Slice-1 acceptance gate REJECTS unsupported kind (v1.0 surface)", () => {
+    test("acceptance gate REJECTS unsupported kind (v1.0 surface)", () => {
       const parsed = OutputCommitmentSchema.parse({
         kind: "external_attestation",
         algorithm: "sha256",

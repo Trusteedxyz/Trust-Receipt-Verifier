@@ -89,7 +89,7 @@ _v1.0 (`verifyTrustReceipt`)_
 > This table used to list it as fatal. The current TypeScript reference
 > implementation reports expiry through `result.freshness.expired` (informative)
 > and does not fail verification, so that a v1.0 receipt keeps verifying for
-> the multi-year retention window FR-018 (spec-049) requires. See the comment
+> the multi-year retention window the spec requires. See the comment
 > above `verifyLegacyCompact` in `src/verifier.ts`. **This has not yet been
 > reconciled with `test-vectors/vectors.json` TC-007**, which still declares
 > `expected: "invalid"`, `expired`, so running `scripts/validate-vectors.ts`

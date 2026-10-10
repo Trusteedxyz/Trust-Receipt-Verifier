@@ -1,11 +1,11 @@
 # AIVS Reference Verifier (zero-dependency)
 
-A **standalone** verifier for an AIVS proof bundle (spec-062 SC-001). It proves
+A **standalone** verifier for an AIVS proof bundle. It proves
 the AIVS thesis: **you can verify a Trusteed AIVS proof bundle offline, without
 contacting Trusteed and without trusting any Trusteed code.**
 
 - **Zero external dependencies.** Uses only Node.js built-ins: `node:crypto`,
-  `node:fs`, `node:url`. No `jose`, no `@agenticmcpstores/*`, no npm install.
+  `node:fs`, `node:url`. No `jose`, no workspace packages, no npm install.
 - **Fully offline.** No network access. You need only the proof bundle and the
   issuer's public keys (JWKS).
 - **Single file.** `verify-aivs-bundle.mjs`: copy it anywhere Node 18+ runs.

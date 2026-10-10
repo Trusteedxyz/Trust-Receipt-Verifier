@@ -1,5 +1,5 @@
 /**
- * Trust-receipts audit 2026-07-26 §R1 — consumer-side revocation check.
+ * consumer-side revocation check.
  *
  * The property under test is almost entirely about what must NOT collapse into
  * `not_revoked`. A relying party that treats "I could not check" as "it is fine"

@@ -1,5 +1,5 @@
 /**
- * T-AUD-012 (GAP H4) — generator for the four strict-mode negative vectors.
+ * generator for the four strict-mode negative vectors.
  *
  * Each emitted vector is SELF-CONTAINED: it embeds the public JWKS that the
  * conformance runner uses to verify the JWS signature, plus the pinned
@@ -11,8 +11,6 @@
  *
  * Run:
  *   pnpm --filter trust-receipt-verifier exec tsx scripts/generate-strict-mode-vectors.ts
- *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md T-AUD-012
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";

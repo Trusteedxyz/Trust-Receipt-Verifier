@@ -1,18 +1,18 @@
 /**
- * spec-049 v1.1 conformance test vectors — runner.
+ * v1.1 conformance test vectors — runner.
  *
- * Scope: T060–T064 + T130/T131 + T132–T134 (10 vectors in `test-vectors/v11/`):
- *   - 011 buyer_agent happy path (T060)             — accepted
- *   - 012 missing consent context (T061)             — rejected: missing_required_consent_context
- *   - 013 receipt_subject mismatch (T062)            — rejected: receipt_subject_mismatch
- *   - 017 legacy v1.0 receipt (T063)                — accepted via dispatcher → v1.0
- *   - 018 pii_absent classification (T064)           — accepted
- *   - 019 x402 evm_permit2 (T132)                   — accepted (payment_authorization_hash + authorization_scheme D24)
- *   - 019b x402 missing payment_authorization_hash   — rejected: schema_invalid (D24 enforcement)
- *   - 020 MCP mcp_tool_invocation (T133)             — accepted (authorization_scheme=mcp_tool_invocation D24)
+ * Scope: 10 vectors in `test-vectors/v11/`):
+ *   - 011 buyer_agent happy path             — accepted
+ *   - 012 missing consent context             — rejected: missing_required_consent_context
+ *   - 013 receipt_subject mismatch            — rejected: receipt_subject_mismatch
+ *   - 017 legacy v1.0 receipt                — accepted via dispatcher → v1.0
+ *   - 018 pii_absent classification           — accepted
+ *   - 019 x402 evm_permit2                   — accepted (payment_authorization_hash + authorization_scheme)
+ *   - 019b x402 missing payment_authorization_hash   — rejected: schema_invalid (rail-aware scheme enforcement)
+ *   - 020 MCP mcp_tool_invocation             — accepted (authorization_scheme=mcp_tool_invocation)
  *
  * Vector 016 (rotated key export bundle) is NOT in scope here — it belongs to
- * T160.
+ * the export-bundle tests.
  *
  * The vectors carry `verify_options.jwks` (raw JWKS) but the v1.1 verifier
  * accepts a `SignedJwksHistory` bundle. The runner builds an unsigned-but
@@ -24,7 +24,7 @@
  * The runner also implements a tiny dispatcher: legacy v1.0 envelopes
  * (carrying `legacy_v1_0: true` and a top-level `receipt` JWS) are routed to
  * `verifyReceiptV10` and the dispatcher appends `legacy_pre_eidas_hardening`
- * to the warnings list (per the T063 expectation).
+ * to the warnings list (as vector 017 expects).
  */
 
 import { describe, it, expect } from "vitest";
@@ -159,19 +159,19 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
     trustAnchorPemSha256:
       "dd43bf2cd65023d79e41358226ed1197fcea36bc693f1c0fadde0e318bfd76a1",
     policyOidAllowlist: ["1.2.3.4.5.6.7.8.9"],
-    // T-CR-002: surface vector-declared TSA root pins as the operator
+    // Surface vector-declared TSA root pins as the operator
     // allowlist so the fixture can self-describe its trusted TSA chain
     // without smuggling envelope-supplied roots into the pin set.
     tsaRootCertSha256Allowlist: vector.verify_options.tsa_root_pins,
     expectedSubject: vector.verify_options.expectedSubject,
-    // T-CR-001: conformance vectors run under the T420 staging-stub root.
+    // Conformance vectors run under the staging-stub root.
     // Opt into the structural-fallback path so the suite continues to
     // round-trip pre-ceremony. Production callers omit this flag.
     allowStagingRoots: true,
-    // GAP H1a: pin the verification clock to the vector's declared `currentTime`
+    // pin the verification clock to the vector's declared `currentTime`
     // so the suite is deterministic and the temporal (issued_at/expires_at)
     // check evaluates the receipt at the same instant the fixture was minted
-    // for. Without this the cross-spec temporal hardening (added 2026-05-18)
+    // for. Without this the temporal hardening
     // rejects every fixture as `receipt_expired` once wall-clock drifts past
     // the fixtures' expiry.
     currentTimeSeconds: vector.verify_options.currentTime,
@@ -194,7 +194,7 @@ async function dispatch(vector: VectorFile): Promise<DispatchResult> {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("spec-049 v1.1 conformance vectors (T060–T064)", () => {
+describe("v1.1 conformance vectors", () => {
   it.each(IN_SCOPE)("T06X — vector %s round-trips", async (name) => {
     const vector = loadVector(name);
     const result = await dispatch(vector);
@@ -211,63 +211,63 @@ describe("spec-049 v1.1 conformance vectors (T060–T064)", () => {
     }
   });
 
-  it("T060 — vector 011 buyer_agent happy path is accepted", async () => {
+  it("vector 011 buyer_agent happy path is accepted", async () => {
     const r = await dispatch(loadVector("011-buyer-agent-happy-path.json"));
     expect(r.outcome).toBe("accepted");
     expect(r.recomputedLegalPosture).toBe("ades_candidate_timestamped");
   });
 
-  it("T061 — vector 012 missing_required_consent_context", async () => {
+  it("vector 012 missing_required_consent_context", async () => {
     const r = await dispatch(loadVector("012-missing-consent-context.json"));
     expect(r.outcome).toBe("rejected");
     expect(r.errorCode).toBe("missing_required_consent_context");
   });
 
-  it("T062 — vector 013 receipt_subject_mismatch", async () => {
+  it("vector 013 receipt_subject_mismatch", async () => {
     const r = await dispatch(loadVector("013-receipt-subject-mismatch.json"));
     expect(r.outcome).toBe("rejected");
     expect(r.errorCode).toBe("receipt_subject_mismatch");
   });
 
-  it("T063 — vector 017 legacy v1.0 dispatched with warning", async () => {
+  it("vector 017 legacy v1.0 dispatched with warning", async () => {
     const r = await dispatch(loadVector("017-legacy-v10-receipt.json"));
     expect(r.outcome).toBe("accepted");
     expect(r.dispatched_to).toBe("v1.0");
     expect(r.warnings).toContain("legacy_pre_eidas_hardening");
   });
 
-  it("T064 — vector 018 privacy_classification=pii_absent accepted", async () => {
+  it("vector 018 privacy_classification=pii_absent accepted", async () => {
     const r = await dispatch(loadVector("018-pii-absent.json"));
     expect(r.outcome).toBe("accepted");
     expect(r.recomputedLegalPosture).toBe("ades_candidate_timestamped");
   });
 
-  it("T130 — vector 014 valid RFC 3161 timestamp evidence accepted", async () => {
+  it("vector 014 valid RFC 3161 timestamp evidence accepted", async () => {
     const r = await dispatch(loadVector("014-valid-timestamp-evidence.json"));
     expect(r.outcome).toBe("accepted");
     expect(r.recomputedLegalPosture).toBe("ades_candidate_timestamped");
   });
 
-  it("T131 — vector 015 timestamp unavailable accepted with warning", async () => {
+  it("vector 015 timestamp unavailable accepted with warning", async () => {
     const r = await dispatch(loadVector("015-timestamp-unavailable.json"));
     expect(r.outcome).toBe("accepted");
     expect(r.recomputedLegalPosture).toBe("ades_candidate_no_tsa");
     expect(r.warnings).toContain("tsa_unavailable");
   });
 
-  it("T132 — vector 019 buyer_agent x402 with evm_permit2 authorization_scheme accepted", async () => {
+  it("vector 019 buyer_agent x402 with evm_permit2 authorization_scheme accepted", async () => {
     const r = await dispatch(loadVector("019-v11-x402-permit2-required.json"));
     expect(r.outcome).toBe("accepted");
     expect(r.recomputedLegalPosture).toBe("ades_candidate_timestamped");
   });
 
-  it("T132b — vector 019b buyer_agent x402 missing payment_authorization_hash rejected", async () => {
+  it("vector 019b buyer_agent x402 missing payment_authorization_hash rejected", async () => {
     const r = await dispatch(loadVector("019b-v11-x402-missing-permit2.json"));
     expect(r.outcome).toBe("rejected");
     expect(r.errorCode).toBe("schema_invalid");
   });
 
-  it("T133 — vector 020 buyer_agent MCP with mcp_tool_invocation authorization_scheme accepted", async () => {
+  it("vector 020 buyer_agent MCP with mcp_tool_invocation authorization_scheme accepted", async () => {
     const r = await dispatch(
       loadVector("020-v11-mcp-tool-invocation-required.json")
     );
@@ -275,10 +275,10 @@ describe("spec-049 v1.1 conformance vectors (T060–T064)", () => {
     expect(r.recomputedLegalPosture).toBe("ades_candidate_timestamped");
   });
 
-  it("scope sanity — exactly 10 vectors covered by T060–T064 + T130/T131 + T132–T133", () => {
+  it("scope sanity — exactly 10 vectors covered", () => {
     expect(IN_SCOPE.length).toBe(10);
-    // Vector 016 (rotated key) belongs to T160.
-    // Vectors 019/019b/020 cover post-Codex round-2 D24 new fields.
+    // Vector 016 (rotated key) belongs to the export-bundle tests.
+    // Vectors 019/019b/020 cover the rail-aware authorization fields.
     const allFiles = readdirSync(VECTORS_DIR).filter((f) =>
       f.endsWith(".json")
     );

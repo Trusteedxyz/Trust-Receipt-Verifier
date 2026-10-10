@@ -46,7 +46,7 @@
  * No estricto significa que Zod ACEPTA una clave no declarada y la DESCARTA del
  * objeto parseado. Declararlo en un solo esquema verificaría bien y no llegaría
  * nunca al tipo público — el fallo que ya mordió dos veces aquí: el
- * enriquecimiento T1.3 y el propio `hash_chain_prev`.
+ * enriquecimiento de campos del esquema legacy compacto y el propio `hash_chain_prev`.
  *
  * ## Contrato publicado
  *

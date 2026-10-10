@@ -1,12 +1,12 @@
 /**
- * spec-056 — `MppBindingExtensionSchema` parse tests.
+ * `MppBindingExtensionSchema` parse tests.
  *
  * Cubre:
  *  - Positive parse (confirmed posture, todos los fields).
  *  - Optional fields (digest, expires, warnings).
  *  - Field validation (ULID, http_method enum, RFC 3339 strict timestamp,
  *    Sha256Tagged formato, URL formato).
- *  - Cross-field rule ADR-056 §Degradation Matrix:
+ *  - Cross-field degradation rule:
  *      SOLO posture == "unverified" REQUIRES warnings[] con ≥1 entry
  *      (NO evidencia de pago). `confirmed` y `recovered` (evidencia pago
  *      previo válida) NO fuerzan warnings.
@@ -92,7 +92,7 @@ describe("MppBindingExtensionSchema — positive parse", () => {
   });
 });
 
-describe("MppBindingExtensionSchema — ADR-056 §Degradation Matrix cross-field", () => {
+describe("MppBindingExtensionSchema — degradation matrix cross-field", () => {
   it("REJECTS posture=unverified without warnings[]", () => {
     const parsed = MppBindingExtensionSchema.safeParse({
       ...baseConfirmed,
@@ -116,7 +116,7 @@ describe("MppBindingExtensionSchema — ADR-056 §Degradation Matrix cross-field
     expect(parsed.success).toBe(false);
   });
 
-  it("ACCEPTS posture=recovered without warnings[] (valid prior-payment evidence, ADR-056)", () => {
+  it("ACCEPTS posture=recovered without warnings[] (valid prior-payment evidence)", () => {
     const parsed = MppBindingExtensionSchema.safeParse({
       ...baseConfirmed,
       posture: "recovered",
@@ -288,7 +288,7 @@ describe("MppBindingExtensionSchema — schema lock", () => {
 });
 
 describe("TrustReceiptV11BodySchema — mpp_binding wiring (additive + backward-compat)", () => {
-  // Note: full body integration tests live downstream (apps/api).
+  // Note: full body integration tests live in the consuming application.
   // Aquí solo verificamos que el extension field está cableado y que un body
   // payload con mpp_binding bien-formado NO produce error path sobre `mpp_binding`
   // (otros required del body v1.1 pueden faltar — ese es scope de tests v1.1 base).

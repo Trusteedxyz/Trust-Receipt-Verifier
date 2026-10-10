@@ -1,7 +1,7 @@
 /**
  * M-01 — vectores de conformidad del verificador MIA.
  *
- * Mismo patrón que los vectores de spec-054: un fichero JSON por caso, con el
+ * Mismo patrón que los vectores de conformidad principales: un fichero JSON por caso, con el
  * documento, el entorno (DNS, directorios de claves, reloj) y el resultado
  * esperado. El runner no sabe nada de los casos; los descubre del directorio.
  *

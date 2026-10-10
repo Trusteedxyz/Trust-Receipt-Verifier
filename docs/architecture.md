@@ -171,7 +171,7 @@ Step 6: Expiry check
   Fail → "not_yet_valid" if now < issued_at − clockTolerance.
   Report (NOT fatal, since 2026-07-28) → result.freshness.expired = true
     if now > expires_at + clockTolerance. A v1.0 receipt must keep verifying
-    for the multi-year retention window FR-018 (spec-049) requires, so
+    for the multi-year retention window, so
     `verifyTrustReceipt` no longer fails on expiry alone; see the comment
     above `verifyLegacyCompact` in src/verifier.ts. NOT YET reconciled with
     test-vectors/vectors.json TC-007 (still `expected: "invalid"`, `expired`)

@@ -1,5 +1,5 @@
 /**
- * Synthetic RFC 3161 TimeStampToken builder for T065 vectors.
+ * Synthetic RFC 3161 TimeStampToken builder for conformance vectors.
  *
  * Produces a deterministic, structurally-valid DER blob that round-trips
  * through ASN.1 parsers. We intentionally do NOT build a fully-validating

@@ -539,9 +539,9 @@ Implementations that pass all 10 vectors may include the following badge in thei
 | Version | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0     | 2026-04-29 | Initial draft. 24 fields, 10 conformance vectors, 6 protocols, 3 conformance levels.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| 1.1     | 2026-05-10 | eIDAS + ESIGN hardening (spec-049). Receipt envelope split, RFC 3161 timestamp evidence, KMS-backed signing, mandatory consent + agent-authorization chain. 11 new vectors.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| 1.1.1   | 2026-05-10 | Phase 12 Codex Review Remediation (T-CR-001..T-CR-012). Trust anchor: staging-root opt-in (T-CR-001), TSA root operator-controlled (T-CR-002). KMS: CloudTrail single-attribute filter (T-CR-003), manifest-signer KMS-only (T-CR-004), `ED25519_SHA_512` algo fix (T-CR-005), dual-cap 2900/4096B (T-CR-006). TSA: default `fail_open` + `merchantTsaPolicy` (T-CR-007), `revocation_evidence.kind` discriminatedUnion (T-CR-008). DLP: `high_entropy_secret` block default (T-CR-009), `CLAIMS_POLICY_BYPASS_TOKEN` (T-CR-010). Cleanup: `intent_hmac_key_version` rename (T-CR-011), `verifyTimestampEvidenceStub` removed (T-CR-012). New error codes: `root_not_in_trust_anchor`, `tsa_root_not_trusted`, `tsa_revocation_unavailable`. **Breaking** for downstream verifiers (see migration guide §v1.1.1).                                                                                                                                                         |
-| 1.1.2   | 2026-05-10 | Phase 13 Audit Remediation (T-AUD-001..T-AUD-006). Hot path wiring: `issueReceipt()` v1.1 routed in `trust-receipt.worker.ts` via kill-switch + `trustReceiptV11CanaryPct` + enqueue-contract sufficiency, graceful v1.0 fallback (`// TODO(spec-049-enqueue-v1.1)`), new metric `trust_receipt_worker_path_total{schema_version, outcome}` (T-AUD-001). QTSA: queue cleanup race fix (positional `ltrim` after pipeline success) (T-AUD-002); real RFC 3161 verification post-batch with new env var `QTSA_ROOT_CERT_SHA256_ALLOWLIST` (T-AUD-003). Export bundle: 3 stubs replaced by real loaders in `trust-export-artifacts.ts` with pre-T420 staging-stub HS256 + explicit `warnings` (T-AUD-004). EUDI: SD-JWT-VC real verification via `@sd-jwt/sd-jwt-vc` (T-AUD-005); LOTL real parser via `fast-xml-parser` with `EU_LOTL_URL` env var + 24h cache + degraded fallback (T-AUD-006). Operational eIDAS conformance projected 65-75% post-canary deploy. ADR-034. |
+| 1.1     | 2026-05-10 | eIDAS + ESIGN hardening. Receipt envelope split, RFC 3161 timestamp evidence, KMS-backed signing, mandatory consent + agent-authorization chain. 11 new vectors. |
+| 1.1.1   | 2026-05-10 | Review remediation. Trust anchor: staging roots are opt-in; TSA roots are operator-controlled. KMS: CloudTrail single-attribute filter, manifest signer KMS-only, `ED25519_SHA_512` algorithm fix, dual body cap 2900/4096B. TSA: default `fail_open` + `merchantTsaPolicy`, `revocation_evidence.kind` discriminated union. DLP: `high_entropy_secret` blocked by default. Cleanup: `intent_hmac_key_version` rename, `verifyTimestampEvidenceStub` removed. New error codes: `root_not_in_trust_anchor`, `tsa_root_not_trusted`, `tsa_revocation_unavailable`. **Breaking** for downstream verifiers (see migration guide §v1.1.1). |
+| 1.1.2   | 2026-05-10 | Audit remediation (issuer side). v1.1 issuance routed through the production path with a graceful v1.0 fallback; QTSA queue cleanup race fixed; real RFC 3161 verification after batching; export bundle stubs replaced by real loaders with explicit `warnings`; real SD-JWT-VC verification for EUDI; real EU LOTL parser with 24h cache and degraded fallback. |
 
 ---
 
@@ -550,7 +550,7 @@ Implementations that pass all 10 vectors may include the following badge in thei
 **Architecture**: [docs/architecture.md](docs/architecture.md)
 **Migration guide**: [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-receipt-v11-migration.md)
 
-### 11.1 Legal disclaimer (FR-003)
+### 11.1 Legal disclaimer
 
 > **Disclaimer**: TrustReceipt v1.1 is cryptographically verifiable technical evidence. It does not by itself determine legal liability. Whether a given receipt is admissible or persuasive in a specific jurisdiction or proceeding depends on applicable local law, the consenting parties' agreements, and other facts beyond the scope of this record format.
 
@@ -581,22 +581,22 @@ A v1.1 receipt is a **JSON envelope** (NOT a single JWS). Media type: `applicati
 | Field                                                 | Type                                                    | Required when               | Purpose                                                                                                                                                     |
 | ----------------------------------------------------- | ------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `schema_version`                                      | `"1.1"`                                                 | always                      | Wire dispatch.                                                                                                                                              |
-| `receipt_subject`                                     | `"buyer_agent" \| "merchant_admin"`                     | always                      | Discriminator (FR-013).                                                                                                                                     |
+| `receipt_subject`                                     | `"buyer_agent" \| "merchant_admin"`                     | always                      | Discriminator.                                                                                                                                     |
 | `privacy_classification`                              | `"pii_redacted" \| "pii_hashed_salted" \| "pii_absent"` | always                      | PII handling posture.                                                                                                                                       |
-| `legal_posture` (signed hint)                         | enum                                                    | always                      | Verifier MUST recompute (FR-019f).                                                                                                                          |
+| `legal_posture` (signed hint)                         | enum                                                    | always                      | Verifier MUST recompute.                                                                                                                          |
 | `buyer_agent_consent_context`                         | object                                                  | subject = buyer_agent       | `consent_type`, `consent_timestamp`, `consent_hash`, `consent_disclosure_version`, `agent_authorization_chain` (≥2 entries), `consent_withdrawal_uri_hash`. |
 | `merchant_admin_authorization_context`                | object                                                  | subject = merchant_admin    | `admin_user_id_hash`, `admin_action_type`, `admin_authentication_method`, `mfa_evidence_hash`, `rbac_role_at_action_time`.                                  |
-| `payment_authorization_hash` + `authorization_scheme` | string + enum                                           | subject = buyer_agent       | Rail-aware authorization (FR-019c). Replaces legacy `mandate_hash`, `permit2_authorization_hash`, `mcp_tool_invocation_hash`.                               |
+| `payment_authorization_hash` + `authorization_scheme` | string + enum                                           | subject = buyer_agent       | Rail-aware authorization. Replaces legacy `mandate_hash`, `permit2_authorization_hash`, `mcp_tool_invocation_hash`.                               |
 | `esign_disclosure_version` + `esign_disclosure_hash`  | semver + sha256                                         | subject = buyer_agent       | 15 U.S.C. §7001(c).                                                                                                                                         |
 | `consent_evidence_ref`                                | string                                                  | when consent recorded       | Pointer to signed evidence record.                                                                                                                          |
-| `intent_hmac_key_version`                             | string                                                  | always                      | KMS HMAC key ARN (FR-016).                                                                                                                                  |
-| `agent_authorization_chain`                           | array of `{actor, method, content_hash, ts}`            | embedded in consent_context | spec-045 RFC 9421 + user authorization (FR-012).                                                                                                            |
+| `intent_hmac_key_version`                             | string                                                  | always                      | KMS HMAC key ARN.                                                                                                                                  |
+| `agent_authorization_chain`                           | array of `{actor, method, content_hash, ts}`            | embedded in consent_context | RFC 9421 agent signature + user authorization.                                                                                                            |
 
-All hash-bearing fields use algorithm-tagged digest format `<algo>:<hex>` where `<algo> ∈ {sha256, sha512, hmac-sha256}` (FR-015).
+All hash-bearing fields use algorithm-tagged digest format `<algo>:<hex>` where `<algo> ∈ {sha256, sha512, hmac-sha256}`.
 
 ### 11.4 timestamp_evidence (RFC 3161)
 
-Lives at envelope level (NOT inside the signed body). Required fields per FR-020:
+Lives at envelope level (NOT inside the signed body). Required fields:
 
 ```jsonc
 {
@@ -615,7 +615,7 @@ Lives at envelope level (NOT inside the signed body). Required fields per FR-020
 }
 ```
 
-Absence permitted ONLY via fail-open path of FR-024 → posture downgrades to `ades_candidate_no_tsa`.
+Absence permitted ONLY via fail-open TSA path → posture downgrades to `ades_candidate_no_tsa`.
 
 ### 11.5 New verifier error codes
 
@@ -637,7 +637,7 @@ In addition to the v1.0 codes:
 | `tsa_imprint_mismatch`             | TST imprint ≠ SHA-256(JWS Compact bytes).                                        |
 | `missing_required_consent_context` | buyer_agent receipt without `buyer_agent_consent_context`.                       |
 | `receipt_subject_mismatch`         | Subject does not match the verification context.                                 |
-| `agent_identity_required_strict`   | buyer_agent receipt lacks verified spec-045 agent identity (default policy).     |
+| `agent_identity_required_strict`   | buyer_agent receipt lacks verified agent identity (RFC 9421) (default policy).     |
 | `esign_disclosure_unverified`      | buyer_agent receipt missing `esign_disclosure_*`.                                |
 | `receipt_payload_too_large`        | Canonical body > 2900 bytes OR jws_signing_input > 4096 bytes.                   |
 
@@ -678,7 +678,7 @@ See [docs/integrations/trust-receipt-v11-migration.md](docs/integrations/trust-r
 
 ### 11.8 Backward compatibility
 
-A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover (FR-018). v1.0 verifiers cannot consume v1.1 envelopes; content-type negotiation is the dispatch mechanism (see §11.2 media type).
+A v1.1 verifier MUST accept v1.0 receipts (flagged `legacy_pre_eidas_hardening`) for at least 10 years past the issuance cutover. v1.0 verifiers cannot consume v1.1 envelopes; content-type negotiation is the dispatch mechanism (see §11.2 media type).
 
 ### 11.9 Declared trust-anchor degradation (`trust_anchor_staging`)
 
@@ -698,7 +698,7 @@ the condition that it says so **inside the signed body**:
 §4.1 the mirror is advisory: verifiers MUST read the signed body.
 
 **Truth-table override.** `trust_anchor_staging` **dominates** the entire
-`legal_posture` recomputation of FR-019. Whatever timestamp evidence or agent
+`legal_posture` recomputation described above. Whatever timestamp evidence or agent
 identity the receipt carries, and **regardless of `receipt_subject`** (including
 `merchant_admin`), the recomputed posture is `simple_electronic_seal`.
 `merchant_admin_action` names a _subject_, not a strength level, and MUST NOT

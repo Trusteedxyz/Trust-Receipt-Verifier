@@ -1,5 +1,5 @@
 /**
- * Spec 054 T121 — Unit tests for the portable PII attestation verifier.
+ * Unit tests for the portable PII attestation verifier.
  *
  * Covers the decision tree of `verifyPiiAttestation`:
  *   - Happy path: signed by merchant root in JWKS → valid:true, matches passes through.

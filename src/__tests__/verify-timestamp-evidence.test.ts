@@ -1,7 +1,7 @@
 /**
- * verify-timestamp-evidence — T-CR-002 hardening tests.
+ * verify-timestamp-evidence — TSA root pin hardening tests.
  *
- * Codex P1 finding: pre-fix, the verifier passed the envelope-supplied
+ * Issue addressed: before the fix, the verifier passed the envelope-supplied
  * `evidence.tsa_root_cert_sha256` as a trust pin alongside the operator's
  * trust anchor. A malicious bundle could self-pin its own forged TSA chain.
  *
@@ -77,7 +77,7 @@ const RECEIPT_BODY = {
   issued_at: 1_700_000_010,
 } as unknown as TrustReceiptV11Body;
 
-describe("verifyTimestampEvidence — T-CR-002 root pin hardening", () => {
+describe("verifyTimestampEvidence — root pin hardening", () => {
   beforeEach(() => {
     verifyTimestampMock.mockReset();
     verifyTimestampMock.mockResolvedValue({
@@ -244,7 +244,7 @@ describe("verifyTimestampEvidence — T-CR-002 root pin hardening", () => {
     expect(verifyTimestampMock).not.toHaveBeenCalled();
   });
 
-  it("plumbs merchantTsaPolicy=fail_closed through to verifyTimestamp (T-CR-007)", async () => {
+  it("plumbs merchantTsaPolicy=fail_closed through to verifyTimestamp", async () => {
     await verifyTimestampEvidence({
       envelope: makeEnvelope(TRUSTED_ROOT_HEX),
       receipt: RECEIPT_BODY,
@@ -257,7 +257,7 @@ describe("verifyTimestampEvidence — T-CR-002 root pin hardening", () => {
     expect(arg?.merchantPolicy).toBe("fail_closed");
   });
 
-  it("plumbs merchantTsaPolicy=fail_open through to verifyTimestamp (T-CR-007)", async () => {
+  it("plumbs merchantTsaPolicy=fail_open through to verifyTimestamp", async () => {
     await verifyTimestampEvidence({
       envelope: makeEnvelope(TRUSTED_ROOT_HEX),
       receipt: RECEIPT_BODY,

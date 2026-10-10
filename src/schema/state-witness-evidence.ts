@@ -1,5 +1,5 @@
 /**
- * Evidencia de STATE WITNESS — qué resolvió el comparador de spec-063 antes de
+ * Evidencia de STATE WITNESS — qué resolvió el comparador de estado antes de
  * mover dinero, y contra qué estado autoritativo.
  *
  * Cierra un hueco concreto: el recibo sólo decía algo del estado cuando hubo
@@ -29,7 +29,7 @@ export const StateWitnessResolutionSchema = z.enum([
   "RECONFIRM",
 ]);
 
-/** Espejo de `ExecutionDivergenceReason` (apps/api state-witness). Lo fija un test de forma en el emisor. */
+/** Espejo de `ExecutionDivergenceReason` (del servicio emisor). Lo fija un test de forma en el emisor. */
 export const StateWitnessReasonSchema = z.enum([
   "price_within_tolerance",
   "price_diverged",

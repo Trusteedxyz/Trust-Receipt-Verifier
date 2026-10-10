@@ -15,7 +15,7 @@
  * `aivs-export.ts`, que lee justo ese campo para decidir entre
  * `unlinked_single_entry` y `linked_single_entry`.
  *
- * Es el mismo patrón que ya mordió con el enriquecimiento T1.3
+ * Es el mismo patrón que ya mordió con el enriquecimiento de campos del esquema legacy compacto
  * (`trust-receipt-legacy.schema.ts:68-77`), con la evidencia de política
  * (`policy-evidence.ts §Por qué se declaran…`) y tres veces con
  * `schema.response` de Fastify.

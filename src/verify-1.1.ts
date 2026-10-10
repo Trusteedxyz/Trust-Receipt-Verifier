@@ -1,32 +1,27 @@
 /**
- * TrustReceipt v1.1 envelope verifier (spec-049 — eIDAS hardening).
+ * TrustReceipt v1.1 envelope verifier (eIDAS hardening).
  *
- * Implements FR-018 (verifier accepts envelope, validates JWS, recomputes
- * envelope-level evidence) plus the post-Codex round 2 invariants:
+ * Implements the envelope verifier (accepts envelope, validates JWS, recomputes
+ * envelope-level evidence) plus these invariants:
  *
- * - D22: envelope_metadata fields (receipt_id, legal_posture,
+ * - envelope_metadata fields (receipt_id, legal_posture,
  *   legal_posture_warnings) are NOT signed — verifier MUST recompute against
  *   the JWS-signed body and reject (or warn) on mismatch. The verifier is
  *   AUTHORITATIVE for `legal_posture`: it recomputes from observed evidence
  *   (TST present? agent identity verified? subject?) and surfaces the result
  *   in `recomputedLegalPosture`.
- * - D23: JWKS history validity-window check — both `body.issued_at` AND
+ * - JWKS history validity-window check — both `body.issued_at` AND
  *   `timestamp_evidence.issued_at_attested` MUST fall inside the resolved
  *   `kid`'s `[valid_from, valid_to]` window.
- * - D27: structured legal_posture_warnings reasons.
+ * - structured legal_posture_warnings reasons.
  *
  * Timestamp (RFC 3161) verification is delegated to
  * `verifyTimestampEvidence` (`verify-timestamp-evidence.ts`), which wraps the
- * full RFC 3161 surface from `@agenticmcpstores/trust-receipt-tsa-client`
+ * full RFC 3161 surface from the bundled TSA client
  * (`verifyTimestamp` orchestrator + `verifyCmsSignerInfo` + `verifyCertPath`
  * + `verifyRevocation`). Caller passes `merchantTsaPolicy` +
- * `tsaRootCertSha256Allowlist` via `VerifyOptions`. T-CR-012 (2026-05-10)
- * removed the legacy `verifyTimestampEvidenceStub` that lived here.
- *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018, FR-019..FR-019g
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-020..FR-024, FR-032b
- * @see specs/049-trust-receipt-eidas-hardening/research.md R15, R16, R18
- * @see specs/049-trust-receipt-eidas-hardening/CODEX-REMEDIATION-2026-05-04.md
+ * `tsaRootCertSha256Allowlist` via `VerifyOptions`. The
+ * former the legacy `verifyTimestampEvidenceStub` that lived here.
  */
 
 import { compactVerify, importJWK, decodeProtectedHeader } from "jose";
@@ -89,7 +84,7 @@ function reject(
 /**
  * Verify a TrustReceipt v1.1 envelope end-to-end.
  *
- * Flow (FR-018 + post-Codex round 2 D22, D23, D27):
+ * Flow:
  *  1. Parse envelope (string → JSON if needed) and validate against
  *     `ReceiptEnvelopeSchema`.
  *  2. Decode the JWS Compact protected header to extract `kid`.
@@ -97,18 +92,16 @@ function reject(
  *     missing.
  *  4. Verify the JWS signature with the resolved JWK (Ed25519).
  *  5. Validate the parsed body against `TrustReceiptV11BodySchema`.
- *  6. D23 validity-window check — `issued_at` AND `issued_at_attested` MUST
+ *  6. validity-window check — `issued_at` AND `issued_at_attested` MUST
  *     fall inside the resolved kid's `[valid_from, valid_to]`.
  *  7. Subject discrimination + missing-context guard.
- *  8. envelope_metadata.receipt_id mirror equality (D22).
+ *  8. envelope_metadata.receipt_id mirror equality.
  *  9. Recompute every protocol-artifact sidecar SHA-256 and confirm it matches
  *     a `body.protocol_artifacts[].hash` entry.
- * 10. Recompute `legal_posture` from observed evidence (D22). Reject or warn
+ * 10. Recompute `legal_posture` from observed evidence. Reject or warn
  *     based on `rejectOnEnvelopePostureMismatch`.
  * 11. Verify timestamp evidence — delegated to `verifyTimestampEvidence`.
- * 12. Optional `expectedSubject` context check (R18).
- *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018
+ * 12. Optional `expectedSubject` context check.
  */
 export async function verifyReceiptEnvelope(
   envelopeInput: ReceiptEnvelope | string,
@@ -202,13 +195,13 @@ export async function verifyReceiptEnvelope(
 
   // 3c. Signature verification or (opt-in) staging fallback ----------------
   //
-  // T-CR-001 / Codex round 2 D2/D3: when the bundled root SHA is unknown to
+  // When the bundled root SHA is unknown to
   // the verifier OR resolves to a non-production "(STAGING)" stub, default
   // behavior is FAIL-CLOSED. Without `allowStagingRoots: true` a forged
   // bundle pointing at an unknown root cannot smuggle its own `kid` past us
   // via structural-only parsing.
   //
-  // Audit §B1 addendum (2026-07-27): rejecting outright also means the absence
+  // Addendum: rejecting outright also means the absence
   // of an offline key ceremony invalidates the ENTIRE v1.1 corpus. So instead
   // of deciding here, we DEFER: parse structurally, remember why, and require
   // the receipt's own SIGNED body to declare `trust_anchor_staging` before
@@ -271,7 +264,7 @@ export async function verifyReceiptEnvelope(
       warnings
     );
   }
-  // M8 — honor `history_chain_sha256`. Previously the verifier IGNORED this
+  // honor `history_chain_sha256`. Previously the verifier IGNORED this
   // field, so tampering with the presented `entries` (e.g. inserting a forged
   // kid on the structural-fallback path) went undetected. We recompute the
   // append-only hash chain and reject on mismatch. Opaque-stub values
@@ -366,7 +359,7 @@ export async function verifyReceiptEnvelope(
   }
   const body = bodyParse.data;
 
-  // 5a'. Deferred staging-root decision (audit §B1) ------------------------
+  // 5a'. Deferred staging-root decision ------------------------
   // The chain of trust could not be verified and the operator did not opt into
   // staging roots. The ONLY thing that may keep this receipt alive is the
   // receipt itself declaring — inside the bytes covered by the signature we
@@ -411,7 +404,7 @@ export async function verifyReceiptEnvelope(
   // 5b. Temporal checks (issued_at / expires_at) --------------------------
   // Honor the caller-supplied verification clock when provided (deterministic
   // conformance harnesses) and fall back to wall-clock otherwise (production).
-  // The expiry/not-yet-valid enforcement itself is unchanged. (GAP H1a)
+  // The expiry/not-yet-valid enforcement itself is unchanged.
   const nowSeconds =
     options.currentTimeSeconds ?? Math.floor(Date.now() / 1000);
   const tolerance = options.toleranceSeconds ?? 30;
@@ -432,7 +425,7 @@ export async function verifyReceiptEnvelope(
 
   // 5b'. A6 — issuer-root validity-window check. `findIssuerRootBySha256`
   // intentionally still RETURNS retired roots (so receipts legitimately signed
-  // while a root was active keep verifying for the FR-018 ≥ 7-year window), but
+  // while a root was active keep verifying for the ≥ 7-year window), but
   // the receipt's `issued_at` MUST fall inside that root's [validFrom, validTo].
   // A root retired/compromised at time T must not validate histories for
   // receipts issued after T. Only enforced when the history signature was
@@ -453,7 +446,7 @@ export async function verifyReceiptEnvelope(
     }
   }
 
-  // 5c. T-AUD-012 (GAP H4) — semantic trust-anchor / jwks-pin verification ---
+  // 5c. semantic trust-anchor / jwks-pin verification ---
   // The Zod layer only enforces the 64-hex REGEX FORMAT, so an all-zeros
   // opaque stub anchor passes shape validation. Here we add the SEMANTIC
   // layer: reject stub pins and verify the body's declared
@@ -494,7 +487,7 @@ export async function verifyReceiptEnvelope(
     warnings.push("jwks_sha256_stub");
   }
 
-  // 6. D23 validity-window check ------------------------------------------
+  // 6. validity-window check ------------------------------------------
   const attestedAt =
     envelope.timestamp_evidence.type === "RFC3161"
       ? envelope.timestamp_evidence.issued_at_attested
@@ -517,7 +510,7 @@ export async function verifyReceiptEnvelope(
     );
   }
 
-  // 8. envelope_metadata.receipt_id mirror (D22) --------------------------
+  // 8. envelope_metadata.receipt_id mirror --------------------------
   if (envelope.envelope_metadata.receipt_id !== body.receipt_id) {
     return reject(
       "envelope_metadata_receipt_id_mismatch",
@@ -534,7 +527,7 @@ export async function verifyReceiptEnvelope(
     if (violation) return reject(violation.code, violation.detail);
   }
 
-  // 10. Recompute legal_posture (D22 — verifier authoritative) ------------
+  // 10. Recompute legal_posture (verifier authoritative) ------------
   // Warn when assertions include providers the verifier doesn't recognise.
   const KNOWN_PROVIDERS = new Set(["rfc9421-native", "human", "visa"]);
   const rawAssertions = body.trust_provider_assertions;
@@ -567,7 +560,7 @@ export async function verifyReceiptEnvelope(
     warnings.push("envelope_legal_posture_mismatch_recomputed");
   }
 
-  // 10b. T-AUD-012 (GAP H4) — agent-identity binding gate -----------------
+  // 10b. agent-identity binding gate -----------------
   // A buyer_agent receipt with no verifiable agent-identity binding recomputes
   // to a degraded posture. Strict mode treats that as fatal; compat warns.
   // A receipt floored to `simple_electronic_seal` purely by its declared

@@ -1,5 +1,5 @@
 /**
- * Receipt body / envelope construction helpers for T065 vectors.
+ * Receipt body / envelope construction helpers for conformance vectors.
  *
  * Each helper takes deterministic seeded inputs and returns plain TS objects
  * matching `types-1.1.ts`. Hash fields use HMAC-SHA-256 over the canonical

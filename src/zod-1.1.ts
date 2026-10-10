@@ -1,16 +1,14 @@
 /**
- * Zod v3 validators for TrustReceipt v1.1 (spec-049 — eIDAS hardening).
+ * Zod v3 validators for TrustReceipt v1.1 (eIDAS hardening).
  *
- * Source of truth: specs/049-trust-receipt-eidas-hardening/data-model.md §3
- * and specs/049-trust-receipt-eidas-hardening/spec.md (FR-015..FR-019g, FR-040,
- * FR-024c).
+ * These schemas mirror the interfaces in `./types-1.1.ts`.
  *
  * Decoupled from `./types-1.1.ts` on purpose — this file defines schemas
  * standalone so callers can use either Zod parsing or pure TypeScript types
  * via `z.infer<typeof XxxSchema>`. Both surfaces stay in sync because the
  * type-level surface is the inferred output here.
  *
- * NOTE: The 2900-byte canonical-bytes cap on the receipt body (FR-019e + FR-040)
+ * NOTE: The 2900-byte canonical-bytes cap on the receipt body
  * is **NOT** enforced in Zod — that lives at issuance time per the spec because
  * Zod operates on parsed JSON values, not canonical-encoded bytes.
  */
@@ -38,8 +36,6 @@ import { StateWitnessEvidenceFields } from "./schema/state-witness-evidence.js";
  * Generic algorithm-tagged digest: `<algo>:<hex>`. Accepts `sha256` (64 hex),
  * `sha512` (128 hex), `hmac-sha256` (64 hex). Hex length is validated against
  * the algorithm via `.superRefine`.
- *
- * spec-049 §3 (data-model) — post-Codex round 2.
  */
 export const TaggedDigest = z
   .string()
@@ -73,16 +69,16 @@ export type Sha512Tagged = z.infer<typeof Sha512Tagged>;
 
 /**
  * HMAC-SHA-256 algorithm-tagged digest (`hmac-sha256:<64-hex>`). Required for
- * any field that hashes PII (post-Codex round 2 D32).
+ * any field that hashes PII.
  */
 export const HmacSha256Tagged = z.string().regex(/^hmac-sha256:[0-9a-f]{64}$/);
 export type HmacSha256Tagged = z.infer<typeof HmacSha256Tagged>;
 
 // ---------------------------------------------------------------------------
-// Authorization chain (FR-019d)
+// Authorization chain
 // ---------------------------------------------------------------------------
 
-/** Single hop in the agent authorization chain. spec-049 FR-019d. */
+/** Single hop in the agent authorization chain. */
 export const AuthorizationChainEntrySchema = z.object({
   actor: z.enum(["user", "agent", "delegated_agent"]),
   method: z.enum([
@@ -109,8 +105,8 @@ export type AuthorizationChainEntry = z.infer<
 // ---------------------------------------------------------------------------
 
 /**
- * Buyer-agent consent context. spec-049 FR-019d (post-Codex round 2 D32:
- * `consent_hash` MUST be HMAC-SHA-256 because consent strings are PII).
+ * Buyer-agent consent context (`consent_hash` MUST be HMAC-SHA-256 because
+ * consent strings are PII).
  */
 export const BuyerAgentConsentContextSchema = z.object({
   consent_type: z.enum([
@@ -132,7 +128,7 @@ export type BuyerAgentConsentContext = z.infer<
   typeof BuyerAgentConsentContextSchema
 >;
 
-/** Merchant-admin authorization context. spec-049 FR-019f. */
+/** Merchant-admin authorization context. */
 export const MerchantAdminAuthorizationContextSchema = z.object({
   admin_user_id_hash: HmacSha256Tagged,
   admin_action_type: z.string().min(1),
@@ -151,10 +147,10 @@ export type MerchantAdminAuthorizationContext = z.infer<
 >;
 
 // ---------------------------------------------------------------------------
-// Legal posture (FR-019)
+// Legal posture
 // ---------------------------------------------------------------------------
 
-/** Receipt-level legal posture. spec-049 FR-019. */
+/** Receipt-level legal posture. */
 export const LegalPostureSchema = z.enum([
   "ades_candidate_timestamped",
   "ades_candidate_no_tsa",
@@ -164,7 +160,7 @@ export const LegalPostureSchema = z.enum([
 ]);
 export type LegalPosture = z.infer<typeof LegalPostureSchema>;
 
-/** Structured degradation reason (post-Codex round 2 D27). */
+/** Structured degradation reason. */
 export const LegalPostureWarningSchema = z.object({
   reason: z.enum([
     "tsa_unavailable",
@@ -173,9 +169,9 @@ export const LegalPostureWarningSchema = z.object({
     "esign_disclosure_unverified",
     "pending_counsel_approval",
     /**
-     * The issuer had no production trust anchor available (the T420 offline key
+     * The issuer had no production trust anchor available (the offline key
      * ceremony has not run) and DECLARES that the chain of trust behind this
-     * receipt is unverifiable. Additive 2026-07-27 per audit §B1: without it an
+     * receipt is unverifiable. Additive field: without it an
      * issuer had no way to say "I am degraded", so the verifier's only options
      * were reject-everything or an operator flag that weakened ALL receipts.
      */
@@ -187,12 +183,11 @@ export const LegalPostureWarningSchema = z.object({
 export type LegalPostureWarning = z.infer<typeof LegalPostureWarningSchema>;
 
 // ---------------------------------------------------------------------------
-// Authorization scheme (post-Codex round 2 D24 — rail-aware)
+// Authorization scheme (rail-aware)
 // ---------------------------------------------------------------------------
 
 /**
- * Rail-aware payment authorization scheme. spec-049 post-Codex round 2 D24 —
- * replaces v1.0 `mandate_hash` / `permit2_hash` / `mcp_tool_invocation_hash`
+ * Rail-aware payment authorization scheme. It replaces v1.0 `mandate_hash` / `permit2_hash` / `mcp_tool_invocation_hash`
  * fields with a single `payment_authorization_hash` discriminated by this
  * scheme.
  */
@@ -209,7 +204,7 @@ export const AuthorizationSchemeSchema = z.enum([
 export type AuthorizationScheme = z.infer<typeof AuthorizationSchemeSchema>;
 
 // ---------------------------------------------------------------------------
-// Timestamp evidence (FR-019e — RFC 3161, post-Codex H9)
+// Timestamp evidence (RFC 3161)
 // ---------------------------------------------------------------------------
 
 /**
@@ -231,7 +226,7 @@ export const TimestampEvidenceSchema = z.discriminatedUnion("type", [
     tsa_cert_chain: z.array(z.string()).min(1),
     tsa_root_cert_sha256: z.string().regex(/^[0-9a-f]{64}$/),
     /**
-     * T-CR-008: discriminated union allowing `unavailable` to express
+     * Discriminated union allowing `unavailable` to express
      * "revocation status not obtainable" (issuer fetcher emits this when
      * OCSP/CRL distribution points are absent or unreachable, and the
      * synthetic-fixture path skips revocation entirely). Verifier policy
@@ -278,9 +273,9 @@ export type TimestampEvidence = z.infer<typeof TimestampEvidenceSchema>;
 // ---------------------------------------------------------------------------
 
 /**
- * spec-049 §2.3 data-model — authorization-evidence binding.
+ * Authorization-evidence binding.
  *
- * post-Codex round 2 D32 (T562): `user_intent_hash` MUST use `hmac-sha256:`
+ * `user_intent_hash` MUST use `hmac-sha256:`
  * prefix only — intent text is reversible PII and the SHA-256 fallback was
  * removed. `execution_hash` remains plain `sha256:` (non-PII canonical
  * payload digest).
@@ -294,7 +289,7 @@ export const AuthorizationEvidenceSchema = z.object({
 export type AuthorizationEvidence = z.infer<typeof AuthorizationEvidenceSchema>;
 
 // ---------------------------------------------------------------------------
-// Verification methods (post-Codex M17 — `jwks_sha256` REQUIRED)
+// Verification methods (`jwks_sha256` REQUIRED)
 // ---------------------------------------------------------------------------
 
 /**
@@ -326,10 +321,10 @@ export const VerificationMethodsSchema = z
 export type VerificationMethods = z.infer<typeof VerificationMethodsSchema>;
 
 // ---------------------------------------------------------------------------
-// Retention metadata (export bundle, FR-024c)
+// Retention metadata (export bundle)
 // ---------------------------------------------------------------------------
 
-/** Retention metadata for export bundles. spec-049 FR-024c. */
+/** Retention metadata for export bundles. */
 export const RetentionMetadataSchema = z.object({
   jurisdiction: z.enum(["EU", "US", "BR", "MX", "UK", "OTHER"]),
   jurisdiction_code: z.string().regex(/^[A-Z]{2}$/),
@@ -344,7 +339,7 @@ export type RetentionMetadata = z.infer<typeof RetentionMetadataSchema>;
 // Common enums
 // ---------------------------------------------------------------------------
 
-/** Supported protocols. spec-049 FR-015. */
+/** Supported protocols. */
 export const ProtocolSchema = z.enum([
   "x402",
   "AP2",
@@ -359,7 +354,7 @@ export type Protocol = z.infer<typeof ProtocolSchema>;
 export const ReceiptSubjectSchema = z.enum(["buyer_agent", "merchant_admin"]);
 export type ReceiptSubject = z.infer<typeof ReceiptSubjectSchema>;
 
-/** Privacy classification (FR-019g). */
+/** Privacy classification. */
 export const PrivacyClassificationSchema = z.enum([
   "pii_redacted",
   "pii_hashed_salted",
@@ -377,27 +372,25 @@ export const PolicyDecisionSchema = z.enum([
 export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
 
 // ---------------------------------------------------------------------------
-// Spec-054 — x402_binding extension (ADR-054-001)
+// x402_binding extension
 // ---------------------------------------------------------------------------
 //
 // Optional `x402_binding` field embedded in the TrustReceipt v1.1 body when
-// the receipt is bound to an x402 flow per spec-054. When absent, the receipt
+// the receipt is bound to an x402 flow per the x402 binding profile. When absent, the receipt
 // is a standard v1.1. When present, the verifier MUST validate the extension
 // shape via the discriminated `output_commitment` union.
 //
 // IMPORTANT (verifier-portable):
 //  - This schema is additive and backward-compatible. v1.1 receipts WITHOUT
 //    `x402_binding` continue to verify as before.
-//  - `external_attestation` is RESERVED for v1.1 of spec-054 — the schema
-//    parser accepts the shape, but Slice-1 acceptance gates (outside the
+//  - `external_attestation` is RESERVED for v1.1 of the binding profile — the schema
+//    parser accepts the shape, but acceptance gates (outside the
 //    parser) reject `kind === "external_attestation"`.
 //  - `posture` MUST be one of `confirmed` | `settlement_failed`.
-//    `pending_settlement` is NOT a valid receipt posture (ADR-054-001).
+//    `pending_settlement` is NOT a valid receipt posture.
 //
-// @see specs/058-trustreceipt-x402-binding/contracts/x402-binding-receipt-payload.schema.json
-// @see specs/058-trustreceipt-x402-binding/contracts/output-commitment.schema.json
 
-/** spec-054 — agent_authorization_chain attached to an x402 binding. */
+/** agent_authorization_chain attached to an x402 binding. */
 export const AgentAuthorizationChainSchema = z.object({
   issuer: z.string().min(1),
   kid: z.string().min(1),
@@ -409,7 +402,7 @@ export type AgentAuthorizationChain = z.infer<
   typeof AgentAuthorizationChainSchema
 >;
 
-/** spec-054 — static SHA-256 output commitment (immutable artefact digest). */
+/** static SHA-256 output commitment (immutable artefact digest). */
 export const OutputCommitmentStaticSha256Schema = z.object({
   kind: z.literal("static_sha256"),
   algorithm: z.literal("sha256"),
@@ -421,7 +414,7 @@ export type OutputCommitmentStaticSha256 = z.infer<
   typeof OutputCommitmentStaticSha256Schema
 >;
 
-/** spec-054 — Merkle manifest output commitment (chunked deliverable). */
+/** Merkle manifest output commitment (chunked deliverable). */
 export const OutputCommitmentMerkleManifestSchema = z.object({
   kind: z.literal("merkle_manifest"),
   algorithm: z.literal("merkle-sha256-v1"),
@@ -439,8 +432,8 @@ export type OutputCommitmentMerkleManifest = z.infer<
 >;
 
 /**
- * spec-054 — external attestation output commitment (RESERVED for v1.1).
- * Slice-1 acceptance gates (outside this parser) MUST reject this kind.
+ * external attestation output commitment (RESERVED for v1.1).
+ * Acceptance gates (outside this parser) MUST reject this kind.
  */
 export const OutputCommitmentExternalAttestationSchema = z.object({
   kind: z.literal("external_attestation"),
@@ -453,7 +446,7 @@ export type OutputCommitmentExternalAttestation = z.infer<
   typeof OutputCommitmentExternalAttestationSchema
 >;
 
-/** spec-054 — discriminated union over commitment kinds. */
+/** discriminated union over commitment kinds. */
 export const OutputCommitmentSchema = z.discriminatedUnion("kind", [
   OutputCommitmentStaticSha256Schema,
   OutputCommitmentMerkleManifestSchema,
@@ -461,7 +454,7 @@ export const OutputCommitmentSchema = z.discriminatedUnion("kind", [
 ]);
 export type OutputCommitment = z.infer<typeof OutputCommitmentSchema>;
 
-/** spec-054 — PII-filtered HMAC hashes carried alongside the x402 binding. */
+/** PII-filtered HMAC hashes carried alongside the x402 binding. */
 export const PrivacyFilteredHashesSchema = z.object({
   resource_description_hmac: HmacSha256Tagged.optional(),
   reason_hmac: HmacSha256Tagged.optional(),
@@ -472,9 +465,9 @@ export const PrivacyFilteredHashesSchema = z.object({
 export type PrivacyFilteredHashes = z.infer<typeof PrivacyFilteredHashesSchema>;
 
 /**
- * spec-054 — top-level `x402_binding` extension carried inside the v1.1 body.
+ * top-level `x402_binding` extension carried inside the v1.1 body.
  *
- * Per ADR-054-001:
+ * Rules:
  *  - `posture` is constrained to `confirmed` | `settlement_failed`.
  *    `pending_settlement` is NEVER a valid receipt posture (receipts are issued
  *    only after the settlement outcome is known).
@@ -498,26 +491,26 @@ export const X402BindingExtensionSchema = z
     payment_authorization_hash: Sha256Tagged,
     verification_posture: z.enum(["unverified", "observed", "enforced"]),
     agent_authorization_chain: AgentAuthorizationChainSchema.nullable(),
-    /** ADR-054-001: `pending_settlement` is NOT valid for issued receipts. */
+    /** `pending_settlement` is NOT valid for issued receipts. */
     posture: z.enum(["confirmed", "settlement_failed"]),
     output_commitment: OutputCommitmentSchema,
     privacy_filtered_hashes: PrivacyFilteredHashesSchema,
     intent_allows_multi_settlement: z.boolean(),
   })
-  // M-1 (security review 2026-05-18): reject unknown keys to prevent
+  // Reject unknown keys to prevent
   // signed-bytes-vs-parsed-keys drift (auditor view masking attacker-injected
   // semantics like `shadow_signature` / `bypass_flag`).
   .strict();
 export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
 
 /**
- * spec-056 — top-level `mpp_binding` extension carried inside the v1.1 body.
+ * Top-level `mpp_binding` extension carried inside the v1.1 body.
  *
  * MPP (Machine Payments Protocol — draft-ryan-httpauth-payment-01) binding
- * profile. Isomorfico a `x402_binding` (spec-054) pero adaptado al flujo
+ * profile. Isomorfico a `x402_binding` pero adaptado al flujo
  * HTTP 402 `WWW-Authenticate: Payment` → 200 OK + `Payment-Receipt` header.
  *
- * Per ADR-056:
+ * Rules:
  *  - `binding_profile_version` const `"mpp-binding/1.0"` (forward compat draft IETF).
  *  - `posture` 3-state load-bearing:
  *      `confirmed`   = challenge context hit + Payment-Receipt válido.
@@ -526,16 +519,16 @@ export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
  *      `recovered`   = status=already_paid (evidencia pago previo, NO insert
  *                      replay cache).
  *  - `request_hash` ata `amount/currency/recipient` del challenge sin replicar
- *    PII en el binding (pattern ADR-019).
+ *    PII en el binding.
  *  - `resource_uri_c14n` canonicalizado per §Canonicalization Rules (RFC 3986
  *    lowercase scheme+host, strip default ports, ordered query, fragment stripped).
  *  - `http_method` aparte del URI previene cross-verb replay.
  *  - `timestamp` + `expires` RFC 3339 strict UTC `Z` (regex enforced).
  *  - Si `posture === "unverified"` → `warnings` REQUIRED con ≥1 entry (cross-field).
- *    `confirmed` (evidencia válida) y `recovered` (evidencia pago previo, ADR-056)
+ *    `confirmed` (evidencia válida) y `recovered` (evidencia pago previo)
  *    NO fuerzan warnings — pueden ir vacíos/ausentes.
  *  - Schema lock v1: NO `intent` field aquí (siempre "charge" — `session` rechazado
- *    por parser con UnsupportedIntentError, diferido a spec-057).
+ *    por parser con UnsupportedIntentError, diferido).
  *  - `method` restringido a `1*LOWERALPHA` (draft MPP §Method Identifier Format) —
  *    idéntico al ABNF del protocolo real, no solo min/max length.
  *  - `realm` (protection space del `WWW-Authenticate: Payment` real, slot 0 del
@@ -545,10 +538,8 @@ export type X402BindingExtension = z.infer<typeof X402BindingExtensionSchema>;
  *    de `tempoxyz/mpp-specs` — antes de este fix, dos challenges de distinto
  *    realm con el resto de campos iguales colisionaban en el mismo binding_hash.
  *
- * Status: ✅ SSOT activo (2026-06-02). Exportado del barrel del paquete y
- * consumido por `MppReceiptIssuerService` (emisión) y `MppBindingVerifier`
- * (auditoría). Runtime parser + settlement service + 5 rutas cableados
- * (dormant hasta ops gate).
+ * Exportado del barrel del paquete y consumido por el emisor y por
+ * `MppBindingVerifier` (verificación independiente).
  */
 const Rfc3339StrictUtc = z
   .string()
@@ -636,7 +627,7 @@ export const MppBindingExtensionSchema = z
       });
     }
 
-    // ADR-056 §Degradation Matrix — solo `unverified` (NO evidencia de pago)
+    // Matriz de degradación — solo `unverified` (NO evidencia de pago)
     // REQUIRES warnings[]. `confirmed` (evidencia válida) y `recovered`
     // (evidencia pago previo válida) NO fuerzan warnings.
     if (binding.posture === "unverified") {
@@ -659,15 +650,15 @@ export type MppBindingExtension = z.infer<typeof MppBindingExtensionSchema>;
  * TrustReceipt v1.1 body — payload of the JWS Compact serialization.
  *
  * Cross-field rules enforced via `.superRefine`:
- * - Subject-discriminated context (post-Codex M14 / round 2 D22):
+ * - Subject-discriminated context:
  *   `buyer_agent` → MUST carry `buyer_agent_consent_context` only.
  *   `merchant_admin` → MUST carry `merchant_admin_authorization_context` only.
- * - Buyer-agent extras (post-Codex round 2 D24 + D28):
+ * - Buyer-agent extras:
  *   `payment_authorization_hash` + `authorization_scheme` REQUIRED, and
  *   `esign_disclosure_version` + `esign_disclosure_hash` + `consent_evidence_ref`
  *   REQUIRED.
  *
- * NOTE: The 2900-byte canonical-bytes cap (FR-019e + FR-040) is enforced at
+ * NOTE: The 2900-byte canonical-bytes cap is enforced at
  * issuance time, NOT here — Zod operates on parsed JSON, not canonical bytes.
  */
 export const TrustReceiptV11BodySchema = z
@@ -687,15 +678,15 @@ export const TrustReceiptV11BodySchema = z
     buyer_agent_consent_context: BuyerAgentConsentContextSchema.optional(),
     merchant_admin_authorization_context:
       MerchantAdminAuthorizationContextSchema.optional(),
-    /** post-Codex round 2 D32: PII source — MUST be HMAC. */
+    /** PII source — MUST be HMAC. */
     user_intent_hash: HmacSha256Tagged,
     intent_hmac_key_version: z.number().int().nonnegative(),
     cart_hash: Sha256Tagged.optional(),
     order_hash: Sha256Tagged.optional(),
-    /** post-Codex round 2 D24. */
+    /** Rail-aware authorization scheme. */
     payment_authorization_hash: Sha256Tagged.optional(),
     authorization_scheme: AuthorizationSchemeSchema.optional(),
-    /** post-Codex round 2 D28. */
+    /** E-signature disclosure evidence (required for buyer_agent receipts). */
     esign_disclosure_version: z
       .string()
       .regex(/^\d+\.\d+\.\d+$/)
@@ -719,14 +710,14 @@ export const TrustReceiptV11BodySchema = z
     trust_provider_assertions: z.unknown().optional(),
     legacy_flag: z.boolean().optional(),
     /**
-     * spec-054 — optional x402 binding extension (ADR-054-001).
+     * optional x402 binding extension.
      * Additive + backward-compatible: v1.1 receipts without this field continue
      * to verify. When present, the discriminated `output_commitment` union and
      * `posture` enum are enforced here at parse time.
      */
     x402_binding: X402BindingExtensionSchema.optional(),
     /**
-     * spec-056 — optional MPP binding extension (ADR-056).
+     * Optional MPP binding extension.
      * Additive + backward-compatible: v1.1 receipts without this field continue
      * to verify. When present, posture/warnings cross-field rule enforced at
      * parse time. Mutually compatible with x402_binding (distintos perfiles
@@ -743,7 +734,7 @@ export const TrustReceiptV11BodySchema = z
     platformOrderId: z.string().optional(),
     platform: z.string().optional(),
     /**
-     * Evidencia de política (R-02, 2026-07-29) — SSOT en
+     * Evidencia de política — SSOT en
      * `schema/policy-evidence.ts`. Aquí NO son opcionales por comodidad: el
      * root es `.strict()`, así que sin declararlos un body que los llevara
      * sería rechazado como clave desconocida. Compartir la declaración con las
@@ -771,7 +762,7 @@ export const TrustReceiptV11BodySchema = z
     // y subirse la clase de verificación.
     ...SignerFields,
   })
-  // A1 (security audit 2026-07-03): reject unknown keys at the ROOT body, not
+  // Reject unknown keys at the ROOT body, not
   // just inside the x402_binding/mpp_binding extensions (M-1). Without this a
   // caller could smuggle arbitrary semantic keys (e.g. `shadow_signature`,
   // `bypass_flag`) into the SIGNED bytes; portable verifiers parse-and-discard
@@ -836,13 +827,13 @@ export const TrustReceiptV11BodySchema = z
 export type TrustReceiptV11Body = z.infer<typeof TrustReceiptV11BodySchema>;
 
 // ---------------------------------------------------------------------------
-// Envelope (FR-019e)
+// Envelope
 // ---------------------------------------------------------------------------
 
 /**
  * Receipt envelope — wraps the JWS Compact `receipt` plus envelope-level
  * sidecars. `envelope_metadata` fields are NOT signed; verifiers MUST
- * recompute and reject mismatches (post-Codex round 2 D22).
+ * recompute and reject mismatches.
  */
 export const ReceiptEnvelopeSchema = z.object({
   /** JWS Compact serialization of the v1.1 body. */

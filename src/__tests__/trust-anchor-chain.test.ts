@@ -1,10 +1,10 @@
 /**
- * Spec-049 T424 — trust-anchor chain validation tests.
+ * Trust-anchor chain validation tests.
  *
  * Companion to `trust-anchor.test.ts` (which exercises EMBEDDED_ISSUER_ROOTS
  * structural invariants). This file covers the chain-validation primitive
  * `validateChain()` and exercises a forged-JWKS rejection path with a
- * synthetic Ed25519 keypair generated per-test (no real T420 ceremony key).
+ * synthetic Ed25519 keypair generated per-test (no real ceremony key).
  *
  * Coverage matrix:
  *   (a) receipt valid under bundled history (mock root key fixture).
@@ -30,7 +30,7 @@ import {
  * Build a synthetic non-staging IssuerRootEntry. The PEM content is structural
  * only — `validateChain` only inspects `pem` for the `(STAGING)` marker and
  * `sha256` for cross-comparison; this fixture intentionally OMITS the marker
- * to exercise the post-T420 happy path.
+ * to exercise the post-ceremony happy path.
  */
 function buildSyntheticRoot(): IssuerRootEntry {
   const { publicKey } = generateKeyPairSync("ed25519");

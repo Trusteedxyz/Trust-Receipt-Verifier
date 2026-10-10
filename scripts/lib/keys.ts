@@ -1,5 +1,5 @@
 /**
- * Deterministic Ed25519 keypair derivation for T065 vector generation.
+ * Deterministic Ed25519 keypair derivation for vector generation.
  *
  * Uses Node's `createPrivateKey` with raw 32-byte seed wrapped in the
  * PKCS#8 prefix for OID 1.3.101.112 (Ed25519). Same seed → same key bytes →

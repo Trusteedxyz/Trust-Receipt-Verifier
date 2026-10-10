@@ -1,8 +1,8 @@
 /**
- * TrustReceipt v1.0-legacy compact schema (C3 closure — 2026-07-03).
+ * TrustReceipt v1.0-legacy compact schema.
  *
- * The production receipt issuer (`apps/api/.../trust-receipt.service.ts`,
- * `TrustReceiptService.sign` / `.signFromHashes`) has, since spec-040 US2,
+ * The production receipt issuer (the issuing service,
+ * `TrustReceiptService.sign` / `.signFromHashes`) has, for a long time,
  * emitted a JWT-style compact payload that PREDATES the `TrustReceiptSchema`
  * canonical v1.0 shape. That payload carries:
  *
@@ -13,14 +13,14 @@
  * Since 2026-07-27 the issuer additionally stamps `schema_version:"1.0"`,
  * `canon:"jcs"`, `expires_at`, and — conditionally — `protocol`,
  * `policy_decision`, `amount`+`currency` and `checkout_session_id` onto that
- * same shape (T1.3 enrichment). The payload still lacks `receipt_id`,
+ * same shape. The payload still lacks `receipt_id`,
  * `user_intent_hash` and `verification_methods`, so `TrustReceiptSchema` keeps
  * rejecting it with `schema_invalid` — meaning any third party using the
  * standalone verifier package could not verify a receipt the platform actually
  * issued.
  *
  * These receipts are ALREADY signed and persisted immutably (`trust_receipts`,
- * append-only), so the signed bytes cannot be rewritten. Per FR-018 (v1.0 MUST
+ * append-only), so the signed bytes cannot be rewritten. Per the retention rule (v1.0 MUST
  * verify ≥ 7 years) the ONLY backward-compatible closure is to teach the
  * verifier to recognise + verify this actually-emitted format. This schema is
  * that recognizer.
@@ -71,7 +71,7 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   outputHashStatus: z.enum(["captured", "not_captured"]).optional(),
   trust_provider_assertions: z.array(z.unknown()).optional(),
 
-  // Optional carry-over fields (platform bridges, spec-062 failure outcome).
+  // Optional carry-over fields (platform bridges, failure outcome).
   platformOrderId: z.string().optional(),
   platform: z.string().optional(),
   outcome: z.enum(["SUCCESS", "FAILURE"]).optional(),
@@ -85,7 +85,7 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   // `VerifyResult.legacyReceipt`, so it was invisible through the public type.
   //
   // All optional: receipts issued before the enrichment must keep verifying for
-  // the full >= 7-year window (FR-018).
+  // the full >= 7-year window.
   /** Always `"1.0"` on this shape. `"1.1"` and `v1.0-FINAL` route elsewhere. */
   schema_version: z.literal("1.0").optional(),
   /** `"jcs"` ⇒ signing input is the RFC 8785 canonical form. */
@@ -102,7 +102,7 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   currency: z.string().optional(),
   checkout_session_id: z.string().optional(),
 
-  // ── Evidencia de política (R-02, 2026-07-29) ──────────────────────────────
+  // ── Evidencia de política ──────────────────────────────
   // Declarados aquí por el MISMO motivo que el bloque de arriba: no estricto
   // acepta claves no declaradas pero Zod las descarta del objeto parseado, así
   // que sin esto verificarían y no llegarían nunca a `VerifyResult`.
@@ -113,7 +113,7 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
   // y subirse la clase de verificación.
   ...SignerFields,
-  // Enlace de cadena (ola 5, 2026-08-05) — SSOT en `schema/chain-link.ts`.
+  // Enlace de cadena — SSOT en `schema/chain-link.ts`.
   // Declarado aquí porque ÉSTA es la forma que valida el corpus real: sin la
   // línea, el emisor firmaría el enlace y Zod lo descartaría del objeto
   // parseado, dejando la cadena firmada e invisible.

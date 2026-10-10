@@ -1,5 +1,5 @@
 /**
- * Spec 054 T101 — Unit tests for VerifierX402Extension.
+ * Unit tests for VerifierX402Extension.
  *
  * Covers the 12-phase verification pipeline:
  *   - happy-path direct issuer (signature-only)
@@ -11,14 +11,12 @@
  *   - malformed JWS shape → schema_invalid
  *   - x402_binding absent → x402_binding_missing
  *   - unsupported authorization_scheme (zk_authorization) → typed reject
- *   - FR-022 inferred identity guard → inferred_identity_not_allowed
+ *   - inferred identity guard → inferred_identity_not_allowed
  *   - binding hash mismatch (no localization) → binding_mismatch
  *   - binding hash mismatch with declared components → binding_mismatch + mismatched_component
  *   - expected binding_profile_version mismatch → schema_invalid
  *   - metric emit happy + error
  *   - expired receipt → valid: true + warning
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T101
  */
 
 import {
@@ -471,7 +469,7 @@ describe("VerifierX402Extension", () => {
     if (!result.valid) expect(result.reason).toBe("schema_invalid");
   });
 
-  test("x402_binding_missing when receipt is legacy spec-049 (no extension)", () => {
+  test("x402_binding_missing when receipt is legacy (no extension)", () => {
     const material = generateKeyMaterial("legacy-1");
     const components = evmPermit2Components();
     const { bindingHashTagged } = recomputeBindingHash(components);
@@ -496,8 +494,8 @@ describe("VerifierX402Extension", () => {
     const { bindingHashTagged } = recomputeBindingHash(components);
     const body = buildV11Body({
       bindingHashTagged,
-      // mcap_cart_binding is in the spec-049 AuthorizationScheme enum but NOT
-      // in the spec-054 binding v1.0 allowlist (FR-020).
+      // mcap_cart_binding is in the base AuthorizationScheme enum but NOT
+      // in the x402 binding v1.0 allowlist.
       authorizationScheme: "mcap_cart_binding",
     });
     const envelope = signEnvelope({ material, body });

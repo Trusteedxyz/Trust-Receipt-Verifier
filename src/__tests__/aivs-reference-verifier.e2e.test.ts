@@ -1,5 +1,5 @@
 /**
- * AIVS reference verifier e2e (spec-062 SC-001).
+ * AIVS reference verifier e2e.
  *
  * Proves the AIVS thesis end-to-end: a proof bundle produced by the internal
  * export (`exportAivsProofBundle`) is verified OFFLINE by the STANDALONE
@@ -99,7 +99,7 @@ async function verdictWithParity(
   return standalone;
 }
 
-describe("AIVS reference verifier — standalone zero-dependency (SC-001)", () => {
+describe("AIVS reference verifier — standalone zero-dependency", () => {
   it("verifies a real bundle offline as valid, matching the internal verifier", async () => {
     const result = await verdictWithParity(validBundle, [publicJwk]);
     expect(result).toEqual({ valid: true });

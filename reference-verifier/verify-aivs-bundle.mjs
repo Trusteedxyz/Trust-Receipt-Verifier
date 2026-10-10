@@ -1,10 +1,10 @@
 /**
- * AIVS proof-bundle reference verifier — ZERO-DEPENDENCY (spec-062 SC-001).
+ * AIVS proof-bundle reference verifier — ZERO-DEPENDENCY.
  *
  * A STANDALONE artifact that verifies an AIVS proof bundle OFFLINE using ONLY
  * Node.js built-ins (`node:crypto`, `node:fs`, `node:url`). It imports NO
  * Trusteed code and NO third-party packages (no `jose`, no
- * `@agenticmcpstores/*`). This is the executable proof of the AIVS thesis:
+ * workspace packages). This is the executable proof of the AIVS thesis:
  * "verify it without contacting or trusting Trusteed."
  *
  * It reproduces, byte-for-byte, the verdict of the internal
@@ -33,7 +33,6 @@
  *   node verify-aivs-bundle.mjs <bundle.json> <jwks.json>
  * Prints the verdict as JSON to stdout and exits 0 when valid, 1 otherwise.
  *
- * @see specs/062-vcap-verified-commerce-alignment (SC-001)
  * @see packages/trust-receipt-verifier/src/aivs-export.ts (parity reference)
  */
 

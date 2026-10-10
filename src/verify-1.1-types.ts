@@ -50,7 +50,7 @@ export type V11VerifyErrorCode =
   | "agent_identity_required_strict"
   | "schema_unsupported"
   | "jwks_history_signature_invalid"
-  // M8 — the committed `history_chain_sha256` does not match the recomputed
+  // the committed `history_chain_sha256` does not match the recomputed
   // hash chain over the presented entries (tamper-evident integrity check).
   | "jwks_history_chain_mismatch"
   // A6 — the resolved (cryptographically verified) issuer root's
@@ -59,7 +59,7 @@ export type V11VerifyErrorCode =
   | "root_outside_validity_window"
   | "receipt_expired"
   | "receipt_not_yet_valid"
-  // T-AUD-012 (GAP H4) — strict-mode semantic anchor/jwks verification.
+  // strict-mode semantic anchor/jwks verification.
   | "trust_anchor_stub_rejected"
   | "jwks_sha256_stub_rejected"
   | "trust_anchor_mismatch";
@@ -69,7 +69,7 @@ export type V11VerifyErrorCode =
  * `"accepted_degraded"`) the `receipt`, `envelope`, and
  * `recomputedLegalPosture` fields are populated.
  *
- * `accepted_degraded` (additive 2026-07-27, audit §B1) means: the signature and
+ * `accepted_degraded` (additive) means: the signature and
  * every structural check passed, but the receipt DECLARES — in its signed body
  * — that its chain of trust is unverifiable (`trust_anchor_staging`). It is a
  * deliberately NEW value so existing consumers that branch on
@@ -102,7 +102,6 @@ export interface V11VerifyResult {
  * `jwksHistory` is the issuer's signed JWKS history bundled into the export
  * bundle (or fetched online). `trustAnchorPemSha256` is the SHA-256 (64-hex)
  * of the embedded issuer root cert that the verifier pins against
- * (R16 trust anchor).
  */
 export interface VerifyOptions {
   jwksHistory: SignedJwksHistory;
@@ -112,12 +111,12 @@ export interface VerifyOptions {
    * Operator-controlled allowlist of TSA root cert SHA-256 hashes (64-hex,
    * lowercase). Default `[]` ⇒ fail-closed: any RFC 3161 TST is rejected
    * with `tsa_root_not_trusted`. See {@link verifyTimestampEvidence} for
-   * back-compat semantics with `trustAnchorPemSha256`. (T-CR-002)
+   * back-compat semantics with `trustAnchorPemSha256`.
    */
   tsaRootCertSha256Allowlist?: readonly string[];
   toleranceSeconds?: number;
   /**
-   * T-CR-007: per-merchant TSA policy (spec-049 FR-024). Default is
+   * Per-merchant TSA policy. Default is
    * `fail_open` (resolved at the TSA client layer). Pass `fail_closed` to
    * reject any receipt whose revocation status could not be obtained.
    */
@@ -130,11 +129,11 @@ export interface VerifyOptions {
    * Verifier recomputation is ALWAYS performed regardless of this flag.
    */
   rejectOnEnvelopePostureMismatch?: boolean;
-  /** Optional caller-supplied subject context (R18). */
+  /** Optional caller-supplied subject context. */
   expectedSubject?: ReceiptSubject;
   /**
-   * Opt-in escape hatch for staging-stub trust anchors (T-CR-001, review
-   * round 2). When the bundled `jwksHistory.signed_by_root_sha256` does
+   * Opt-in escape hatch for staging-stub trust anchors (an unknown or
+   * staging root is rejected unless this is set). When the bundled `jwksHistory.signed_by_root_sha256` does
    * NOT resolve to an entry in the embedded issuer-root list, OR resolves to
    * an entry whose private-key material has not yet been provisioned (the
    * `embedded_root_not_production` staging stub case), the verifier behaves
@@ -146,7 +145,7 @@ export interface VerifyOptions {
    *    `parseJwksHistoryPayload` is performed, so a bundle CANNOT smuggle a
    *    forged `kid` past verification by pointing at an unknown root.
    *
-   *  - `true` (staging / dev / pre-T420 ceremony): the verifier falls back to
+   *  - `true` (staging / dev / pre-ceremony): the verifier falls back to
    *    structural-only parsing of the JWKS history payload and emits the
    *    non-fatal warning `jwks_history_signature_unverifiable_staging_root`.
    *    This path MUST NOT be enabled in production deployments — the
@@ -160,11 +159,11 @@ export interface VerifyOptions {
    * `Math.floor(Date.now() / 1000)` when omitted, so production callers need
    * not supply it. Conformance/test harnesses pass a fixed value so the suite
    * is deterministic regardless of the host clock — the temporal check itself
-   * is NOT weakened, it merely honors the caller-supplied "now". (GAP H1a)
+   * is NOT weakened, it merely honors the caller-supplied "now".
    */
   currentTimeSeconds?: number;
   /**
-   * T-AUD-012 (GAP H4) — semantic trust-anchor / jwks-pin verification mode.
+   * semantic trust-anchor / jwks-pin verification mode.
    *
    * The Zod layer validates `verification_methods.trust_anchor_sha256` and
    * `jwks_sha256` only by REGEX FORMAT, so an all-zeros opaque stub anchor

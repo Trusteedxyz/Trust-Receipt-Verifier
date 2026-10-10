@@ -44,7 +44,7 @@
  *
  * `mandate_hash` **ya existe** y significa otra cosa: es una claim del v1.0
  * histórico (el triplete `mandate_hash` / `permit2_authorization_hash` /
- * `mcp_tool_invocation_hash` que la D24 sustituyó por `authorization_scheme` +
+ * `mcp_tool_invocation_hash` que la sustituyó por `authorization_scheme` +
  * `payment_authorization_hash`), viaja como *tagged digest* `sha256:<hex>` y
  * sigue vivo en el corpus — el vector de conformidad
  * `test-vectors/v11/017-legacy-v10-receipt.json` lo lleva.

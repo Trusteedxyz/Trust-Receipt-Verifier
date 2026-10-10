@@ -1,5 +1,5 @@
 /**
- * Unit tests for `verifyJwksHistorySignature` — closes Codex F1 finding.
+ * Unit tests for `verifyJwksHistorySignature` — a forged JWKS history must be rejected.
  *
  * @see ../verify-jwks-history.ts
  */

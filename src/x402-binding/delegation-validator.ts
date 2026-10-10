@@ -1,8 +1,8 @@
 /**
- * Spec 054 T074 — Portable Delegation Validator (FR-008a).
+ * Portable Delegation Validator.
  *
  * Stateless mirror of the server-side `DelegationResolverService`
- * (`apps/api/src/services/trust/x402-binding/delegation-resolver.service.ts`).
+ * (the issuing service's delegation resolver).
  * Receives a JWKS document directly (NO network I/O) and resolves a receipt's
  * signing kid through one of two mutually exclusive branches:
  *
@@ -25,9 +25,6 @@
  *
  * This module is PORTABLE: it relies only on `node:crypto` and the
  * `canonicalize` (JCS, RFC 8785) package. No filesystem, no env, no Prisma.
- *
- * @see specs/058-trustreceipt-x402-binding/spec.md §FR-008a
- * @see specs/058-trustreceipt-x402-binding/tasks.md T074 T075
  */
 
 import { createPublicKey, verify as cryptoVerify } from "node:crypto";
@@ -206,7 +203,7 @@ function verifyDelegationSignature(
 // ---------------------------------------------------------------------------
 
 /**
- * FR-008a stateless delegation validator. Never throws on validation failure;
+ * Stateless delegation validator. Never throws on validation failure;
  * always returns a typed `DelegationValidationResult`.
  */
 export function validateDelegation(

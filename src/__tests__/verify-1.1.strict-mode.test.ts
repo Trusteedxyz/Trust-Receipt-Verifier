@@ -1,9 +1,9 @@
 /**
- * GAP H4 (T-AUD-012) — strict-mode semantic trust-anchor / jwks verification.
+ * Strict-mode semantic trust-anchor / jwks verification.
  *
  * The verifier historically validated `verification_methods.trust_anchor_sha256`
  * and `jwks_sha256` only by REGEX FORMAT (`zod-1.1.ts` — `/^[0-9a-f]{64}$/`), so
- * an all-zeros opaque stub anchor sailed through. T-AUD-012 closes this with an
+ * an all-zeros opaque stub anchor sailed through. Strict mode closes this with an
  * explicit `mode: "strict" | "compat"` option:
  *
  *   - "compat" (default during the canary): stub / mismatched anchors and a
@@ -18,8 +18,6 @@
  *   - vector-user-auth-synthetic-rejected.json  (jwks_sha256 = all-zeros stub)
  *   - vector-lotl-degraded-warning.json          (TSA/LOTL degraded — warn in BOTH)
  *   - vector-agent-identity-missing-rejected.json (no agent identity binding)
- *
- * @see specs/049-trust-receipt-eidas-hardening/spec.md FR-018, T-AUD-012
  */
 
 import { describe, it, expect } from "vitest";
@@ -112,7 +110,7 @@ const VECTORS = [
   "vector-agent-identity-missing-rejected.json",
 ] as const;
 
-describe("GAP H4 (T-AUD-012) strict-mode trust-anchor verification", () => {
+describe("strict-mode trust-anchor verification", () => {
   it.each(VECTORS)("%s — strict mode matches expected_strict", async (name) => {
     const vector = loadVector(name);
     const result = await verifyReceiptEnvelope(

@@ -15,7 +15,7 @@ async function makeKeys(): Promise<{ pub: PublicJwk; priv: JWK }> {
 }
 
 /**
- * T1.3 enrichment must survive Zod. `TrustReceiptLegacyCompactSchema` is a
+ * Enriched legacy fields must survive Zod. `TrustReceiptLegacyCompactSchema` is a
  * non-strict `z.object`, so undeclared keys are ACCEPTED but STRIPPED — the
  * enriched fields never reached `VerifyResult.legacyReceipt`, making the whole
  * enrichment invisible through the internal verifier's public type.
@@ -38,7 +38,7 @@ describe("legacy-compact schema — enriched v1.0 fields survive parsing", () =>
       outputHashStatus: "captured",
       trust_provider_assertions: [],
       kid: KID,
-      // T1.3 enrichment (A4):
+      // Enriched fields:
       schema_version: "1.0",
       canon: "jcs",
       expires_at: now + 86400,

@@ -1,5 +1,5 @@
 /**
- * Trust-receipts audit 2026-07-26 §R1 — revocation check for third parties.
+ * revocation check for third parties.
  *
  * A revocation registry nobody can query revokes nothing. This is the consumer
  * half of `/.well-known/trust-receipt-status/{merchantId}`: it answers "is THIS
@@ -81,7 +81,7 @@ const SUPPORTED_VERSION_PREFIX = "trust-receipt-status/v1";
  * SHA-256 hex of the receipt id — the published key.
  *
  * Must stay byte-identical to `hashReceiptId` in
- * `apps/api/src/services/trust/receipt-revocation.service.ts`. Unsalted on
+ * the issuing service's `hashReceiptId`. Unsalted on
  * purpose: the only party that can perform this lookup is one already holding
  * the receipt, so a secret in the derivation would lock out the sole intended
  * user.

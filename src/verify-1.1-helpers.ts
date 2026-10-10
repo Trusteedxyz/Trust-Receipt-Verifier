@@ -22,7 +22,7 @@ import type { V11VerifyErrorCode } from "./verify-1.1-types.js";
  * The all-zeros / opaque SHA-256 stub. A `trust_anchor_sha256` or `jwks_sha256`
  * equal to this is structurally well-formed (passes the Zod regex) but carries
  * NO real chain-of-trust binding — it is the placeholder emitted by issuers
- * before a production anchor ceremony. Strict mode rejects it. (T-AUD-012)
+ * before a production anchor ceremony. Strict mode rejects it.
  */
 export const STUB_SHA256 = "0".repeat(64);
 
@@ -117,7 +117,7 @@ export function resolveKid(
 }
 
 /**
- * D23: both `body.issued_at` AND `timestamp_evidence.issued_at_attested` MUST
+ * both `body.issued_at` AND `timestamp_evidence.issued_at_attested` MUST
  * fall inside the resolved kid's `[valid_from, valid_to]` window. A null
  * `valid_to` means "still active".
  */
@@ -138,7 +138,7 @@ export function sha256HexStr(input: string): string {
 }
 
 /**
- * M8 — recompute the append-only JWKS-history hash chain over `entries`.
+ * recompute the append-only JWKS-history hash chain over `entries`.
  *
  * MUST stay byte-identical to the issuer's history-chain computation:
  *
@@ -163,7 +163,7 @@ export function recomputeHistoryChainSha256(
 
 /**
  * Recompute the verifier-authoritative legal_posture from observed evidence
- * (v1.1 review round 2). The truth table:
+ * The truth table:
  *
  * - merchant_admin subject ⇒ `merchant_admin_action`
  * - buyer_agent + tst-present + agent-identity ⇒ `ades_candidate_timestamped`
@@ -172,16 +172,16 @@ export function recomputeHistoryChainSha256(
  * - buyer_agent + tst-absent + no agent-identity ⇒ `simple_electronic_seal`
  *
  * Agent-identity is considered "verified" when ANY of the following is true:
- *  - `body.trust_provider_assertions` is a non-empty array (spec-045 adapter
+ *  - `body.trust_provider_assertions` is a non-empty array (adapter
  *    output — preferred signal), OR
  *  - `body.authorization_evidence.protocol_authorization_ref` is set (the
  *    receipt cites a signed protocol mandate such as AP2/MCAP/UCP, which
  *    inherently binds an agent identity at the protocol layer).
  *
- * We stay loose because spec-045 adapter shapes vary and not every issuer
+ * We stay loose because adapter shapes vary and not every issuer
  * embeds a `trust_provider_assertions` field at issuance time.
  *
- * Staging floor (audit §B1): a body declaring `trust_anchor_staging` has NO
+ * Staging floor: a body declaring `trust_anchor_staging` has NO
  * verifiable chain of trust behind it. Whatever agent identity or timestamp it
  * carries, the strongest posture it can honestly claim is
  * `simple_electronic_seal` — so the verifier floors it there rather than

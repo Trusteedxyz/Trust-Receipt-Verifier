@@ -1,5 +1,5 @@
 /**
- * Spec 054 T100 — Unit tests for the portable Binding Hash Recompute Service.
+ * Unit tests for the portable Binding Hash Recompute Service.
  *
  * Verifies bit-by-bit recipe parity with the server-side
  * `BindingHashBuilderService`. Tests cover:
@@ -8,11 +8,9 @@
  *   - Per-component mismatch localization (5 negative tests, one per component).
  *   - Output commitment hash parity for static_sha256 + merkle_manifest kinds.
  *   - JCS canonicalization integration (key-reorder ⇒ same hash).
- *   - FR-020 fail-fast on RESERVED v1.1 authorization schemes.
+ *   - fail-fast on RESERVED v1.1 authorization schemes.
  *   - Invalid input rejection (settlement, URI, output_commitment).
  *   - Conformance vector load + self-consistency (002 + 003).
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T100
  */
 
 import { createHash } from "node:crypto";
@@ -441,7 +439,7 @@ describe("recomputeBindingHash — output commitment c5 parity", () => {
   });
 });
 
-describe("recomputeBindingHash — FR-020 unsupported authorization schemes", () => {
+describe("recomputeBindingHash — unsupported authorization schemes", () => {
   const reservedSchemes = [
     "zk_authorization",
     "gasless_relay",

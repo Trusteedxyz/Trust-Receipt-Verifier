@@ -1,7 +1,7 @@
 /**
- * T065 — Deterministic seeded build script for v1.1 conformance vectors 011-018.
- * SOT: specs/049-trust-receipt-eidas-hardening/research.md R9 + R13;
- * data-model.md §2/§3; CODEX-REMEDIATION-2026-05-04.md (D24/D25/D27/D32).
+ * Deterministic seeded build script for v1.1 conformance vectors 011-018.
+ * Source of truth: the v1.1 data model and research notes (internal);
+ * the shapes are those of ./src/types-1.1.ts and ./src/zod-1.1.ts.
  * Run: `pnpm --filter trust-receipt-verifier exec tsx scripts/generate-test-vectors-v11.ts [--dry-run]`.
  * Reproducible: same MASTER_SEED → byte-identical output across runs.
  */
@@ -407,10 +407,10 @@ export async function generateVector013_ReceiptSubjectMismatch(): Promise<Vector
   };
 }
 
-// ─── Vector 014 — valid timestamp_evidence (full TST per D25) ────────────────
+// ─── Vector 014 — valid timestamp_evidence (full TST) ────────────────
 
 export async function generateVector014_ValidTst(): Promise<VectorResult> {
-  // Same shape as 011 but emphasized on TSR + TST + revocation evidence (D25).
+  // Same shape as 011 but emphasized on TSR + TST + revocation evidence.
   const buyerCtx = buildBuyerAgentConsentContext({
     consentTimestamp: ISSUED_AT_V1 - 30,
     disclosureVersion: "1.0.0",
@@ -656,7 +656,7 @@ export async function generateVector017_LegacyV10(): Promise<VectorResult> {
     issued_at: ISSUED_AT_LEGACY,
     // 100-year window so the v1.0 verifier (which uses real Date.now())
     // accepts the legacy receipt regardless of when the conformance suite
-    // runs. The dispatcher logic, not temporal validity, is what T063
+    // runs. The dispatcher logic, not temporal validity, is what vector 017
     // exercises.
     expires_at: ISSUED_AT_LEGACY + 100 * 365 * 86400,
     issuer: ISSUER,
