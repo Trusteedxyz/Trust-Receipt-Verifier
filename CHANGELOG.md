@@ -2,6 +2,56 @@
 
 All notable changes to the verifier package are documented here.
 
+## 0.7.0 (2026-10-10): Bounded input handling, no keys from the receipt under verification
+
+### Security fixes
+
+- **The `trust-receipt` CLI no longer takes a key location from the receipt it is verifying.**
+  Without `--jwks-file` or `--jwks-url`, `verify` used to fetch the JWKS from the URL
+  declared in the receipt's own `verification_methods`. A plain JWKS carries no signature that
+  can be checked against a built-in trust anchor, so a forged receipt that pointed at its own
+  JWKS verified as valid. `verify` now exits with code 2 and makes no network request when no
+  key source is given; the URL declared in the receipt is printed for information only.
+  **Behaviour change:** invocations that relied on the implicit fetch must pass `--jwks-file`
+  or `--jwks-url` explicitly.
+- **`verify-bundle` passed two options under names the library does not read.**
+  `--trust-anchor-sha256` and `--policy-oid` reached `verifyExportBundle` as
+  `trustAnchorSha256` and `expectedPolicyOids`, while the library reads
+  `trustAnchorPemSha256` and `policyOidAllowlist`, so the pin and the allowlist were silently
+  ignored. They are now passed under the names the library reads.
+- **Export bundles are unpacked with limits** (`src/verify-export-bundle.ts`). Declared sizes
+  are checked before anything is inflated, each entry is inflated with an output cap equal to
+  its declared size, and an entry whose real size differs from the declared one is rejected,
+  because `adm-zip` bounds its own inflation only when the header declares a size greater than
+  zero. Encrypted entries and compression methods other than stored and deflate are rejected.
+  New verdict `bundle_limits_exceeded`; defaults are exported as `DEFAULT_BUNDLE_LIMITS` and can
+  be tightened or relaxed through `options.limits`: 16 MiB compressed bundle, 64 entries,
+  8 MiB per entry, 32 MiB in total, and a 100:1 compression ratio for entries larger than 256 KiB.
+  The `..` and `/` path filter is unchanged. The defaults are an estimate, not measured against a
+  production bundle.
+- **Remote documents are fetched through one bounded helper** (`src/safe-fetch.ts`, exported as
+  `safeFetch`, `safeFetchText`, `safeFetchJson` and `SafeFetchError`). It is used for the JWKS
+  history, extension artifacts, the audit command and the `--manifest` download. Only `http:`
+  and `https:` URLs are accepted; there is a 5 s total timeout; the response size is capped at
+  1 MiB while the body is read, with early rejection on `Content-Length`; at most 3 redirects
+  are followed and an https to http downgrade is refused. Tune it with `jwksFetch` in
+  `VerifyOptions` and in the extension verifier options. Fetching an extension artifact had no
+  timeout before.
+
+### Changed
+
+- Internal references were removed from comments, test titles, documentation and a few runtime
+  messages (error messages in `zod-1.1.ts` no longer cite decision records). The error codes are
+  unchanged. The frozen v1.0-FINAL schema, its hash, the vectors and the vendored TSA client are
+  untouched.
+- The monorepo-internal export script `scripts/prepare-public-repo.sh` was removed; it only
+  worked inside the private checkout.
+- Added `SECURITY.md`.
+
+### Tests
+
+- 577 tests in 45 files (31 new: CLI network policy, bundle limits, bounded fetch).
+
 ## 0.6.0 (2026-10-10): Verifier hardening, settlement and platform-mandate evidence
 
 ### Security hardening
@@ -144,7 +194,7 @@ which schema-version values route to the legacy-compact path.
   (`"1.1"`, `"v1.0-FINAL"`, a future version) is still never silently
   downgraded, which is the invariant the old guard existed to protect.
 - `verify-1.1.ts`: `recomputeLegalPosture()` now evaluates the
-  `trust_anchor_staging` floor FIRST, so it dominates the whole FR-019 truth
+  `trust_anchor_staging` floor FIRST, so it dominates the whole truth
   table including `merchant_admin`. `merchant_admin_action` names a subject, not
   a strength level, and must not shadow an unverifiable anchor.
 
@@ -173,7 +223,7 @@ which schema-version values route to the legacy-compact path.
 ### Explicitly NOT changed
 
 - **`expires_at` is not enforced on the legacy-compact branch.** The issuer now
-  stamps one (`iat + 86400`), but FR-018 requires v1.0 receipts to verify for
+  stamps one (`iat + 86400`), but the retention policy requires v1.0 receipts to verify for
   ≥ 7 years and the rows are immutable, so gating on it would mark essentially the
   entire corpus `expired`. Regression tests in all three verifier ports fail if
   anyone adds the check. The 24h TTL over 7-year evidence is a real open

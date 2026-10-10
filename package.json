@@ -1,6 +1,6 @@
 {
   "name": "trust-receipt-verifier",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "TrustReceipt open standard — cross-protocol agentic commerce evidence receipt verifier",
   "license": "MIT",

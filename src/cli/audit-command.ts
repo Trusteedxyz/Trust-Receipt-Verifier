@@ -1,5 +1,5 @@
 /**
- * Spec 054 T102 — CLI auditor helper.
+ * CLI auditor helper.
  *
  * Standalone command-line front-end for VerifierX402Extension. Designed for
  * auditors and external partners — receives the 5 binding components (file
@@ -26,8 +26,6 @@
  *     [--no-binding-recompute]
  *
  * For test/CI use, prefer `--jwks-file` to bypass network.
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T102
  */
 
 import { readFile } from "node:fs/promises";

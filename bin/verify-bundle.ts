@@ -1,20 +1,17 @@
 #!/usr/bin/env node
 /**
- * verify-bundle CLI — spec-049 T154
+ * verify-bundle CLI
  *
  * Offline verifier for TrustReceipt export bundles (ZIP). Wraps the
- * clean-room verifier `verifyExportBundle` (T153 —
- * `../src/verify-export-bundle.js`) so users can run:
+ * clean-room verifier `verifyExportBundle` (`../src/verify-export-bundle.js`) so users can run:
  *
- *   npx @agenticmcpstores/trust-receipt-verifier verify-bundle ./trust-receipt-export-<id>.zip
- *
- * Reference: specs/049-trust-receipt-eidas-hardening/quickstart.md §A.3
+ *   node dist/bin/verify-bundle.js ./trust-receipt-export-<id>.zip
  *
  * Usage:
  *   verify-bundle <zip-path>
  *     [--trust-anchor-sha256 HEX]
  *     [--expected-bundle-sha256 HEX]
- *     [--manifest URL]              (T502: fetch external signed manifest.jws)
+ *     [--manifest URL]              (fetch external signed manifest.jws)
  *     [--policy-oid OID]            (repeatable)
  *     [--expected-subject buyer_agent|merchant_admin]
  *     [--json]
@@ -22,7 +19,7 @@
  *     [--help]
  *
  * The bundle ZIP intentionally does NOT carry its own SHA-256 internally
- * (Codex round 2 D31 — manifest is EXTERNAL). The bundle integrity record
+ * (manifest is EXTERNAL). The bundle integrity record
  * lives in the separately-signed `manifest.jws` returned by
  * `GET /api/v1/trust/export/:receiptId/manifest.jws`. With `--manifest URL`
  * the CLI fetches that endpoint, decodes the JWS Compact payload, extracts
@@ -47,8 +44,8 @@
 
 import { readFile, stat } from "node:fs/promises";
 import { parseArgs } from "node:util";
-// NOTE: `verifyExportBundle` (T153) is loaded via dynamic import inside `main()`
-// so that `--help` and arg-validation paths work even before T153 ships.
+// NOTE: `verifyExportBundle` is loaded via dynamic import inside `main()`
+// so that `--help` and arg-validation paths work even if the verifier module cannot be loaded.
 // Type-only import keeps strict typing without forcing eager module resolution.
 import type { BundleVerifyResult } from "../src/verify-export-bundle.js";
 import { safeFetchText, SafeFetchError } from "../src/safe-fetch.js";
@@ -90,20 +87,20 @@ function printHelp(): void {
       "",
       "Options:",
       "  --trust-anchor-sha256 HEX        Pinned issuer root SHA-256 (hex).",
-      "                                   TODO(T423): replaced by embedded-issuer-root.ts.",
+      "                                   TODO: replaced by embedded-issuer-root.ts.",
       "  --expected-bundle-sha256 HEX     Pinned bundle SHA-256 for integrity check.",
-      "  --manifest URL                   Fetch external signed manifest.jws (T502).",
+      "  --manifest URL                   Fetch external signed manifest.jws.",
       "                                   Overrides --expected-bundle-sha256 on success.",
       "                                   On fetch failure: warning + partial offline verify.",
       "  --policy-oid OID                 Required claims policy OID (repeatable).",
       "  --tsa-root-allowlist HEX[,HEX]   Comma-separated 64-hex SHA-256 of",
       "                                   pre-approved TSA root certs. Default empty",
       "                                   ⇒ fail-closed on any RFC 3161 timestamp",
-      "                                   (T-CR-002 — envelope-supplied roots are",
+      "                                   (envelope-supplied roots are",
       "                                   never trusted on their own).",
       "  --expected-subject SUBJECT       'buyer_agent' or 'merchant_admin'.",
       "  --allow-staging-roots            Opt-in: accept staging-stub embedded",
-      "                                   issuer roots (T-CR-001). Default OFF —",
+      "                                   issuer roots. Default OFF —",
       "                                   bundles whose JWKS history root is not in",
       "                                   the verifier's trust anchor list are",
       "                                   REJECTED with detail",
@@ -319,7 +316,7 @@ interface ManifestFetchResult {
  *
  * NOTE: This step does NOT cryptographically verify the manifest signature —
  * the embedded issuer root + JWS verifier path lives in
- * `verify-export-bundle.ts` (T423). Here we only extract the integrity hash
+ * `verify-export-bundle.ts`. Here we only extract the integrity hash
  * to feed into the bundle verifier as `expectedBundleSha256`.
  */
 async function fetchManifestBundleSha256(
@@ -408,7 +405,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  // T502: External manifest fetch. If --manifest is supplied, override the
+  // External manifest fetch. If --manifest is supplied, override the
   // explicit --expected-bundle-sha256 with the value from manifest.jws. On
   // fetch failure, emit a warning to stderr and continue with whatever pin
   // the operator already supplied (partial offline verification).
@@ -428,7 +425,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // TODO(T423 / Phase 9): replace --trust-anchor-sha256 flag with the
+  // TODO: replace --trust-anchor-sha256 flag with the
   // embedded issuer root from `src/embedded-issuer-root.ts`. Until then,
   // the CLI relies on the operator pinning the anchor explicitly.
   const mod = await import("../src/verify-export-bundle.js");

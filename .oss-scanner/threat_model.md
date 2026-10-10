@@ -24,7 +24,8 @@ Everything the verifier is handed is untrusted, because the party who produced i
 Most important:
 - Signature and key resolution: `verifier.ts`, `verify-1.0.ts`, `verify-1.1.ts`, `verify-jwks-history.ts`, `verify-jwks-snapshot.ts`, `issuer.ts`.
   Acceptance of `alg: none` or another algorithm, algorithm confusion, `kid` substitution, or a key that does not
-  belong to the issuer is critical.
+  belong to the issuer is critical. Key material, or the location of key material, taken from the receipt being
+  verified is not a trust source: the CLI refuses to verify without an explicit `--jwks-file` / `--jwks-url`.
 - Trust anchoring: `embedded-issuer-root.ts`, `verify-export-bundle.ts`. A bundle must never be able to supply its own
   trust anchor; the trust root must be the one matched by the fingerprint of the bundle's `trust-anchor.pem`; the bundled
   `jwks-snapshot.json` must be bound to the signed receipt body or the root-signed history; `allowStagingRoots` must stay
@@ -37,9 +38,15 @@ Most important:
 - Sidecar binding: `verify-sidecars.ts`, called from `verify-1.1.ts` (each sidecar must match a signed
   `protocol_artifacts` entry on type, algorithm and digest; no duplicates, no orphans; `hmac-sha256` sidecars are rejected).
 - ZIP, JSON and ASN.1 parsing of attacker-controlled data (`verify-export-bundle.ts`, `vendor/trust-receipt-tsa-client/`):
-  traversal, decompression bombs, unbounded allocation, parser hangs.
-- Network fetches of caller-supplied URLs (`fetchJwksAsHistory` in `verifier.ts`, `verify-extension-artifact.ts`, `src/cli/audit-command.ts`, `bin/verify-bundle.ts`): scheme,
-  destination, response size and redirects.
+  traversal, decompression bombs, unbounded allocation, parser hangs. Bundles are unpacked under limits (compressed size,
+  entry count, per-entry and total inflated size, compression ratio; `DEFAULT_BUNDLE_LIMITS`, verdict
+  `bundle_limits_exceeded`), declared sizes are checked before inflating, and an entry whose real size differs from its
+  declared size is rejected. A way around those limits is a finding.
+- Network fetches of caller-supplied URLs (`fetchJwksAsHistory` in `verifier.ts`, `verify-extension-artifact.ts`,
+  `src/cli/audit-command.ts`, `bin/verify-bundle.ts`) all go through `safe-fetch.ts`: `http`/`https` only, 5 s timeout,
+  1 MiB cap enforced while the body is read, at most 3 redirects, no https to http downgrade. Which host a caller chooses to
+  contact is the caller's decision (a verifier library does not filter private addresses); a URL taken from the artifact
+  under verification would be a finding.
 - Fail-closed behaviour: any error, missing field or unreachable lookup must yield a rejected or degraded verdict,
   never an accepted one.
 
@@ -54,7 +61,7 @@ Less important / out of scope:
 - The issuing side (the Trusteed platform that signs receipts) is not in this repository.
 
 ## How to exercise it
-- `pnpm install`, `pnpm run build`, then `pnpm test` (vitest, runs `src/**` unit and conformance suites; about 546 tests).
+- `pnpm install`, `pnpm run build`, then `pnpm test` (vitest, runs `src/**` unit and conformance suites; about 577 tests).
   The workspace file that links `vendor/trust-receipt-tsa-client` is written by the Dockerfile, not committed.
 - `test-vectors/` and `conformance/` hold signed vectors, positive and negative; `npx tsx scripts/validate-vectors.ts`
   checks the legacy set.

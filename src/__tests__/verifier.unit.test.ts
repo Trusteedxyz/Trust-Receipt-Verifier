@@ -104,7 +104,7 @@ describe("verifyTrustReceipt", () => {
    * CHANGED 2026-07-28 (audit §5 R3). `expires_at` no longer invalidates a v1.0
    * receipt on EITHER branch of this verifier.
    *
-   * The legacy-compact branch already exempted it, and documented why: FR-018
+   * The legacy-compact branch already exempted it, and documented why: the retention policy
    * requires v1.0 receipts to keep verifying for ≥ 7 years, the rows are
    * immutable, and the issuer stamped a 24 h lifetime — so enforcing it here
    * marked essentially the whole corpus `expired`. The canonical branch kept
@@ -113,7 +113,7 @@ describe("verifyTrustReceipt", () => {
    *
    * Freshness is a consumer policy decision, not a signature-validity one, so it
    * is REPORTED (`freshness`) rather than acted on. v1.1 and the Python port are
-   * deliberately untouched — their rejection is a published spec-054 conformance
+   * deliberately untouched — their rejection is a published conformance
    * requirement (vector `053-temporal-receipt-expired`).
    */
   it("test 3: an expired receipt still VERIFIES, and reports its staleness", async () => {

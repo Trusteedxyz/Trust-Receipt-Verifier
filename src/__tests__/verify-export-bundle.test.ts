@@ -1,5 +1,5 @@
 /**
- * Unit tests for verify-export-bundle.ts (spec-049 T173).
+ * Unit tests for verify-export-bundle.ts.
  *
  * Builds synthetic ZIP fixtures with adm-zip and asserts the verifier's
  * accept/reject paths + error codes.
@@ -139,7 +139,7 @@ describe("verifyExportBundle", () => {
     const zip = buildFixtureZip();
     const result = await verifyExportBundle(zip, {
       trustAnchorPemSha256: TRUST_ANCHOR_SHA256,
-      // T-CR-001: fixture runs under staging-stub embedded root.
+      // The fixture runs under staging-stub embedded root.
       allowStagingRoots: true,
     });
 
@@ -241,7 +241,7 @@ describe("verifyExportBundle", () => {
     expect(opts.mode).toBe("compat");
   });
 
-  it("[T-CR-001] default (no allowStagingRoots) rejects bundle under staging-stub root", async () => {
+  it("default (no allowStagingRoots) rejects bundle under staging-stub root", async () => {
     verifyReceiptEnvelope.mockResolvedValue({
       outcome: "accepted",
       schema_version: "1.1",

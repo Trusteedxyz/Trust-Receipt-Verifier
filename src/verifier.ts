@@ -71,7 +71,7 @@ export type VerifyFailureReason =
    * exhaustive `switch` statements keep compiling across the upgrade.
    *
    * Note this does NOT apply to v1.1 (`verify-1.1.ts`) or the Python port, where
-   * `receipt_expired` remains fatal — that is a published spec-054 conformance
+   * `receipt_expired` remains fatal — that is a published conformance
    * requirement (vector `053-temporal-receipt-expired`).
    */
   | "expired"
@@ -87,9 +87,9 @@ export interface VerifyResult {
   /**
    * Which v1.0 shape matched. `"canonical"` = the standard `TrustReceiptSchema`
    * shape (populated in `receipt`). `"legacy_compact"` = the JWT-style compact
-   * payload actually emitted by the platform issuer since spec-040 (populated in
+   * payload actually emitted by the platform issuer (populated in
    * `legacyReceipt`). Absent when verification failed before schema matching.
-   * See `schema/trust-receipt-legacy.schema.ts` (C3 closure).
+   * See `schema/trust-receipt-legacy.schema.ts`.
    */
   variant?: "canonical" | "legacy_compact";
   /**
@@ -403,9 +403,9 @@ export async function verifyTrustReceipt(
 
   const schemaResult = TrustReceiptSchema.safeParse(parsed);
   if (!schemaResult.success) {
-    // C3 closure: the canonical schema did not match. Before rejecting, try the
-    // v1.0-legacy compact shape actually emitted by the platform issuer
-    // (spec-040 US2). The crypto signature has ALREADY been verified above, and
+    // The canonical schema did not match. Before rejecting, try the
+    // v1.0-legacy compact shape actually emitted by the platform issuer.
+    // The crypto signature has ALREADY been verified above, and
     // this branch does not relax the canonical schema.
     //
     // The version guard used to require the ABSENCE of `schema_version`. The
@@ -481,7 +481,7 @@ export async function verifyTrustReceipt(
   // This branch used to return `{ valid: false, reason: "expired" }` while its
   // legacy-compact sibling below deliberately did not, so the same evidence
   // verified or failed depending only on which v1.0 shape it happened to be in.
-  // The legacy branch had the better argument: FR-018 requires v1.0 receipts to
+  // The legacy branch had the better argument: the retention policy requires v1.0 receipts to
   // keep verifying for ≥ 7 years, the rows are immutable, and the issuer stamped
   // a 24 h lifetime until 2026-07-28 — so enforcing expiry here condemned
   // essentially the entire emitted corpus at exactly the moment it is needed,
@@ -525,7 +525,7 @@ function detectCompactCanonRegime(
  * Verify an already-signature-checked legacy compact payload.
  *
  * DELIBERATELY does NOT enforce `expires_at`. The issuer now stamps one, but on
- * this branch it is INFORMATIVE only: FR-018 requires v1.0 receipts to keep
+ * this branch it is INFORMATIVE only: the retention policy requires v1.0 receipts to keep
  * verifying for ≥ 7 years, and these rows are immutable, so treating a 24-hour
  * `expires_at` as a validity gate would mark essentially the entire corpus
  * `expired` and collapse the receipt-integrity signal. Freshness is a consumer

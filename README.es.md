@@ -21,6 +21,27 @@ Este paquete es la implementación de referencia del verificador y emisor. Forma
 
 ---
 
+## Actualizaciones recientes (2026-10-10)
+
+La versión 0.7.0 de este paquete pone el repo público al día con la implementación de referencia (0.6.0) y cierra tres debilidades en el tratamiento de entradas. La lista completa está en [CHANGELOG.md](CHANGELOG.md), en inglés.
+
+Endurecimiento de la versión 0.7.0:
+
+- La CLI `trust-receipt` ya no toma la ubicación de una clave del recibo que está verificando. Sin `--jwks-file` ni `--jwks-url`, `verify` termina con código 2 y no hace ninguna petición. **Esto cambia el comportamiento de quien dependiera de la descarga implícita.**
+- `verify-bundle` pasaba la fijación del ancla de confianza y la lista de OID de política con nombres que la librería no lee, así que las dos se ignoraban. Ahora surten efecto.
+- Los bundles de exportación se descomprimen con límites de tamaño, número de entradas y ratio de compresión (veredicto `bundle_limits_exceeded`, ajustable con `options.limits`).
+- Todo documento remoto que lee el verificador pasa por una única descarga acotada: solo `http(s)`, plazo de 5 s, tope de 1 MiB, como máximo 3 redirecciones y sin degradar de https a http.
+- Se eliminaron referencias internas de comentarios, documentación y algunos mensajes de error.
+
+Endurecimiento de la versión 0.6.0:
+
+- Los sidecars de un envelope v1.1 se comprueban contra lo que cubre la firma: tipo, algoritmo de hash y digest deben coincidir con una entrada firmada de `protocol_artifacts`, sin duplicados ni huérfanos. Los sidecars `hmac-sha256` no los puede comprobar un tercero y se rechazan.
+- Una lista de estado de revocación se autentica por su JWS (`verifyStatusList`) antes de que `checkRevocation` responda `revoked` o `not_revoked`. Una lista solo etiquetada `signed: true` da `unknown`. Esto cambia el resultado para quien pasara una lista sin más.
+- Bundles de exportación: la raíz que comprueba `jwks-history.jws` se elige por la huella del `trust-anchor.pem` del propio bundle, y `jwks-snapshot.json` debe coincidir con el cuerpo firmado del recibo o con el historial firmado por la raíz.
+- Campos de evidencia opcionales nuevos para liquidación y para mandatos emitidos por la plataforma, y siete vectores de endurecimiento nuevos en `test-vectors/v11-hardening/`.
+
+Estas comprobaciones reducen lo que un artefacto falsificado o editado puede hacer pasar por el verificador. No cambian lo que prueba un recibo; véase [Lo que un TrustReceipt NO prueba](#lo-que-un-trustreceipt-no-prueba).
+
 ## Actualizaciones recientes (2026-09-16)
 
 Esta sincronización pone el repo público al día con la implementación de referencia (sincronización anterior: 2026-08-17) e incluye una pasada de exactitud sobre la documentación existente. Novedades:
@@ -59,9 +80,9 @@ Ver [CHANGELOG.md](CHANGELOG.md) para el historial completo de versiones.
 | Enlace de operación (`operation-link.ts`)                                | ✅ Implementado (sólo esquema)           | Enlaza un reintento corregido o una ejecución reconfirmada con el recibo al que sustituye, distinto de `hash_chain_prev`, que sólo ordena por tiempo sin afirmar continuidad; no se reexporta desde `index.ts`, importar desde `trust-receipt-verifier/schema/operation-link.js` |
 | Firma del lado del emisor con AWS KMS                                    | 🟡 Opcional / del lado del emisor        | Provisto por el paquete hermano `trust-receipt-kms-signer`; no requerido para verificar                                                                                                                       |
 | Ports de referencia (TS) / ports a otros lenguajes (Python, Go, Java)    | 🟡 Solo TS por ahora                     | Se aceptan ports, ver `CONTRIBUTING.md`                                                                                                                                                                       |
-| Exportación/verificación de proof-bundle AIVS (`aivs-export.ts`)         | 🟡 Código completo                       | Proyecta un recibo v1.0 firmado en un bundle compatible con AIVS `{ manifest_hash, session_sig, audit_log }`, verificable sin conexión sin código de Trusteed (spec-062 US1, alineación, no custodia/escrow) |
+| Exportación/verificación de proof-bundle AIVS (`aivs-export.ts`)         | 🟡 Código completo                       | Proyecta un recibo v1.0 firmado en un bundle compatible con AIVS `{ manifest_hash, session_sig, audit_log }`, verificable sin conexión sin código de Trusteed (alineación, no custodia/escrow) |
 | Verificación de artefactos de extensión (`verify-extension-artifact.ts`) | 🟡 Código completo                       | Verifica recibos de borrado firmados por el desarrollador y manifiestos de extensión del ecosistema del Trusteed Extension Marketplace                                                                        |
-| Forma compacta v1.0-legacy del recibo (`verifier.ts`)                    | ✅ Implementado                          | `verifyTrustReceipt` también acepta el payload compacto estilo JWT emitido por el emisor de la plataforma desde spec-040; expuesto como `result.variant` / `result.legacyReceipt`                             |
+| Forma compacta v1.0-legacy del recibo (`verifier.ts`)                    | ✅ Implementado                          | `verifyTrustReceipt` también acepta el payload compacto estilo JWT emitido por el emisor de la plataforma; expuesto como `result.variant` / `result.legacyReceipt`                             |
 | Degradación declarada del ancla de confianza (`accepted_degraded`) | ✅ Implementado | Veredicto de tres valores para los sobres v1.1; ver [Veredictos de verificación](#veredictos-de-verificación) y SPEC.md §4.1 (NORMATIVO) |
 | Revocación del lado del consumidor (`revocation.ts`) | ✅ Implementado | `verifyStatusList()` autentica la lista de estado publicada por el comerciante (JWS, anclas de confianza, `manifest_hash` firmado); después `checkRevocation()` decide. Puro y offline: tú descargas, él decide. Todo fallo, y toda lista no autenticada, resuelve a `unknown`, nunca a `not_revoked` |
 | Canonicalización reportada (`result.canonicalization`) | ✅ Implementado | `"jcs"` frente a `"json-stringify-legacy"` en el camino legacy-compact, eje independiente de `variant`, que describe la FORMA del payload |
@@ -361,9 +382,11 @@ Una implementación de verificador debe pasar los 10 vectores de prueba (v1.0) p
 
 > **Estado v1.1 (2026-05-06).** El endurecimiento eIDAS añade 12 vectores v1.1 en `test-vectors/v11/`. Esta línea decía 11, pero la tabla de SPEC.md §11.6 siempre listó 12 filas, incluida `019b`. El esquema v1.1 elimina los campos legacy `mandate_hash` / `permit2` / `mcp` de rail e introduce `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings` y `esign_disclosure_hash`.
 
-> ⚠️ **Discrepancia de conformidad, a 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): ejecutar `npx tsx scripts/validate-vectors.ts` hoy reporta **9/10**, no 10/10. La comprobación de expiración de `verifyTrustReceipt` pasó a ser sólo informativa (`result.freshness.expired`, no fatal) el 2026-07-28 para satisfacer el requisito de retención plurianual de spec-049 FR-018, y la entrada `expected: "invalid"` de TC-007 nunca se reconcilió con ese cambio. Lee ese issue antes de escribir un port contra esta línea. `test-vectors/vectors.json` es la ABI del verificador entre lenguajes (ver `PUBLISH.md`).
+> ⚠️ **Discrepancia de conformidad, a 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): ejecutar `npx tsx scripts/validate-vectors.ts` hoy reporta **9/10**, no 10/10. La comprobación de expiración de `verifyTrustReceipt` pasó a ser sólo informativa (`result.freshness.expired`, no fatal) el 2026-07-28 para satisfacer el requisito de retención plurianual, y la entrada `expected: "invalid"` de TC-007 nunca se reconcilió con ese cambio. Lee ese issue antes de escribir un port contra esta línea. `test-vectors/vectors.json` es la ABI del verificador entre lenguajes (ver `PUBLISH.md`).
 
 > **Añadidos 2026-09-16.** Dos verificadores de identidad de terceros nuevos, cada uno con su propia suite de conformidad: **50 vectores** en `conformance/agtp-merchant-vectors/` (`draft-hood-agtp-merchant-identity-02`) y **30 vectores** en `conformance/mia-vectors/` (`draft-anders-merchant-identity-assertions-01`), más un 7º vector `legacy-compact` (`L007-signers-declaration.json`). Contando cada fichero de vector en `test-vectors/` y `conformance/` (v1.0 núcleo 10, v1.1 12, v1.1-strict 4, legacy-compact 7, x402-binding 11, agtp-merchant 50, mia 30) da **124 vectores de conformidad** en disco. La suite de tests automatizados en conjunto (`pnpm test`) son **475 tests pasando en 36 ficheros**, más que el conteo bruto de vectores porque varias suites comprueban comportamiento por campo y de frontera más allá del conjunto fijo de vectores. Ambas cifras se midieron directamente (`pnpm vitest run` / `npx tsc --noEmit`, ambos limpios) contra este árbol exacto.
+
+> **Actualización 2026-10-10.** Siete vectores de endurecimiento (`H001`..`H007`) en `test-vectors/v11-hardening/` y un octavo vector `legacy-compact` (`L008-platform-mandate-evidence.json`) elevan el recuento de ficheros de vectores en disco a **132** (núcleo v1.0 10, v1.1 12, v1.1-strict 4, v1.1-hardening 7, legacy-compact 8, x402-binding 11, agtp-merchant 50, mia 30). `pnpm test` ejecuta **577 pruebas en 45 ficheros** y pasa, y `npx tsc --noEmit` está limpio; ambas cosas se midieron sobre este árbol. `scripts/validate-vectors.ts` sigue dando 9/10 (véase arriba).
 
 | Nivel | Nombre   | Requisito                                                                      |
 | ----- | -------- | ------------------------------------------------------------------------------ |
@@ -416,18 +439,21 @@ trust-receipt-verifier/
 │   ├── verify-jwks-history.ts         # verificación de la cadena de historial JWKS
 │   ├── verify-timestamp-evidence.ts   # verificación de sello de tiempo RFC 3161
 │   ├── verify-export-bundle.ts        # verificación de bundle de exportación sin conexión
+│   ├── verify-sidecars.ts             # liga los sidecars del envelope a los protocol_artifacts firmados
+│   ├── verify-jwks-snapshot.ts        # liga el jwks-snapshot.json del bundle a la evidencia firmada
+│   ├── safe-fetch.ts                  # descarga acotada de documentos remotos (tamaño, plazo, redirecciones, esquema)
 │   ├── verify-extension-artifact.ts   # verificación de recibo de borrado / manifiesto de extensión (Extension Marketplace)
-│   ├── aivs-export.ts                 # exportación/verificación de proof-bundle AIVS (spec-062 US1)
+│   ├── aivs-export.ts                 # exportación/verificación de proof-bundle AIVS
 │   ├── __tests__/                     # tests unitarios + de conformidad
 │   └── schema/
 │       ├── trust-receipt.schema.ts        # esquema Zod (fuente de verdad para los tipos TypeScript v1.0)
-│       └── trust-receipt-legacy.schema.ts # forma compacta v1.0-legacy (emitida por la plataforma desde spec-040)
+│       └── trust-receipt-legacy.schema.ts # forma compacta v1.0-legacy (emitida por la plataforma)
 ├── test-vectors/
 │   ├── README.md                    # cómo usar los vectores
 │   ├── vectors.json                 # manifiesto de vectores con resultados esperados
 │   ├── valid/                       # TC-001 a TC-005
 │   ├── invalid/                     # TC-006 a TC-010
-│   └── v11/, v11-strict/            # vectores de conformidad v1.1 + modo estricto
+│   └── v11/, v11-strict/, v11-hardening/ # vectores de conformidad v1.1, modo estricto y endurecimiento (sidecars)
 ├── bin/
 │   └── trust-receipt.ts (fuente) → dist/bin/trust-receipt.js (compilado) # CLI: verify, inspect, generate-key, conformance
 └── demo/                            # scripts de demostración ejecutables

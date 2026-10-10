@@ -3,7 +3,7 @@
  *
  *  Root: the bundle's jwks-history.jws must be verified against the root FOUND
  *       BY FINGERPRINT (`trust-anchor.pem` sha), never against whichever root is
- *       "active" today. Matrix built with TWO test roots (no T420 dependency).
+ *       "active" today. Matrix built with TWO test roots (no production-root dependency).
  *  Snapshot: jwks-snapshot.json is no longer a name-only requirement: it is bound to
  *       the signed evidence (committed digest, or the signed JWKS history).
  */

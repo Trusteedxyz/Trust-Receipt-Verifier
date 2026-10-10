@@ -222,8 +222,7 @@ export interface BuyerAgentConsentContext {
   /** SHA-256 of withdrawal endpoint URL. */
   consent_withdrawal_uri_hash: Sha256Tagged;
   /**
-   * Pointer to evidence vault entry: signed UI screenshot or HTML hash
-   *.
+   * Pointer to evidence vault entry: signed UI screenshot or HTML hash.
    */
   consent_evidence_ref: string;
   /**

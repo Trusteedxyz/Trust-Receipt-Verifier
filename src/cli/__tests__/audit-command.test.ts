@@ -1,10 +1,8 @@
 /**
- * Spec 054 T103 — Integration tests for the audit-command CLI helper.
+ * Integration tests for the audit-command CLI helper.
  *
  * Drives `runCli(argv)` programmatically (no spawn) — covers happy
  * verification, binding mismatch with localization, and input errors.
- *
- * @see specs/058-trustreceipt-x402-binding/tasks.md T103
  */
 
 import {

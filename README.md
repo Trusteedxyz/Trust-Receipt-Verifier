@@ -23,6 +23,16 @@ This package is the reference verifier and issuer implementation. It is part of 
 
 ## Recent updates (2026-10-10)
 
+Version 0.7.0 closes three input-handling weaknesses found while reviewing the 0.6.0 code. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+
+- The `trust-receipt` CLI no longer takes a key location from the receipt it is verifying. Without `--jwks-file` or `--jwks-url`, `verify` exits with code 2 and makes no request. **This changes behaviour for anyone who relied on the implicit fetch.**
+- `verify-bundle` was passing the trust-anchor pin and the policy OID allowlist under names the library does not read, so both were ignored. They now take effect.
+- Export bundles are unpacked with limits on size, entry count and compression ratio (verdict `bundle_limits_exceeded`, tunable with `options.limits`).
+- Every remote document the verifier reads goes through one bounded fetch: `http(s)` only, 5 s timeout, 1 MiB cap, at most 3 redirects, no https to http downgrade.
+- Internal references were removed from comments, documentation and a few error messages.
+
+## Recent updates (2026-10-10)
+
 This sync brings the verifier current with the reference implementation (version 0.6.0 of this package). It is a hardening release; see [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 - Sidecars in a v1.1 envelope are now checked against what the signature covers: type, hash algorithm and digest must match a signed `protocol_artifacts` entry, with no duplicates or orphans. `hmac-sha256` sidecars cannot be checked by a third party and are rejected.
@@ -70,9 +80,9 @@ See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 | Operation link (`operation-link.ts`)                             | ✅ Implemented (schema only)         | Ties a corrected retry or a reconfirmed execution back to the receipt it supersedes, distinct from `hash_chain_prev`, which only orders receipts by time and makes no continuation claim; not re-exported from `index.ts`, import from `trust-receipt-verifier/schema/operation-link.js` |
 | AWS KMS issuer-side signing                                      | 🟡 Optional / issuer-side           | Provided by sibling package `trust-receipt-kms-signer`; not required for verification                                                                                                     |
 | Reference ports (TS) / language ports (Python, Go, Java)         | 🟡 TS only today                    | Ports welcome; see `CONTRIBUTING.md`                                                                                                                                                     |
-| AIVS proof-bundle export/verify (`aivs-export.ts`)               | 🟡 Code-complete                    | Projects a signed v1.0 receipt into an AIVS-compatible `{ manifest_hash, session_sig, audit_log }` bundle, offline-verifiable with no Trusteed code (spec-062 US1, alignment not escrow) |
+| AIVS proof-bundle export/verify (`aivs-export.ts`)               | 🟡 Code-complete                    | Projects a signed v1.0 receipt into an AIVS-compatible `{ manifest_hash, session_sig, audit_log }` bundle, offline-verifiable with no Trusteed code (alignment, not escrow) |
 | Extension artifact verification (`verify-extension-artifact.ts`) | 🟡 Code-complete                    | Verifies developer-signed erasure receipts and extension manifests from the Trusteed Extension Marketplace ecosystem                                                                      |
-| v1.0-legacy compact receipt shape (`verifier.ts`)                | ✅ Implemented                      | `verifyTrustReceipt` also accepts the JWT-style compact payload emitted by the platform issuer since spec-040; surfaced as `result.variant` / `result.legacyReceipt`                      |
+| v1.0-legacy compact receipt shape (`verifier.ts`)                | ✅ Implemented                      | `verifyTrustReceipt` also accepts the JWT-style compact payload emitted by the platform issuer; surfaced as `result.variant` / `result.legacyReceipt`                      |
 | Declared trust-anchor degradation (`accepted_degraded`)          | ✅ Implemented                      | Three-valued verdict for v1.1 envelopes; see [Verification verdicts](#verification-verdicts) and SPEC.md §4.1 (NORMATIVE)                                                                |
 | Consumer-side revocation (`revocation.ts`)                       | ✅ Implemented                      | `verifyStatusList()` authenticates a merchant's published status list (JWS, trust anchors, signed `manifest_hash`); `checkRevocation()` then decides. Pure and offline: you fetch, it decides. Every failure, and any list that is not authenticated, resolves to `unknown`, never `not_revoked`                         |
 | Canonicalization reporting (`result.canonicalization`)           | ✅ Implemented                      | `"jcs"` vs `"json-stringify-legacy"` on the legacy-compact path, independent of `variant`, which describes the payload shape                                                             |
@@ -370,9 +380,9 @@ A verifier implementation must pass all 10 test vectors (v1.0) to claim TrustRec
 
 > **v1.1 status (2026-05-06).** eIDAS hardening adds 12 v1.1 vectors under `test-vectors/v11/`. This line used to say 11, but the table in SPEC.md §11.6 always listed 12 rows, including `019b`. The v1.1 schema drops legacy `mandate_hash` / `permit2` / `mcp` rail fields and introduces `payment_authorization_hash`, `authorization_scheme`, `legal_posture_warnings`, and `esign_disclosure_hash`.
 
-> ⚠️ **Conformance discrepancy, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` today reports **9/10**, not 10/10. `verifyTrustReceipt`'s expiry check became informative-only (`result.freshness.expired`, not fatal) on 2026-07-28 to satisfy spec-049 FR-018's multi-year retention requirement, and TC-007's `expected: "invalid"` entry was never reconciled with that change. Read that issue before you write a port against this line. `test-vectors/vectors.json` is the cross-language verifier ABI (see `PUBLISH.md`), and the wrong side of this discrepancy could get frozen into an independent port.
+> ⚠️ **Conformance discrepancy, as of 2026-09-16** ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)): running `npx tsx scripts/validate-vectors.ts` today reports **9/10**, not 10/10. `verifyTrustReceipt`'s expiry check became informative-only (`result.freshness.expired`, not fatal) on 2026-07-28 to satisfy the multi-year retention requirement, and TC-007's `expected: "invalid"` entry was never reconciled with that change. Read that issue before you write a port against this line. `test-vectors/vectors.json` is the cross-language verifier ABI (see `PUBLISH.md`), and the wrong side of this discrepancy could get frozen into an independent port.
 
-> **2026-10-10 update.** Seven hardening vectors (`H001`..`H007`) under `test-vectors/v11-hardening/` and an eighth `legacy-compact` vector (`L008-platform-mandate-evidence.json`) bring the count of vector files on disk to **132** (v1.0 core 10, v1.1 12, v1.1-strict 4, v1.1-hardening 7, legacy-compact 8, x402-binding 11, agtp-merchant 50, mia 30). `pnpm test` runs **546 tests across 41 files** and passes, and `npx tsc --noEmit` is clean; both were measured on this tree. `scripts/validate-vectors.ts` still reports 9/10 (see above).
+> **2026-10-10 update.** Seven hardening vectors (`H001`..`H007`) under `test-vectors/v11-hardening/` and an eighth `legacy-compact` vector (`L008-platform-mandate-evidence.json`) bring the count of vector files on disk to **132** (v1.0 core 10, v1.1 12, v1.1-strict 4, v1.1-hardening 7, legacy-compact 8, x402-binding 11, agtp-merchant 50, mia 30). `pnpm test` runs **577 tests across 45 files** and passes, and `npx tsc --noEmit` is clean; both were measured on this tree. `scripts/validate-vectors.ts` still reports 9/10 (see above).
 
 > **2026-09-16 additions.** Two new third-party identity verifiers, each with its own conformance suite: **50 vectors** under `conformance/agtp-merchant-vectors/` (`draft-hood-agtp-merchant-identity-02`) and **30 vectors** under `conformance/mia-vectors/` (`draft-anders-merchant-identity-assertions-01`), plus a 7th `legacy-compact` vector (`L007-signers-declaration.json`). Counting every vector file across `test-vectors/` and `conformance/` (v1.0 core 10, v1.1 12, v1.1-strict 4, legacy-compact 7, x402-binding 11, agtp-merchant 50, mia 30) gives **124 conformance vectors** on disk. The automated test suite as a whole (`pnpm test`) is **475 passing tests across 36 files**, more than the raw vector count because several suites assert per-field and boundary behavior beyond the fixed vector set. Both figures were measured directly (`pnpm vitest run` / `npx tsc --noEmit`, both clean) against this exact tree, not carried over from an older release.
 
@@ -427,8 +437,9 @@ trust-receipt-verifier/
 │   ├── verify-jwks-history.ts         # JWKS history chain verification
 │   ├── verify-timestamp-evidence.ts   # RFC 3161 timestamp verification
 │   ├── verify-export-bundle.ts        # offline export-bundle verification
+│   ├── safe-fetch.ts                  # bounded fetch for remote documents (size, time, redirects, scheme)
 │   ├── verify-extension-artifact.ts   # erasure receipt / extension manifest verification (Extension Marketplace)
-│   ├── aivs-export.ts                 # AIVS proof-bundle export/verify (spec-062 US1)
+│   ├── aivs-export.ts                 # AIVS proof-bundle export/verify
 │   ├── revocation.ts                  # consumer-side revocation check; verifyStatusList() authenticates the list first
 │   ├── verify-sidecars.ts             # binds envelope sidecars to the signed protocol_artifacts
 │   ├── verify-jwks-snapshot.ts        # binds an export bundle's jwks-snapshot.json to signed evidence
@@ -437,7 +448,7 @@ trust-receipt-verifier/
 │   ├── __tests__/                     # unit + conformance tests
 │   └── schema/
 │       ├── trust-receipt.schema.ts        # Zod schema (source of truth for v1.0 TypeScript types)
-│       ├── trust-receipt-legacy.schema.ts # v1.0-legacy compact shape (issued by platform since spec-040)
+│       ├── trust-receipt-legacy.schema.ts # v1.0-legacy compact shape (issued by the platform)
 │       ├── policy-evidence.ts             # policy-evidence fields, shared by all three receipt shapes
 │       ├── mandate-evidence.ts            # mandate + approval evidence fields (2026-09)
 │       ├── state-witness-evidence.ts      # state-comparator evidence fields (2026-09)
