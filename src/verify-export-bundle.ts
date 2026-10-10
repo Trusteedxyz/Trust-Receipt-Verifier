@@ -21,9 +21,13 @@
  * `trust_anchor_unknown`. A JWKS bundled alone is NOT a trust anchor.
  */
 
-import AdmZip from "adm-zip";
 import { createHash } from "node:crypto";
-import { inflateRawSync } from "node:zlib";
+import {
+  ZipReaderError,
+  extractZipEntry,
+  readZipDirectory,
+  type ZipEntry,
+} from "./zip-reader.js";
 import { verifyReceiptEnvelope } from "./verify-1.1.js";
 import { verifyJwksHistorySignature } from "./verify-jwks-history.js";
 import {
@@ -269,14 +273,13 @@ const limitsExceeded = (detail: string): UnzipResult => ({
 });
 
 /**
- * Unpacks the ZIP in memory under {@link BundleLimits}.
+ * Unpacks the ZIP in memory under {@link BundleLimits}, using the strict
+ * in-house reader (`zip-reader.ts`).
  *
  * Declared sizes (central directory) are checked before anything is inflated.
  * They are attacker-controlled, so they are NOT trusted as a bound: each known
- * entry is inflated here with `maxOutputLength` set to its declared size, and
- * the real length must equal the declared one. (adm-zip's own `getData()` is
- * not relied on: it only bounds the output when the declared size is > 0, and
- * only on newer Node versions, so a header declaring 0 inflates unbounded.)
+ * entry is inflated with `maxOutputLength` set to its declared size, the real
+ * length must equal the declared one, and the CRC-32 must match.
  */
 function unzipInMemory(zipBuffer: Buffer, limits: BundleLimits): UnzipResult {
   if (zipBuffer.length > limits.maxCompressedBytes) {
@@ -284,27 +287,31 @@ function unzipInMemory(zipBuffer: Buffer, limits: BundleLimits): UnzipResult {
       `ZIP is ${zipBuffer.length} bytes, limit is ${limits.maxCompressedBytes}`
     );
   }
-  let zip: AdmZip;
   try {
-    zip = new AdmZip(zipBuffer);
-  } catch {
+    return unzipChecked(zipBuffer, limits);
+  } catch (err) {
+    if (err instanceof ZipReaderError) {
+      return err.kind === "limits"
+        ? limitsExceeded(err.message)
+        : { ok: false, kind: "invalid" };
+    }
     return { ok: false, kind: "invalid" };
   }
-  const entries = zip.getEntries();
-  if (entries.length > limits.maxEntries) {
-    return limitsExceeded(
-      `ZIP has ${entries.length} entries, limit is ${limits.maxEntries}`
-    );
-  }
+}
+
+function unzipChecked(zipBuffer: Buffer, limits: BundleLimits): UnzipResult {
+  const entries: ZipEntry[] = readZipDirectory(zipBuffer, {
+    maxEntries: limits.maxEntries,
+  });
 
   // Pass 1: declared sizes only (nothing inflated yet).
   let declaredTotal = 0;
   for (const entry of entries) {
     if (entry.isDirectory) continue;
-    const { size, compressedSize } = entry.header;
+    const size = entry.uncompressedSize;
     if (size > limits.maxEntryBytes) {
       return limitsExceeded(
-        `entry "${entry.entryName}" declares ${size} bytes, limit is ${limits.maxEntryBytes}`
+        `entry "${entry.name}" declares ${size} bytes, limit is ${limits.maxEntryBytes}`
       );
     }
     declaredTotal += size;
@@ -315,10 +322,10 @@ function unzipInMemory(zipBuffer: Buffer, limits: BundleLimits): UnzipResult {
     }
     if (
       size > BUNDLE_RATIO_CHECK_MIN_BYTES &&
-      size / Math.max(compressedSize, 1) > limits.maxCompressionRatio
+      size / Math.max(entry.compressedSize, 1) > limits.maxCompressionRatio
     ) {
       return limitsExceeded(
-        `entry "${entry.entryName}" compression ratio exceeds ${limits.maxCompressionRatio}:1`
+        `entry "${entry.name}" compression ratio exceeds ${limits.maxCompressionRatio}:1`
       );
     }
   }
@@ -330,44 +337,17 @@ function unzipInMemory(zipBuffer: Buffer, limits: BundleLimits): UnzipResult {
   let actualTotal = 0;
   for (const entry of entries) {
     if (entry.isDirectory) continue;
-    const name = entry.entryName;
-    // Reject path traversal — only plain top-level names allowed.
+    const name = entry.name;
+    // Only plain top-level names are used. (Names that are unsafe outright -
+    // NUL, backslash, absolute, ".." segments - were already rejected by the
+    // reader; this also skips ordinary sub-directory members.)
     if (name.includes("..") || name.includes("/") || name.includes("\\"))
       continue;
     if (!knownSet.has(name)) {
       unknownNames.push(name);
       continue;
     }
-    const { size, method } = entry.header;
-    if (entry.header.encripted) return { ok: false, kind: "invalid" };
-    let raw: Buffer;
-    try {
-      raw = entry.getCompressedData();
-    } catch {
-      return { ok: false, kind: "invalid" };
-    }
-    let data: Buffer;
-    if (method === 0) {
-      data = raw;
-    } else if (method === 8) {
-      try {
-        data = inflateRawSync(raw, { maxOutputLength: Math.max(size, 1) });
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") {
-          return limitsExceeded(
-            `entry "${name}" inflates beyond its declared size of ${size} bytes`
-          );
-        }
-        return { ok: false, kind: "invalid" };
-      }
-    } else {
-      return { ok: false, kind: "invalid" };
-    }
-    if (data.length !== size) {
-      return limitsExceeded(
-        `entry "${name}" inflated to ${data.length} bytes but declares ${size}`
-      );
-    }
+    const data = extractZipEntry(zipBuffer, entry, limits.maxEntryBytes);
     actualTotal += data.length;
     if (actualTotal > limits.maxTotalBytes) {
       return limitsExceeded(`total exceeds ${limits.maxTotalBytes} bytes`);

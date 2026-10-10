@@ -19,16 +19,23 @@ All notable changes to the verifier package are documented here.
   `trustAnchorSha256` and `expectedPolicyOids`, while the library reads
   `trustAnchorPemSha256` and `policyOidAllowlist`, so the pin and the allowlist were silently
   ignored. They are now passed under the names the library reads.
-- **Export bundles are unpacked with limits** (`src/verify-export-bundle.ts`). Declared sizes
-  are checked before anything is inflated, each entry is inflated with an output cap equal to
-  its declared size, and an entry whose real size differs from the declared one is rejected,
-  because `adm-zip` bounds its own inflation only when the header declares a size greater than
-  zero. Encrypted entries and compression methods other than stored and deflate are rejected.
-  New verdict `bundle_limits_exceeded`; defaults are exported as `DEFAULT_BUNDLE_LIMITS` and can
-  be tightened or relaxed through `options.limits`: 16 MiB compressed bundle, 64 entries,
-  8 MiB per entry, 32 MiB in total, and a 100:1 compression ratio for entries larger than 256 KiB.
-  The `..` and `/` path filter is unchanged. The defaults are an estimate, not measured against a
-  production bundle.
+- **Export bundles are unpacked with limits, by a small strict ZIP reader**
+  (`src/verify-export-bundle.ts`, `src/zip-reader.ts`). `adm-zip`, which has published security
+  advisories with no fixed version, is no longer a dependency (it remains a dev dependency, used
+  only to build test fixtures). The in-house reader accepts single-disk, non-ZIP64 archives with
+  stored or deflate entries and rejects everything else with a typed error: encrypted entries,
+  other compression methods, a local-header name that differs from the central-directory name,
+  duplicate entry names (exact, or differing only in case or path separators), overlapping
+  entries, offsets or lengths outside the buffer, a CRC-32 mismatch, invalid UTF-8 names, and
+  names with NUL, a backslash, an absolute path or a `..` segment (previously such entries were
+  skipped; they now reject the bundle as `bundle_zip_invalid`). Declared sizes are checked
+  before anything is inflated, each entry is inflated with an output cap equal to its declared
+  size, and an entry whose real size differs from the declared one is rejected, whatever the
+  header claims. New verdict `bundle_limits_exceeded`; defaults are exported as
+  `DEFAULT_BUNDLE_LIMITS` and can be tightened or relaxed through `options.limits`: 16 MiB
+  compressed bundle, 64 entries, 8 MiB per entry, 32 MiB in total, and a 100:1 compression ratio
+  for entries larger than 256 KiB. Sub-directory members and unknown plain files are still
+  skipped. The defaults are an estimate, not measured against a production bundle.
 - **Remote documents are fetched through one bounded helper** (`src/safe-fetch.ts`, exported as
   `safeFetch`, `safeFetchText`, `safeFetchJson` and `SafeFetchError`). It is used for the JWKS
   history, extension artifacts, the audit command and the `--manifest` download. Only `http:`

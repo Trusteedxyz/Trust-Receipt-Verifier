@@ -11,7 +11,7 @@ Everything the verifier is handed is untrusted, because the party who produced i
   `protocol_artifact_sidecars`;
 - JWKS documents and JWKS history JWS, supplied inline, from a file, or fetched by URL (`--jwks-url`, `jwksUrl`);
 - revocation status lists (`revocation.ts`), including the `signed` flag and `signature` they carry;
-- export bundles (ZIP files unpacked in memory with `adm-zip` by `verify-export-bundle.ts`), including
+- export bundles (ZIP files unpacked in memory by `verify-export-bundle.ts` with the strict in-house reader in `zip-reader.ts`: no ZIP64, encryption or multi-disk; local and central names must agree; no duplicate or overlapping entries; inflation capped at the declared size; CRC-32 checked), including
   `trust-anchor.pem`, `jwks-history.jws`, `jwks-snapshot.json` and the optional external `manifest.jws`
   (`verify-bundle --manifest URL`);
 - RFC 3161 timestamp responses, CMS structures, certificate chains and OCSP/CRL evidence (ASN.1 parsing in

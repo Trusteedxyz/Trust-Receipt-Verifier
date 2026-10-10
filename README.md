@@ -27,7 +27,7 @@ Version 0.7.0 closes three input-handling weaknesses found while reviewing the 0
 
 - The `trust-receipt` CLI no longer takes a key location from the receipt it is verifying. Without `--jwks-file` or `--jwks-url`, `verify` exits with code 2 and makes no request. **This changes behaviour for anyone who relied on the implicit fetch.**
 - `verify-bundle` was passing the trust-anchor pin and the policy OID allowlist under names the library does not read, so both were ignored. They now take effect.
-- Export bundles are unpacked with limits on size, entry count and compression ratio (verdict `bundle_limits_exceeded`, tunable with `options.limits`).
+- Export bundles are unpacked by a small strict in-house ZIP reader (`src/zip-reader.ts`; `adm-zip` is no longer a dependency) with limits on size, entry count and compression ratio (verdict `bundle_limits_exceeded`, tunable with `options.limits`).
 - Every remote document the verifier reads goes through one bounded fetch: `http(s)` only, 5 s timeout, 1 MiB cap, at most 3 redirects, no https to http downgrade.
 - Internal references were removed from comments, documentation and a few error messages.
 
@@ -437,6 +437,7 @@ trust-receipt-verifier/
 │   ├── verify-jwks-history.ts         # JWKS history chain verification
 │   ├── verify-timestamp-evidence.ts   # RFC 3161 timestamp verification
 │   ├── verify-export-bundle.ts        # offline export-bundle verification
+│   ├── zip-reader.ts                  # strict in-memory ZIP reader used by the bundle verifier
 │   ├── safe-fetch.ts                  # bounded fetch for remote documents (size, time, redirects, scheme)
 │   ├── verify-extension-artifact.ts   # erasure receipt / extension manifest verification (Extension Marketplace)
 │   ├── aivs-export.ts                 # AIVS proof-bundle export/verify
