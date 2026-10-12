@@ -97,8 +97,14 @@ export const TrustReceiptLegacyCompactSchema = z.object({
   expires_at: z.number().int().optional(),
   protocol: z.string().optional(),
   policy_decision: z.string().optional(),
-  /** Emitted together with `currency`, or not at all. */
-  amount: z.string().optional(),
+  /**
+   * Emitted together with `currency`, or not at all. Issuers sign it as an
+   * INTEGER in minor units (`4999`); the string arm is kept for anything
+   * signed as a string. Earlier releases declared only the string, so every
+   * real v1.0 receipt carrying an amount failed this schema, and those bytes
+   * are signed and cannot change.
+   */
+  amount: z.union([z.string(), z.number().int().nonnegative()]).optional(),
   currency: z.string().optional(),
   checkout_session_id: z.string().optional(),
 

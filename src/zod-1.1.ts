@@ -8,7 +8,8 @@
  * via `z.infer<typeof XxxSchema>`. Both surfaces stay in sync because the
  * type-level surface is the inferred output here.
  *
- * NOTE: The 2900-byte canonical-bytes cap on the receipt body
+ * NOTE: The canonical-bytes cap on the receipt body (2900 bytes for an Ed25519
+ * issuer key, 16384 for P-256)
  * is **NOT** enforced in Zod — that lives at issuance time per the spec because
  * Zod operates on parsed JSON values, not canonical-encoded bytes.
  */
@@ -20,6 +21,11 @@ import {
   MandateEvidenceFields,
 } from "./schema/mandate-evidence.js";
 import { OperationLinkFields } from "./schema/operation-link.js";
+import {
+  EvidenceContractFields,
+  evidenceContractIssues,
+  isDeclaredAbsent,
+} from "./schema/evidence-contract.js";
 import { SettlementEvidenceFields } from "./schema/settlement-evidence.js";
 import { SignerFields } from "./schema/signers.js";
 import {
@@ -119,7 +125,15 @@ export const BuyerAgentConsentContextSchema = z.object({
   consent_timestamp: z.number().int().positive(),
   consent_hash: HmacSha256Tagged,
   consent_hmac_key_version: z.number().int().nonnegative(),
-  consent_disclosure_version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  /**
+   * Optional: it may be missing only if the body declares `esign_disclosure`
+   * in `evidence_absent` (rule in the body's `superRefine`, which sees both
+   * levels).
+   */
+  consent_disclosure_version: z
+    .string()
+    .regex(/^\d+\.\d+\.\d+$/)
+    .optional(),
   consent_withdrawal_uri_hash: Sha256Tagged,
   consent_evidence_ref: z.string().min(1),
   agent_authorization_chain: z.array(AuthorizationChainEntrySchema).min(2),
@@ -761,6 +775,9 @@ export const TrustReceiptV11BodySchema = z
     // del cuerpo firmado a propósito: fuera, cualquiera podría editar la custodia
     // y subirse la clase de verificación.
     ...SignerFields,
+    // Evidence contract: claim parity with v1.0 and declared absences with a
+    // reason. Additive, does not change `schema_version`.
+    ...EvidenceContractFields,
   })
   // Reject unknown keys at the ROOT body, not
   // just inside the x402_binding/mpp_binding extensions (M-1). Without this a
@@ -773,6 +790,17 @@ export const TrustReceiptV11BodySchema = z
     // Coherencia de la evidencia del mandato de plataforma.
     for (const message of platformMandateEvidenceIssues(receipt)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: [], message });
+    }
+    // Evidence-contract coherence: amount and currency together, no claim
+    // both present and absent, no duplicated absences.
+    for (const message of evidenceContractIssues(
+      receipt as unknown as Record<string, unknown>
+    )) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["evidence_absent"],
+        message,
+      });
     }
     const hasBuyer = receipt.buyer_agent_consent_context !== undefined;
     const hasAdmin = receipt.merchant_admin_authorization_context !== undefined;
@@ -797,11 +825,31 @@ export const TrustReceiptV11BodySchema = z
             "buyer_agent receipts MUST carry payment_authorization_hash AND authorization_scheme",
         });
       }
-      const esignFields = [
-        "esign_disclosure_version",
-        "esign_disclosure_hash",
-        "consent_evidence_ref",
-      ] as const;
+      // The ESIGN disclosure may be missing only if its absence is declared in
+      // `evidence_absent` (signed). Without a document holding the text that was
+      // shown, signing a hash of a version number would assert a disclosure
+      // nothing proves. `consent_evidence_ref` stays mandatory. The disclosure
+      // version inside the consent context follows the same rule.
+      if (
+        hasBuyer &&
+        receipt.buyer_agent_consent_context?.consent_disclosure_version ===
+          undefined &&
+        !isDeclaredAbsent(receipt, "esign_disclosure")
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["buyer_agent_consent_context", "consent_disclosure_version"],
+          message:
+            "consent_disclosure_version is required unless esign_disclosure is declared absent",
+        });
+      }
+      const esignFields = isDeclaredAbsent(receipt, "esign_disclosure")
+        ? (["consent_evidence_ref"] as const)
+        : ([
+            "esign_disclosure_version",
+            "esign_disclosure_hash",
+            "consent_evidence_ref",
+          ] as const);
       for (const f of esignFields) {
         if (receipt[f] === undefined) {
           ctx.addIssue({

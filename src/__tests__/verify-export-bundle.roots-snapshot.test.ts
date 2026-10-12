@@ -36,6 +36,8 @@ vi.mock("../embedded-issuer-root.js", () => {
     EMBEDDED_ISSUER_ROOTS: entries,
     findIssuerRootBySha256: (s: string) => entries.find((e) => e.sha256 === s.toLowerCase()) ?? null,
     getActiveIssuerRoot: () => entries[0],
+    // No stub in this suite: both test roots parse, so stub detection is off.
+    KNOWN_STAGING_STUB_ROOT_SHA256: new Set<string>(),
   };
 });
 vi.mock("../verify-1.1.js", () => ({

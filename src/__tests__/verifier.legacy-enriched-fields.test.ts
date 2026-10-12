@@ -72,6 +72,48 @@ describe("legacy-compact schema — enriched v1.0 fields survive parsing", () =>
     expect(r?.outcome).toBe("SUCCESS");
   });
 
+  // The real issuer signs `amount` as an INTEGER in minor units (`4999`), not
+  // as a string. The case above uses `"12.34"`, which nobody emits, so a
+  // `z.string()` schema passed the tests while rejecting every real v1.0
+  // receipt that carries an amount with `schema_invalid`. Bytes that are
+  // already signed cannot be rewritten: the verifier has to accept what was
+  // actually issued.
+  it("verifies the amount as the issuer really signs it (integer minor units)", async () => {
+    const { pub, priv } = await makeKeys();
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iss: "merchant:m",
+      sub: "c1",
+      iat: now,
+      callId: "c1",
+      merchantId: "m",
+      agentId: "a",
+      bucket: "checkout",
+      tool: "complete_checkout",
+      inputHash: "a".repeat(64),
+      outputHash: "b".repeat(64),
+      outputHashStatus: "captured",
+      trust_provider_assertions: [],
+      kid: KID,
+      schema_version: "1.0",
+      canon: "jcs",
+      expires_at: now + 86400,
+      amount: 4999,
+      currency: "EUR",
+    };
+    const { importJWK } = await import("jose");
+    const key = await importJWK(priv, "EdDSA");
+    const jws = await new CompactSign(
+      new TextEncoder().encode(JSON.stringify(payload))
+    )
+      .setProtectedHeader({ alg: "EdDSA", kid: KID, typ: "trust-receipt+jwt" })
+      .sign(key);
+
+    const res = await verifyTrustReceipt(jws, { jwks: [pub] });
+    expect(res.valid).toBe(true);
+    expect(res.legacyReceipt?.amount).toBe(4999);
+  });
+
   it("still verifies the historic payload that carries none of them", async () => {
     const { pub, priv } = await makeKeys();
     const payload = {

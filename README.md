@@ -21,6 +21,17 @@ This package is the reference verifier and issuer implementation. It is part of 
 
 ---
 
+## Recent updates (2026-10-12)
+
+Version 0.8.0 embeds the production trust root and brings the v1.1 body in line with v1.0. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+
+- The embedded issuer root is now the production Ed25519 root (SHA-256 `c8907ac3…352ad5`). The earlier staging stub is kept only to recognise and reject it.
+- v1.1 bodies carry the same evidence claims as v1.0, and a claim that is not present is declared in `evidence_absent` with a reason from a closed list. A missing ESIGN disclosure is signed as a declared absence.
+- `amount` is signed in minor units together with `amount_unit`; `formatAmountForDisplay` presents it in major units.
+- ES256 (P-256) receipts are accepted. The algorithm is taken from the key in the signed history, never from the JWS header.
+- The verifier also compares the `legal_posture` inside the signed body (`body_legal_posture_mismatch`), and a receipt that declares a degraded trust anchor is no longer admitted for an arbitrary unknown root. **This changes behaviour for callers that relied on the old admission.**
+- `verifyReceiptV10` now accepts the compact v1.0 form that issuers emit.
+
 ## Recent updates (2026-10-10)
 
 Version 0.7.0 closes three input-handling weaknesses found while reviewing the 0.6.0 code. See [CHANGELOG.md](CHANGELOG.md) for the full list.

@@ -82,18 +82,26 @@ export async function verifyReceiptV10(
   const opts: VerifyOptions = { jwks: keys };
   const inner: VerifyResult = await verifyTrustReceipt(jws, opts);
 
-  if (inner.valid && inner.receipt) {
+  // The form issuers emit is the compact one, which arrives in
+  // `legacyReceipt`. Accepting only `receipt` rejected every real v1.0 receipt,
+  // and did so with `errors: []`.
+  const parsed = inner.receipt ?? inner.legacyReceipt;
+  if (inner.valid && parsed) {
     return {
       outcome: "accepted",
       schema_version: "1.0",
       warnings: [],
-      receipt: inner.receipt as unknown as object,
+      receipt: parsed as unknown as object,
     };
   }
 
   const errors: string[] = [];
   if (inner.reason) errors.push(inner.reason);
   if (inner.errors && inner.errors.length > 0) errors.push(...inner.errors);
+  // A rejection is never silent.
+  if (errors.length === 0) {
+    errors.push(inner.valid ? "receipt_not_parsed" : "verification_failed");
+  }
 
   const result: V10VerifyResult = {
     outcome: "rejected",

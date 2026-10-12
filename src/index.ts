@@ -37,6 +37,12 @@ export {
 
 // Issuer
 export { issueTrustReceipt, type IssueOptions } from "./issuer.js";
+// `amount` is signed in minor units together with `amount_unit`; this presents
+// it in major units (ISO 4217 exponent). Presentation only, not evidence.
+export {
+  formatAmountForDisplay,
+  PRESENT_KEYS as EVIDENCE_CLAIM_PRESENT_KEYS,
+} from "./schema/evidence-contract.js";
 
 // AIVS proof-bundle export — projects a signed TrustReceipt
 // into an AIVS-compatible { manifest_hash, session_sig, audit_log } bundle,

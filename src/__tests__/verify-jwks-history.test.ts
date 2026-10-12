@@ -14,6 +14,7 @@ import {
 import { verifyJwksHistorySignature } from "../verify-jwks-history.js";
 import { EMBEDDED_ISSUER_ROOTS } from "../embedded-issuer-root.js";
 import type { IssuerRootEntry } from "../embedded-issuer-root.js";
+import { STAGING_STUB_ROOT_ENTRY } from "./fixtures/staging-stub-root.js";
 import type { SignedJwksHistory } from "../types-1.1.js";
 
 // ---------------------------------------------------------------------------
@@ -128,15 +129,33 @@ describe("verifyJwksHistorySignature", () => {
   it("returns embedded_root_not_production for the staging stub root", async () => {
     const { privateKey } = makeEd25519TestKey();
     const jws = await signHistoryPayload(privateKey, samplePayload);
-    const stagingRoot = EMBEDDED_ISSUER_ROOTS[0];
-    expect(stagingRoot).toBeDefined();
-    if (!stagingRoot) throw new Error("missing staging root");
+    // The stub is passed explicitly: reading EMBEDDED_ISSUER_ROOTS[0] only
+    // worked while the shipped root was the stub.
+    const stagingRoot = STAGING_STUB_ROOT_ENTRY;
     const result = await verifyJwksHistorySignature(
       { jws_compact: jws, signed_by_root_sha256: stagingRoot.sha256 },
       stagingRoot
     );
     expect(result.valid).toBe(false);
     expect(result.reason).toBe("embedded_root_not_production");
+  });
+
+  it("the shipped root is NOT treated as a stub: a foreign signature fails as a signature", async () => {
+    // The shipped root must import as a usable Ed25519 key, so a bad signature
+    // is reported as a signature failure and never as
+    // embedded_root_not_production (which would let the bundle verifier take
+    // the staging fallback). The stub-fingerprint constant is guarded by
+    // embedded-issuer-root.conformance.test.ts, not by this test.
+    const { privateKey } = makeEd25519TestKey();
+    const jws = await signHistoryPayload(privateKey, samplePayload);
+    const shipped = EMBEDDED_ISSUER_ROOTS[0];
+    if (!shipped) throw new Error("missing embedded root");
+    const result = await verifyJwksHistorySignature(
+      { jws_compact: jws, signed_by_root_sha256: shipped.sha256 },
+      shipped
+    );
+    expect(result.valid).toBe(false);
+    expect(result.reason).not.toBe("embedded_root_not_production");
   });
 
   it("rejects an unsupported alg header", async () => {

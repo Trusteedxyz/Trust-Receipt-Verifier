@@ -244,3 +244,26 @@ export function mapTimestampError(code: string | undefined): V11VerifyErrorCode 
       return "tsa_invalid";
   }
 }
+
+/** JWS algorithms allowed for signing a v1.1 receipt. Closed list. */
+export type ReceiptJwsAlg = "EdDSA" | "ES256";
+
+/**
+ * The `alg` that corresponds to a key in the history, derived from its TYPE
+ * (`kty`/`crv`) and never from the JWS header, which is chosen by whoever
+ * signs. `OKP/Ed25519` -> `EdDSA`; `EC/P-256` -> `ES256`. If the JWK also
+ * declares an `alg`, it must be that one. Any other combination -> `null`
+ * (rejected).
+ */
+export function expectedAlgForJwk(
+  jwk: Record<string, unknown>
+): ReceiptJwsAlg | null {
+  let expected: ReceiptJwsAlg | null = null;
+  if (jwk["kty"] === "OKP" && jwk["crv"] === "Ed25519") expected = "EdDSA";
+  else if (jwk["kty"] === "EC" && jwk["crv"] === "P-256") expected = "ES256";
+  if (expected === null) return null;
+  const declared = jwk["alg"];
+  if (declared !== undefined && declared !== expected) return null;
+  return expected;
+}
+

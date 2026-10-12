@@ -30,6 +30,7 @@ export type V11VerifyErrorCode =
   | "receipt_subject_mismatch"
   | "envelope_metadata_receipt_id_mismatch"
   | "envelope_legal_posture_mismatch"
+  | "body_legal_posture_mismatch"
   | "protocol_artifact_sidecar_hash_mismatch"
   | "protocol_artifact_sidecar_duplicate"
   | "protocol_artifact_sidecar_unverifiable"

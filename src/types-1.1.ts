@@ -558,8 +558,9 @@ export type PaymentReference = Record<string, unknown>;
  * The JWS-signed body of a TrustReceipt v1.1.
  *
  * Canonical (JCS) serialization of this object MUST be ≤ 2900 bytes so that
- * the resulting JWS signing input is ≤ 4096 bytes after base64url
- *. Issuance enforces the cap; Zod does NOT.
+ * the resulting JWS signing input is ≤ 4096 bytes after base64url, for an
+ * Ed25519 issuer key. With a P-256 key (ES256 over a digest) the cap is 16384
+ * bytes. Issuance enforces the cap; Zod does NOT.
  *
  * Subject-discriminated invariants (enforced by Zod `superRefine`, NOT by the
  * TS shape):

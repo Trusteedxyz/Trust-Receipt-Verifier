@@ -78,7 +78,18 @@ async function resign(body: Record<string, unknown>): Promise<string> {
     .sign(key);
 }
 
-function jwksHistory(currentTime: number): SignedJwksHistory {
+/**
+ * The retired staging stub. Only a history naming THIS root may defer to the
+ * declared degradation; any other unknown root is rejected outright (see the
+ * last tests in this file).
+ */
+const STAGING_STUB_ROOT_SHA256 =
+  "6c8e57a39f46de1fe7698365fbd0c0031dc180719c2c656a73207a890f80d722";
+
+function jwksHistory(
+  currentTime: number,
+  rootSha256: string = STAGING_STUB_ROOT_SHA256
+): SignedJwksHistory {
   const payload = {
     schema_version: "1.0",
     entries: [
@@ -97,7 +108,7 @@ function jwksHistory(currentTime: number): SignedJwksHistory {
   const b = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return {
     jws_compact: `${header}.${b}.AA`,
-    signed_by_root_sha256: "0".repeat(64),
+    signed_by_root_sha256: rootSha256,
   };
 }
 
@@ -339,5 +350,62 @@ describe("verifyReceiptEnvelope — declared trust-anchor degradation", () => {
 
     expect(result.outcome).toBe("rejected");
     expect(result.errorCode).toBe("jwks_history_signature_invalid");
+  });
+
+  it("REJECTS a declared-degraded receipt whose history names a root nobody embeds", async () => {
+    const { envelope, currentTime } = await buildEnvelope({
+      declareDegradation: true,
+    });
+    const options = {
+      ...makeOptions(currentTime, envelope),
+      jwksHistory: jwksHistory(currentTime, "ab".repeat(32)),
+    };
+    const result = await verifyReceiptEnvelope(
+      envelope as unknown as Parameters<typeof verifyReceiptEnvelope>[0],
+      options
+    );
+    expect(result.outcome).toBe("rejected");
+    expect(result.errorCode).toBe("jwks_history_signature_invalid");
+    expect(result.errorDetail).toBe("root_not_in_trust_anchor");
+  });
+
+  it("names a SIGNED body legal_posture that overclaims the recomputed one", async () => {
+    const vector = loadHappyVector();
+    const envelope = structuredClone(vector.envelope);
+    const body = decodeBody(envelope.receipt as string);
+    const metadata = envelope.envelope_metadata as Record<string, unknown>;
+    const warning = { reason: "trust_anchor_staging", since: body.issued_at };
+    const overclaim = {
+      ...envelope,
+      receipt: await resign({
+        ...body,
+        legal_posture: "ades_candidate_timestamped",
+        legal_posture_warnings: [warning],
+      }),
+      envelope_metadata: {
+        ...metadata,
+        legal_posture: "simple_electronic_seal",
+        legal_posture_warnings: [warning],
+      },
+    };
+    const currentTime = vector.verify_options.currentTime;
+    const asInput = overclaim as unknown as Parameters<
+      typeof verifyReceiptEnvelope
+    >[0];
+
+    const compat = await verifyReceiptEnvelope(
+      asInput,
+      makeOptions(currentTime, overclaim)
+    );
+    expect(compat.outcome).toBe("accepted_degraded");
+    expect(compat.recomputedLegalPosture).toBe("simple_electronic_seal");
+    expect(compat.warnings).toContain("body_legal_posture_mismatch_recomputed");
+
+    const strict = await verifyReceiptEnvelope(asInput, {
+      ...makeOptions(currentTime, overclaim),
+      mode: "strict",
+    });
+    expect(strict.outcome).toBe("rejected");
+    expect(strict.errorCode).toBe("body_legal_posture_mismatch");
   });
 });

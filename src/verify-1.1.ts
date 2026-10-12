@@ -34,7 +34,10 @@ import {
   verifyJwksHistorySignature,
   type ParsedJwksHistoryPayload as VerifiedJwksHistoryPayload,
 } from "./verify-jwks-history.js";
-import { findIssuerRootBySha256 } from "./embedded-issuer-root.js";
+import {
+  findIssuerRootBySha256,
+  KNOWN_STAGING_STUB_ROOT_SHA256,
+} from "./embedded-issuer-root.js";
 import type { IssuerRootEntry } from "./embedded-issuer-root.js";
 import type {
   V11VerifyErrorCode,
@@ -45,6 +48,7 @@ import {
   isOpaqueStubSha256,
   parseJwksHistoryPayload,
   resolveKid,
+  expectedAlgForJwk,
   isWithinValidityWindow,
   recomputeHistoryChainSha256,
   recomputeLegalPosture,
@@ -155,7 +159,9 @@ export async function verifyReceiptEnvelope(
   if (!kid) {
     return reject("jws_invalid", "JWS protected header missing kid");
   }
-  if (alg !== "EdDSA") {
+  // Closed list. That `alg` matches the key TYPE is checked in step 4, once
+  // the history key is known.
+  if (alg !== "EdDSA" && alg !== "ES256") {
     return reject("jws_invalid", `unsupported alg: ${alg ?? "<missing>"}`);
   }
 
@@ -225,7 +231,27 @@ export async function verifyReceiptEnvelope(
     options.jwksHistory.signed_by_root_sha256
   );
   if (!rootEntry) {
-    // Unknown root SHA — staging window or unknown issuer.
+    // Root SHA not embedded.
+    //
+    // Every unknown root used to DEFER, so a forger could mint their own root,
+    // key and history, have the body declare `trust_anchor_staging`, and walk
+    // out with `accepted_degraded`. The degraded admission exists for receipts
+    // issued before the production root was embedded, whose histories name
+    // the retired staging stub, never a root nobody knows. Any other root,
+    // without the explicit opt-in, is a rejection.
+    //
+    // Residual: a history naming the stub is still self-attested. That is what
+    // `accepted_degraded` means, and why it is never folded into `accepted`.
+    const namesKnownStagingStub = KNOWN_STAGING_STUB_ROOT_SHA256.has(
+      options.jwksHistory.signed_by_root_sha256.toLowerCase()
+    );
+    if (!allowStagingRoots && !namesKnownStagingStub) {
+      return reject(
+        "jwks_history_signature_invalid",
+        "root_not_in_trust_anchor",
+        warnings
+      );
+    }
     if (!allowStagingRoots) {
       pendingStagingDowngrade = { detail: "root_not_in_trust_anchor" };
     }
@@ -299,9 +325,27 @@ export async function verifyReceiptEnvelope(
   }
 
   // 4. Verify JWS signature ------------------------------------------------
+  // The algorithm is dictated by the key in the signed history (its
+  // `kty`/`crv`), not by the header: a receipt cannot choose the algorithm it
+  // is verified with (algorithm confusion).
+  const expectedAlg = expectedAlgForJwk(
+    entry.jwk_pub as Record<string, unknown>
+  );
+  if (expectedAlg === null) {
+    return reject(
+      "jws_invalid",
+      `jwksHistory key ${kid} is not an Ed25519 or P-256 signing key`
+    );
+  }
+  if (alg !== expectedAlg) {
+    return reject(
+      "jws_invalid",
+      `JWS alg ${alg} does not match the ${expectedAlg} key ${kid}`
+    );
+  }
   let publicKey;
   try {
-    publicKey = await importJWK(entry.jwk_pub as JWK, "EdDSA");
+    publicKey = await importJWK(entry.jwk_pub as JWK, expectedAlg);
   } catch (err) {
     return reject(
       "jws_signature_invalid",
@@ -311,7 +355,9 @@ export async function verifyReceiptEnvelope(
 
   let payloadBytes: Uint8Array;
   try {
-    const verified = await compactVerify(compact, publicKey);
+    const verified = await compactVerify(compact, publicKey, {
+      algorithms: [expectedAlg],
+    });
     payloadBytes = verified.payload;
   } catch (err) {
     return reject(
@@ -558,6 +604,22 @@ export async function verifyReceiptEnvelope(
       );
     }
     warnings.push("envelope_legal_posture_mismatch_recomputed");
+  }
+  // The SIGNED body's own `legal_posture` is compared too. Comparing only the
+  // unsigned mirror let a receipt carry `ades_candidate_timestamped` in its
+  // signed claims while the evidence recomputes to something weaker, and a
+  // consumer reading `result.receipt.legal_posture` would repeat the overclaim.
+  // The verifier stays authoritative (`recomputedLegalPosture`); a disagreement
+  // is named, and fatal in strict mode.
+  if (body.legal_posture !== recomputedPosture) {
+    if (strict) {
+      return reject(
+        "body_legal_posture_mismatch",
+        `body=${body.legal_posture} recomputed=${recomputedPosture}`,
+        warnings
+      );
+    }
+    warnings.push("body_legal_posture_mismatch_recomputed");
   }
 
   // 10b. agent-identity binding gate -----------------

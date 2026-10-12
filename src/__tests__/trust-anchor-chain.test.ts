@@ -25,6 +25,7 @@ import {
   getActiveIssuerRoot,
   type IssuerRootEntry,
 } from "../embedded-issuer-root.js";
+import { STAGING_STUB_ROOT_ENTRY } from "./fixtures/staging-stub-root.js";
 
 /**
  * Build a synthetic non-staging IssuerRootEntry. The PEM content is structural
@@ -52,8 +53,10 @@ function buildSyntheticRoot(): IssuerRootEntry {
 }
 
 describe("validateChain — staging-stub fail-closed", () => {
-  it("rejects with root_key_not_provisioned when active root is the staging stub", () => {
-    const stub = getActiveIssuerRoot();
+  it("rejects with root_key_not_provisioned when the root is the staging stub", () => {
+    // The stub is passed explicitly: reading the embedded root would only
+    // test "the package ships a stub", which is no longer the case.
+    const stub = STAGING_STUB_ROOT_ENTRY;
     // The "(STAGING)" marker lives inside the X.509 subject CN field — i.e.,
     // in the base64-decoded body, NOT in the raw PEM text.
     const decodedBody = Buffer.from(
@@ -71,6 +74,15 @@ describe("validateChain — staging-stub fail-closed", () => {
     const result = validateChain("any-kid", history, stub);
     expect(result.valid).toBe(false);
     expect(result.reason).toBe("root_key_not_provisioned");
+  });
+
+  it("the shipped root is production-grade: it does not take the stub branch", () => {
+    const root = getActiveIssuerRoot();
+    const history = {
+      entries: [{ kid: "any-kid" }],
+      signed_by_root_sha256: root.sha256,
+    };
+    expect(validateChain("any-kid", history, root)).toEqual({ valid: true });
   });
 });
 

@@ -2,6 +2,65 @@
 
 All notable changes to the verifier package are documented here.
 
+## 0.8.0 (2026-10-12): Production trust root, evidence contract for v1.1, ES256, stricter degraded admission
+
+### Security fixes
+
+- **A receipt that declares a degraded trust anchor is no longer admitted for any unknown root.**
+  `verifyReceiptEnvelope` used to defer to `accepted_degraded` whenever the signed history named
+  a root that is not embedded. A forger could mint their own root, key and history, have the
+  body declare `trust_anchor_staging`, and obtain `accepted_degraded`. Now only a history that
+  names the retired staging stub can take that path; any other unknown root is rejected as
+  `jwks_history_signature_invalid` with detail `root_not_in_trust_anchor`, unless
+  `allowStagingRoots` is set explicitly. **Behaviour change** for callers that relied on the old
+  admission of arbitrary roots.
+- **The verifier compares the `legal_posture` of the signed body, not only the unsigned
+  envelope mirror.** A receipt could carry `ades_candidate_timestamped` inside its signed claims
+  while the evidence recomputes to something weaker, and a consumer reading
+  `result.receipt.legal_posture` would repeat the overclaim. A disagreement now adds the warning
+  `body_legal_posture_mismatch_recomputed` (`recomputedLegalPosture` stays authoritative) and, in
+  strict mode, rejects with the new code `body_legal_posture_mismatch`.
+- **`verifyReceiptV10` accepted no real v1.0 receipt.** Issuers emit the compact form, which
+  `verifyTrustReceipt` returns in `legacyReceipt`; the wrapper only looked at `receipt` and
+  returned `rejected` with an empty `errors` list. It now accepts the compact form, and a
+  rejection always carries at least one error. Related: in the compact schema `amount` is
+  accepted as a non-negative integer in minor units (what issuers sign) as well as a string; it
+  was declared as a string only, so every real v1.0 receipt with an amount failed
+  `schema_invalid`.
+
+### Added
+
+- **Production issuer root embedded.** The active entry of `EMBEDDED_ISSUER_ROOTS` is now the
+  production self-signed Ed25519 root (SHA-256
+  `c8907ac3111c2fba15561d4398995853b9b35ada338159c451643dc38c352ad5`) instead of the staging
+  stub. The stub survives only as a detector: its fingerprint (`6c8e57a3…`) is recognised and
+  rejected wherever it shows up (old bundles, stale builds), and it must never hold the
+  production fingerprint. A conformance test enforces this and checks that every embedded root
+  that is not the stub is a parseable, self-signed Ed25519 certificate with a matching SHA-256.
+- **Evidence contract for the v1.1 body** (`src/schema/evidence-contract.ts`). The v1.1 body
+  carries the same claims as v1.0 (`outcome`, `amount`, `currency`, `output_hash_status`,
+  `checkout_session_id`), all optional and additive, with no `schema_version` change. A claim is
+  either present under its own name or listed in `evidence_absent` with a reason from a closed
+  enum (`not_applicable`, `not_captured`, `producer_does_not_supply`, `job_predates_field`,
+  `withheld_privacy`), never both, and never listed twice. Incoherent bodies are rejected.
+- **A missing ESIGN disclosure is signed as a declared absence.** The disclosure version and hash
+  (and `consent_disclosure_version` inside the buyer-agent consent context) may be missing only
+  when `evidence_absent` lists `esign_disclosure`; `consent_evidence_ref` stays mandatory.
+  Without the declaration the previous requirement still applies.
+- **`amount` in minor units with a signed `amount_unit`.** `amount` is an unsigned integer string
+  in the currency's minor units (cents for EUR) and `amount_unit: "minor"` is required next to it
+  and signed with it, so `"amount":"4999","currency":"EUR"` can no longer be read as 49.99 EUR.
+  Decimal strings such as `"49.99"` are no longer accepted. New helper
+  `formatAmountForDisplay(amount, currency)` presents the value in major units using the ISO 4217
+  exponent; it is presentation only, not evidence. `PRESENT_KEYS` is exported as
+  `EVIDENCE_CLAIM_PRESENT_KEYS`.
+- **ES256 receipts.** `verifyReceiptEnvelope` accepts v1.1 receipts signed with ES256 (ECDSA P-256
+  over SHA-256 of the JWS signing input) in addition to EdDSA. The algorithm is derived from the
+  key in the signed history (`OKP/Ed25519` gives `EdDSA`, `EC/P-256` gives `ES256`; a JWK that
+  declares a different `alg` is rejected) and never from the JWS header, so a receipt cannot
+  choose how it is verified. The canonical body cap is 2900 bytes for an Ed25519 issuer key and
+  16384 bytes for a P-256 key.
+
 ## 0.7.0 (2026-10-10): Bounded input handling, no keys from the receipt under verification
 
 ### Security fixes
