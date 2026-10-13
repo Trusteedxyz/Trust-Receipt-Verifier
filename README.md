@@ -385,6 +385,24 @@ A TrustReceipt payload contains 24 fields across five groups:
 
 ---
 
+## Check the verifier in 30 seconds
+
+Static vectors, no network and no keys to provision. The script signs each vector with a throwaway keypair and runs the real verifier on it:
+
+```bash
+git clone https://github.com/Trusteedxyz/Trust-Receipt-Verifier && cd Trust-Receipt-Verifier
+pnpm install && npx tsx scripts/validate-vectors.ts   # ~2 s
+```
+
+| Case | Vector | Expected verdict |
+| ---- | ------ | ---------------- |
+| Valid | `test-vectors/valid/TC-001` … `TC-005` | verified |
+| Tampered payload | `test-vectors/invalid/TC-006-tampered-payload.json` | `schema_invalid` |
+| Expired | `test-vectors/invalid/TC-007-expired-receipt.json` | `expired` (see the note below) |
+| Unknown signing key | `test-vectors/invalid/TC-008-wrong-kid.json` | `unknown_kid` |
+
+Honest status as of 2026-10-13: the script prints **9/10**. `TC-007` verifies as valid where the vector expects `expired` ([issue #6](https://github.com/Trusteedxyz/Trust-Receipt-Verifier/issues/6)); code and spec disagree there and it is not hidden. Manifest with every expected outcome: `test-vectors/vectors.json`.
+
 ## Conformance
 
 A verifier implementation must pass all 10 test vectors (v1.0) to claim TrustReceipt conformance. Three levels are defined:
